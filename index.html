@@ -4,30 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V3.7</title>
-  <link rel="manifest" href="manifest.webmanifest?v=370">
-  <link rel="stylesheet" href="styles.css?v=370">
+  <title>FleetPilot V3.9</title>
+  <link rel="manifest" href="manifest.webmanifest?v=390">
+  <link rel="stylesheet" href="styles.css?v=390">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V3.7</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V3.9</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
   <main>
     <section id="fleetPage" class="page active">
-      <div class="fleet-month-toolbar card">
-        <div>
-          <span class="eyebrow">Финансовый месяц</span>
-          <h3 id="fleetMonthTitle">Результат за месяц</h3>
-        </div>
-        <label>
-          <span>Выберите месяц</span>
-          <input id="fleetMonth" type="month">
-        </label>
-      </div>
-      <div id="fleetMonthSummary" class="summary-grid compact"></div>
       <div id="fleetSummary" class="summary-grid"></div>
       <div class="toolbar card">
         <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору">
@@ -121,11 +110,18 @@
     <section id="analyticsPage" class="page">
       <div class="section-head">
         <div><span class="eyebrow">Результаты автопарка</span><h2>Аналитика</h2></div>
-        <select id="analyticsPeriod">
-          <option value="month">Текущий месяц</option>
-          <option value="year" selected>Текущий год</option>
-          <option value="all">За всё время</option>
-        </select>
+        <div class="analytics-period-controls">
+          <select id="analyticsPeriod">
+            <option value="selectedMonth">Выбранный месяц</option>
+            <option value="year" selected>Текущий год</option>
+            <option value="all">За всё время</option>
+          </select>
+          <input id="analyticsMonth" type="month" aria-label="Месяц аналитики">
+        </div>
+      </div>
+      <div class="analytics-period-title card">
+        <span class="eyebrow">Финансовый результат</span>
+        <h3 id="analyticsPeriodTitle">Текущий год</h3>
       </div>
       <div id="analyticsSummary" class="summary-grid compact"></div>
       <div class="card">
@@ -137,6 +133,75 @@
         <div class="card"><h3>Самый дорогой ремонт</h3><div id="largestRepair"></div></div>
         <div class="card"><h3>Самая дорогая страховка</h3><div id="largestInsurance"></div></div>
         <div class="card"><h3>Средняя прибыль машины</h3><div id="averageProfit"></div></div>
+      </div>
+    </section>
+
+
+    <section id="dataPage" class="page">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Сохранность информации</span>
+          <h2>Данные и резервные копии</h2>
+        </div>
+      </div>
+
+      <div class="data-status-grid">
+        <div class="summary-card">
+          <span>Автомобилей</span>
+          <strong id="dataCarsCount">0</strong>
+        </div>
+        <div class="summary-card">
+          <span>Всего записей</span>
+          <strong id="dataRecordsCount">0</strong>
+        </div>
+        <div class="summary-card">
+          <span>Последнее сохранение</span>
+          <strong id="dataLastSaved">—</strong>
+        </div>
+        <div class="summary-card">
+          <span>Автокопия</span>
+          <strong id="dataBackupStatus">Проверяется…</strong>
+        </div>
+      </div>
+
+      <div class="backup-grid">
+        <div class="card backup-card">
+          <div class="backup-icon">💾</div>
+          <h3>Скачать резервную копию</h3>
+          <p>Сохраняет автомобили, фотографии, пробеги, ремонты, оплаты, документы, налоги и настройки в один JSON-файл.</p>
+          <button id="exportBackup" class="btn primary full">Скачать копию</button>
+        </div>
+
+        <div class="card backup-card">
+          <div class="backup-icon">📥</div>
+          <h3>Восстановить из файла</h3>
+          <p>Выберите ранее сохранённый файл FleetPilot. Текущие данные будут заменены только после подтверждения.</p>
+          <label class="btn full backup-file-button">
+            Выбрать файл
+            <input id="importBackup" type="file" accept="application/json,.json" hidden>
+          </label>
+        </div>
+
+        <div class="card backup-card">
+          <div class="backup-icon">🕘</div>
+          <h3>Последняя автокопия</h3>
+          <p>FleetPilot автоматически сохраняет копию базы в отдельном хранилище браузера после изменений.</p>
+          <button id="restoreAutoBackup" class="btn full">Восстановить автокопию</button>
+        </div>
+
+        <div class="card backup-card danger-zone">
+          <div class="backup-icon">🗑️</div>
+          <h3>Удалить все данные</h3>
+          <p>Полностью очищает автопарк на этом устройстве. Перед удалением рекомендуется скачать резервную копию.</p>
+          <button id="eraseAllData" class="btn danger full">Удалить всё</button>
+        </div>
+      </div>
+
+      <div class="card persistence-note">
+        <h3>Как сохраняются машины</h3>
+        <p><strong>Обновление файлов сайта не удаляет данные.</strong> Новая версия использует постоянное имя базы и автоматически переносит данные из старых версий.</p>
+        <p>Ярлык или установленное приложение должны открывать тот же адрес: <code>kirushak47.github.io/FLEETCAR/</code>. Другой домен или другой путь считается отдельным приложением.</p>
+        <p>Очистка данных браузера, режим инкогнито или удаление данных сайта могут стереть локальную базу — поэтому периодически скачивайте резервную копию.</p>
       </div>
     </section>
 
@@ -154,6 +219,7 @@
     <button data-page="documentsPage">📄<span>Документы</span></button>
     <button data-page="calendarPage">🗓️<span>Календарь</span></button>
     <button data-page="analyticsPage">📊<span>Аналитика</span></button>
+    <button data-page="dataPage">💾<span>Данные</span></button>
   </nav>
 </div>
 
@@ -266,5 +332,5 @@
 </form></dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=370"></script>
+<script src="app.js?v=390"></script>
 </body></html>

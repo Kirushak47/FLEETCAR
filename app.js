@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const KEY="fleetpilot.v3.7",today=()=>new Date().toISOString().slice(0,10),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
+const DATA_KEY="fleetpilot.data.v1",META_KEY="fleetpilot.meta.v1",today=()=>new Date().toISOString().slice(0,10),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
 const addDays=(d,n)=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
 const MODELS={
  "toyota-prius-2":{brand:"Toyota",model:"Prius II",years:"2004–2009",image:"data:image/webp;base64,UklGRp4qAABXRUJQVlA4IJIqAADwyACdASrQAqQBPikUiEMhoSEQmfRkGAKEtLdwu7CH3inPg8u4C57nTdt5t8lW8svxn5QedP459I/e/7P+0/9z/ZXpadd+Y/8p++v5P+/ftZ+bnzj/v/yz/t3pr+Wfvv+/9Qj8S/k/9w/KP/A/tx9PUk7m19b6DXsN8+/vf9//bv+8/t79eXwf+v9Pfsb/m/cC/VL++fm3/cv//74Xgw/hv+X7AX8w/p3+e/yX7j/6H///bV/Lf8//Jf5T/2/8f3MfnH99/33+T/eH/S///8Ev5D/Sf87/dP8p/wv79////F92/s9/dr2Rv2A/435/hghR6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q0rBvkZMqYpjd2f6VvjyvDf6H/NnqGSVvjy3Q2SLj/St8eI5BzicZskXH+k8OH6Fb48t0Nki4/0rfHluhskXH+gOlUKPSt8eW6GyRcf6VvjgP7BuXrs44pAzGlo4ZlLY8DTD5wJNRYCQMl2aXsEXyxjNTaNqMxmPSt8eW6GyRcf6VvjxW+kX1GDd/oZi4KXc/5fi38T9JWFKpX56E4H9ekkSi4Q8SkYvsYXywfk+oFBLt586gyAVWZ4YdoJ/WvJ0w0Pm2oOUFbQOxRyN+e1Cj0rfHluhskXH+lA1vgtQ82Q940RdRvqv8YyiKmU9oZqkyFTjF6wmDqGd5cdUPpqj5o7SCDJcUgPgOUo6MgyH6p6YXuaEjlOm2tjrzDsqMi6uDnHc7iJUVzhaT94bxtA9c5AiYlUKPSt8eW6GySQAMpm+9/MTDuOgBfR0ayLLUWIab9psHApJveQbf+JcGElX1nHxe235pektVTkICzYE4FEyDuc5TBD5rXfGl/lYgMF7zh39P1nj3zBHjSVpH/ux/orDQekCJiVQo9K3x5bobJFSFzoUFxk0OcDxsQxLHhGu9Ik56zxPu3o4f2Qn1K2PnXYFCTUH597Z54JXgRfOxr0nbsnOMBCaYgrgw8MDUENp+moad5efTz/RIFpO+wFK+4J05INGNXb+/KmdKu/Y9K3x5bobJFx/pWV6s9436cggCBiRIwvI+4AKiyjAw+kFaADAR1/SkddcAvQSaTl0N4XNktoKzFnDPUOCeYzSEbBdM4mxwkyACTVEzbY6Il7Dl0JSIbfPeF51f4WNPniNbPcpLVcSstbHPPOeUbtmvfbobJFx/pW+PLdDZGEPdfLfgEtWlZmKclYsvBkIeocAf3avrIdCHpNigEBc/qHRYIEb/sZsUAj7y6x47MPDJl2hPmi4jHxobudR+MyqzN3nDnIwBaf//T2q/xmkbnP9j/L1bGJlJfP4/t72QjaUXH+lb48t0Nki4/z19Ryq/w/LVJtKpn7zNhaA5qDAA3p1VZWNixLI3QgUp+NN2kv8iegiiNqRDOISofo27fcv29vewZ9o2J+xeGLeo2Sgr2NQ7lhBz0U859v3P29uC2+YL3WN/xr8KhV/0Ls/gTeWQoRmn7sRKoUelb48t0Nki4/rEbrJiQjbt8rvTDX5H04eeNwIMoW5zublSeRun6MWPpiK+aIy9zTi7fjmBfq5hDuCFDfXiU+LjhYVlzPqoBXwoe/6ZfqihfHCSKDNr9c51c6GuywPO+/9BQCFy5vUxKoUelb48t0Nki4pD7mjTWB2ntYiny4RNCGNfcHjpa3CZmqB1GJLY0tkDFv8zl+OXbHY1rURFZ4jr4gd+v0J6e31dVwfSlm3G2T8pO+M3o+3Q2SLj/St8eW6GyQe62Ol/iWz0/Oso/3QyjfT7/OggPJlH62PRkSaYkwU53d/iVELKtLipgv6AkYVZaMHDmEyw4ImJVCj0rfHluhskXH+lcMceM2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GyRcf6Vvjy3Q2SLj/St8eW6GxIAAD+//pc4AAAAAAAAAAAAAAAAaP//iM/nhjvv5E2lNAuDwsC1p4QmJVjSX2RCjrkgTMzO//y7FDJeh9BJnEMzXIhNIcVLNWyKDYseL1MxqKn+t9ABjDr+Ju1LtFp/E4f19MiRNUbi4TgMWSWDsnMcNdaaxbl93xapoGxxDTt0OOCjzHX58YEXnfvTHIwh3QGln3E99vncsYSbivxbKtf/TvEu+mH//icPPrHffyKXCNU3gtRUh+5C3uN940t7MbCms1M4poM7Hp66JwlEcHqU3yRcHAFv4ArAFQjNho9qzEpvuVAc1JUJ369O8iAVPXwEGrDo9WufLmfSyGQkn6ycaMGUtS+olZUFzwjAcBsT874cIs5wxYOsqmEQ5//vCUrI3pkgbaL0UFA+cqLvty2cGZ4EACR2D4Y01j1oKdNesAACJAQIGOYQJGV1ockk/WJOvGVHzWN/mhVF8ei1JxU77BJ15JmvJ4P7o6BE0s1RvH+PFKNKxqtS6KaE/+96cKVk/NXmnenLrVPdA0zgI8CGy33eYWz4P8T8/cZMN2PVF5kUpGuoU1Gj5tIQevRyMLGpFqlXdSq1xkSGJA3OcxlsbG4BLKnEC7OyKLErJZ6wd/aGLWuUP7KSeYAHJMsILg0X4viMzDP1r4LF5PHDaU+w2+f4c7ZlIY5MwA1TCEVn/4uWJDiEh1+/6XcFmvbtrt/TzKUsWG6lTyE2AVxOUbUn4rRT61ZrRE0crDTZG4Ok1Y9W+1Ws68RvGqbh1JU1oKMj3H1/EePyErJB2+LfjTyfnYLJLqwwHpJEx6/YB4rDj7k2F5RTWPqeIFx1Ifn0VjuTs73rFX+j4t3frt5W2QQGdBKk7qSsY55sh5VtzbfUGqP6Z0VbRCW3jS0TQsRqlMbocbdxkzmcyMa6FFuLvQLuAsgHeySYTPbBOcDLy269iLGBS96n/yhbFGjS2GLoSi5yLT8mMXaeyFIF63ePnmbhVnNmsP2wPDJG+6RhrDlKOSilFNqlxn3jdO7omUQ6ebKqrHUEVIAAQffcXE4ZsVJj5NHt67iXWrLmlXsu7xKZQ6jMmd6ZLGGnyt/d2trXanjaTgHnmfcBsYkG8hzuVR/49W1VK09A0QqoRNYev8grHm3dTigcC8YtwNDSghrY0gqsuWOVmjOiuVPmzUFfQDRMouOVeA6V5xH7dvB6Y3W3Vt+NhBirHsWSKbh9AKp1qvmNwdOk/aE6i5bpwubpM8rtgotSwxAz7lYk/WtJo1wxvA56xr4/d8g0aHBrRklxVgr5WnypmW0ovIQ5U3vi089GhQp2QwAydy3O8U2CLBwYmXM4ZGrPJ/BF+Wh7Q4oXArwvIC6wAh9kN49k59rrjvnPWLf/xxCJ4ZY21gN57vT+TtfOxpDgyuiD9QMaZ8OAqnpMppg2ojCy68aq8YjOEnL0/SHSsMATay3+o5ueMVv6DRyW4MqJVe11nQaRkHs+Ap8UoBS6obB8ujMIWzql5oYBJoulivJ4ibMt9qBpdHKyAk8QvuAIod0OdPQBClMxigbZcBUt744q1mR+Y/jTXLWKU5+/uA8i/phQB+xY+FIlMfXQBOA2CE99PqHUUtad/e6yDgJW1juoTIpl8lNEgJ5yjgnMgNhFij5fNrAtxkSHsDHLdo9+zuIYGxLt2f+zg/snb93mhqffGo203/HWPZm+jiRo0X4sOqBSeDA2WlfWgDa9DIkGgXB3Om4e1E8Kr5X18SaVUS4trEXUq1NoxdsdFnoQT2eotGRWCZ7MoZ6msTuOwl9TV36a4Bjh8dwatbpvMXwXeDWIpTdhofANPjoRoIycHuC0jct8iILpm9NZlvXnWBMwO7H/DPk6CfT68NMeyu8/lqr80xUfGdbRmVWcCvBy6eHU2BZ2SWln7ie8et6ju+VYLRZmY6w9R9hp/in8+LlzrKPW67C6N2puvkTC0Pjr62Ch6gA+zb0ztP+l+ti34XhXgjYxW6SJZXUnyUDHY/7/mEbm3EleqXFcY0XmIrDV+Kh7r1ohf/NXsqnylbPQaqxVYGzla1oewIRUaq65kMwNpozAR8vL6DjW62ZD4Lcumkbw4ycce1IZgv2+8gJaEnw/24IHVG4c1Wq9qSRmVnAz+aL+DtXL4NUXtLUasV2PrIlP3fP82IB5Z9QZaNTxGv8gjUh4r7UBy70TmxrxeZM8L4ZUzMTy/3w7OrqKIwKhBbw3L9wkFuHmZhTqOd3rGA+AgfxIsXck28G3B/cr53RGzbc3GmrABKHqaaes5SZwE/KOsWObxhhZVbcR8U0tUZkx70VgecU3XvKnpLSD/CzKJLrNwPgPkFWFiXtz+6zEGde3fKuokXpHO+rJQs2UCP8DJWFOauOAQe6YojP7cPJpZGSqr0eB9P3GpOmzloDIPSgKqxlgE5iboWtZemnFym/o2GbeBl1d9YqKP9pOYcJyhST+Fu0IrfeZy17cQBounlmMKt9lTf/T3xZjFZG37N7FYNtEilSmQfR1ECAw+ANg2xd2wX81nzx9TSqt7JeAMNMHNGleba/W5st0G8tuf+BDfACsieLxao/wepASpB0j9CtTiMxpVIPdb10yTcAMqUZn3tReoBXRy8kUyz8F7pfQUyzlITYSDAihYRXsfhBH+FfulZgYrjRwgtwFczJiiwbRRY82IMlkCn2Q6LT8cJ/D9wf9vLXFYoPCZx/QbjvC2AHvleC+fmdTDTvch4R10l+blHVWIf65RCqO4eXmsCylO99QVTM6aOCeVVPpxFF+wKU+JaM9ewc7SE7JHfREANuMBWkRM74+B2PpMv/tBQcLYbitywN/gmgkLiBgd/eY81UAee33+Y47yNHbU+2yhvww9WL5ljAvb87DIG0/1Al93L0xRNfk9oMA/+cKTIS29VrPmrDX4pX6wBRj4ippgZerwD9Mzje9aKcLw1Mv3UsxsQOjMDnipwWtXIgzGMcLf8jS1zfyZDQmpEZL3LyMKiGcDPDRhqfmTJ2dj58UpwVzs0yY7b9A5/WdwkH7UO+7l8s0fUzxZ3KD3FPOE3Ip5393fTjp+Ehi07uQacXJIpkTv6oEOMBWprnWiAmx1wB9SSrV2KSpmUrD7abPgt4ZQjh9veV0qTmX5fBqtZZscPWWIx/z4Z0NndeYFEkASXzQa/ahDc3DFm9anL3mAG3V8nW/6BmLaCosGizCaBRuGAANgjSE9tw+1v4gIGIdr8yZN2BIGaOJpyv22CBrA0KLqu1NoDVtW9uSxNvAtBY3xmTPCmoF9VtTaK6/2zHBTCoH0yJzGNALNVlZwcQpKB6XQEKLSjS6lL0JrwQR4c2jUTaJtyqB0uCpWyHcUuHEXF7VcSXt/e48W8QJZblfdeOh/yk8KdvTsW6nlnICggsJMjWUlEYTTAIES2iRrg9B5U2A+HxrfWeY19zDz6Yd+YKE0rG5EEKv/eWStaiXQ8Csbhsx9O4pLBS9i5HSSFdE5ebuOBNdjbR8SHkWO6YeYe/F+/hdG+82zrlej5jYryt8ocus+IlEEoz5zkyqOQgVl6tW7BiqJWG8Z4AynMTlYrx9naEwc4w9U+7qVuAzjZFLNtST3QVmghR3klDgV+l+4a/07HOIWd65Px5SNpvgIs/y1wX1U7wIfvVXUB578hehmzATXMBNYssBNgmd/eTLw981/4mRe1aJn/WoRijwi520otNrv4x/t+kVPf1oMAHD7lJo5naM/qEyGBnQ8q1GQdSna5Y8GX/WBydXiZhWcO/fCtZAHEilyDnVmzNHol4TdviMoFUspiTQyy2yLxMZ1CeJQmerPj8XobrSGuuWk4fAkoNLXxUR/MSPd/V1oxOP8RnysnW/M5fNG6wKRglgGqC/UXpckDyRN8oW0x7v3BocT7SvNDG4sZUG8NICVI+nKZKU/QCs7NMEiObgS/IaPuGRm/6PMy8Vt7vtEeH9uoyNkOPGCufRVl6VzEajkx3w/xCoJ67L86V1pPzbAwAvm2SIqb7gEhrBlwxv5vnnyD/VrALJKNwYeS5A79Ch5M8lunv9eb6sMOT7gSlKt62DmZnlvAe6P+2+T1rVKgGSqmzWhKoKKWqVnfI3RQOKaD5NCrCBEkm9fvNxHFnh4V8vMb1O4HTpI9rGuu3GmgQBTdDFxhZ7KUnSdK6DIla4Z+DEpaw34FVmoNG1OVey1EYb8AGXWpthgTZcl6QQtBRI8ZGV0pzHfIOp7HyRqtuqGq30TPUGC2cBHcKBthr2klz9V9ZcW5vZSK7x05yaot1JA/JjOlPJJXDoehQD3bZl3srTIxgnrlmiug0igOaK2fqLOG5yukEQQJAcRtS+9sgRm1CWNa8Gr+aR/erR2IHbAl8H9X/aBsSFqOLjDgq8E/dFoXtNIf2TyGWIeLOCxS3IHuHt4pCaHg7g5l7GONMeAUbVJgdhTTXtq6Jcff8Py7TvpzZJJXqUCOZi7oHaURkg9ObCiLjYjtNakGztNUsBQzYkB09Gdd574uDwtio0bIiIxtN5MYoIF5LRrm5TOaHe1Dzje05J/GvApt/vSvdej6IV7kqf+f4/M8tjV8gBvhn8mhLKv4O97zU3Ba2Z5igck3fRGPOYhqZ9HbAyyshVXGFCQ//cot1FzTX3LYGYl4ZSHzWg+v7dtlMv3ZKszGYuMfEH+3jaQxYeyOzJPBTzyjJO1lgGIzJFYfMIhtVS2qjyQEHJzPOHBhUm9LGkubk6y9DSTEozgvTj3m5r/ma3a+tYiIzJb8yQLlgb27OdLRgMN0SDGbV8+CPL04SBJ1XZzQ5jxssuqKgNVzP/1p6kdPaaELHXmVMNm9TUOQIoCoMCs/3R00jBLs89WFmRd4kDqK6tc6axsjs/p702CgE3n5Vl6M0pfbg6V7U7aOs3/68j4y2PzZzyjM+xNERBkaa7dwsc2lvnxiG4a+1p2a9wsYWAtKIcogAASt5UFcn0GigyYYOds0Cua1j3slgWbkxfab/353zOBH5ZMYOW6fIiBO22nNeyZbgXRxUWc/GBTVrn3L4wRtpBEJ3XSwlPUZ8AQzQuOZHXSt7FerSU/3LM+eMb/iiU1Eg6VQm6lW9ngqGGVTJQ/45r4RNtjViExMNp/Kjl+R/2CMyZz7gYg38t+I7DH0LNI/mFHOQyv9DpudENgd2dxdm39L3KVl30LRGq/8ppDJ//zJHIxrlUTM6cx20UlIB2QwRRSJZjBPqAGKtJi+S3I/TLLiXC5G8k0DXPSNjXnKUb7p66rX6JJP3ja7hRhCBBDLT9K2gnADHm1gDK0lubSS+PeApEHLgxqXaGCN49febWtlXc4Ne+mkQV1iuasoogBhgU51yljd19PO8cjnS3lGpeeCsQzlPj1zM/wvhqOr3MocDlYFZa0qvuFANLNaz6j15kKLgk8eUN+78xlxnQbeeC6P5vFE/tbuQn91f8Ye0nfuPpHDEndpATVZUbiEov3lczFCkSxZPGkZ7ZiBSPbWoC8v4XzgwFEBaFD+ejWqiHzzvhqJgFMJIP7ZRo1AOPP3dahU9FFMBMjzcRjF1GK4EntCWcUBkF4c0MSsRhTS0YVNo37dhawgNXV5E6XP+7VhTRRTdZcipNekteELbcZWfKt3QiLKLeFKdkx3KodtjA8zHjdKqEm5Z+9xwL56BEBkKbhazsc/V/92SecPULu2zO19HOqme19THPvh6brgF6JEyewhacyWqjtNcG1xnGQoHXdLFg7hYZx031wRal0XYgJ1lqHrZcisWGyIVmJlJ8E9eZxypvTyT20zpn6qIAwUIEherjvvLxq4JgKE/yDrOtjBRTKQbYl94kz2MVJYTd4V/reaUlK1GL37XEiJSkR5JUiki13qIqMESmzFu2oRxrXnhLbErg6am2tUbxpudj61rxXoymfsNCs607sS6KJmpLtui9H0WwIssm30SAAGRMTevMzrAORCDhrtUeekNScX1IidVLfh3YD3VinMz36RtAJRUXMaLWkT8mOOiYr63JMSspAHtvY0cbobIeyeZe2TCyXnk5Zstva9EBfz2ia+tdQzyyQo5SNaXsfMrI9Uk0AQWQmgvBlY3DHblRXTFn/w+6l58kQtyBmEetlHFO2mpay670/FpgTudN8GpneSAiKcjve5b8WTBRMUGjelwM5+LSD3S3fLMk1HIGXJwxnYB3WC+X8KOcPV5LpNYVs/2JNH2CoPKOrL0AI3uNulTZPEgJkb774KrakzawuWYp9g13fRKB4/501koftm4f78gkytOl6T6lgSf+de3aJ2FAGddxyc8cZ/tYirkbqXgUZsCEwB93ykutLubWqKC75MmUJi38zd/X2zKegKfGrDbJMwSUDMi3NWThlYczGklsRoXw/0IYqpDC3eShbl4K9VPiqPqUfw6DqF/Utr9SyZpR3iWOKwjXJ1z27JeIaiKs04i5OpCshOsrFzbbES8BdFil3F4dsq8MThBnHpy4lNNNgE6jdfjDGjQvFaj0yKKRg2QEqN7ZNtxjcCsLnOnXcrqXM4QvcKwHiNxwgXtmHu71Ujq/NIzRHL9/2iZX6jBAUgZ+emAyizs89SASerz1TNWAUPaPV/oDyDl+VXqo9O4kfUbxdK0QGsyDp1YKo/x8v0Z8KYzVUjcLHfFn1zUHEwBP47+OaVSY2FNwFq7pkq6O+UgPlwxo34GzC2lpsKy/0GiwXNeMy4zl+FWHvh97+beO6Sed+lylXI2uPc3synfqjD3DGmnx8bmwaE16iSPFpENF6P9OJWlP38zGFxYPTf8Tsvrn2CgA4uDsBiVw2LPj26XWlQpL5LdQoyFtri4DezeeO7VgI7jkXDSePVjfVHRrje2OUl2k3I51TML0Fuqkqfkz4paIK9AY+PaEqfg6Bz0ToDHhiRrDfd4ocn6en0tVWa3/QKRybjDtEAM4gAAWuOhSxKV2nlqclb/ER2MfaWIKr3X56lKbcxMwq/KY2HcqiDyfYQd0+eJtJvcPfFTeptH0CWY7ubn8wlX7LKIw/InNiRUXbJO70Fb8z9TWH/6jT9S+1cXDpXb0icCkDds5VgV+0/+terJz/XtQi+/u5z5O3hvzeeIJbq+TUyRqv18BqxzJiaIVzPRTbiMz6Az6uuiodTpkGy/3YBpkJEl8AaDJf5YAs5SJzM0uBl+uicuqryAjO78RksDpbjXwTVgrL0tEBmFWKUyETwT8EJo7wmPzD788IHqn3Om5ia5gTtoll68MoFLkiA7TFRuOpTOhSK4R16zlhJF5JS3u+u5kiqtcx+aiOrDs9OWuZW14+aAW+euRtmNCaoRJ2kyVCtyQGQwmypwdgi+zdARvPGEPKs1pIRIRttDZGIzbmjdVuTp2aO6wjBFIhCOoFJgzMzYPBDHSSF+asJQjPOeFozqfaH9bh6qcQ6qaP3jM3FLJDQeFRohJQh4GVC9/G+4hMPTVU35eZvF9NvYZF3CLbOisjreohozq01lSeiPv5bn8VgAYgCXEob4p/urtlvMqPlACtCkClBrwp2r9bxUzufjY02R7EuD3yws4HfcTBEKXqkvqfgM86VIlxneQ6dmnr4rydpVi54ycVTy8TqHZZ1r8F2YrBDqWAuPXVrRofxuUpFTxO+n6Dl/ub03E6/XKgKrEK4N91QjifU3nwKFtNGhMNe2FNkZNxUTrkBpciGbP1J2kUgR6l9BizNXa9cDuaWwqeahkqvE21/TN/I9e8b1uSAW4/VVYQh9YPjndXPOsQS5IyZhXio0l1rL+R7unFAI6EZ2TpCDkljkSpXSxUwvTC4RjAF29PUei9sWwlagSMjH4YdHdf8tdpk2InyYZVmsKa6lwXYX58xz6xWbNDa996LXApEijPVjD4tLR3ioOjYdUneO6sbn5BGCNCUAtPqFgpjxmsOedfm5VU97Dyu0ZDIDNqAIYLH/CHTarzgLmMsi1IGgDq2tGxhEhfEWm4Yb/MKAu2SMc+eRmOEP173TRXwEd0QXQI2F6ZIf/yvFyeK0GmaT1jpaNPygZxwEENr03kG/w57OR3PMxsrhVjVNVo8P3zQUD5t5eDO+BUGDZeJ9ZQqHBasV8iwTge5C71NkK0rQOcuORtfQwR/G6zFkWWw1y45YSE/emYdBVKPp7rbSZCFA6gsdBL5IkWBAdl/H7eNB5UPAAk7dFLaPXFi1UbgkTNc24OSUjVkD8rl6XxteLREFVnQ1pSc8dkOwx7kP7qr6JO7tYx8UFSwQYnOJEl0v7CG4vkN6c9+zArVMolK6Bv8Di4j0jkL6nNOL84K+7cuUb3p72r5gn3cRLCF+JtRM0jbvilexMfJpczoUni2KIwih50QdYTOAnxubdf5JSkkezpwnb6II0zficcoIsxLzUXClTz2SDqOlkZEVingkOLKjLSaxaPymabQUSXBjueaamwsTuFQc0q6QuCNo4XAor1IYM62nNP13y/R+2T1PqmRHxZcGZXPH082JyXFkgjWezDoMwtKI0HhPLeJj3V31V5TL8dRSEzpXIb2ccVj1rAcJUOeUxnA1LPiKTeJovVdyEKZLuEEIo1WKf8E/4qqCzINUVaQLwLRP5qbFNe/Q/GNhbfXeZN3bwhUxtuPX5dOs5iEo3MwxqZogM30SAyS5X5eLKwavsbMorTJkudkcSA40qzhsrpGhRFLr4kU/n8167sbCVCeJSIRXin8vcRrlkJH2luqjDhMN4lLCnySBFtG3+YwIwg4iVEEZ8sWDvJee3OCLl84x+2Ewqmf9aD945EpdQc/DtQBOyZSUMAksC0KfaV5TtYbLdZ6r+2DJpuiegYKcnUR8z8w7Et4cyHclS/4Xi4zkH1RoQoGe2HEZXJFhsYdlPGY2tT2ajBPBGDMhKhaUX9eDfyh87tj7xY0UNiZUpaumWgcN1tT9swOr4F8I4lo/7YV/0OqxHDAuPyH6G6xWg+vTDjJXef4T5ABlzWCcaGPQ7AHEzZZTbI3UubkX/jX+owKbZ0K99A3kGSbr8yrNAI5jYOVBAKryTaBFhtjb9E2M/ETC3VFdJvSj1ESi4HOqNKddUVwuL/NKv0smC3iop3qT7kb8qC0CLqyInOq9ikMeQorcTfuoCR+G9nVRPd4lG0Q0KeEai82+gOybW7GZEVLgBWqwvQAKFU2gnF85PyQkloF+KtHfGY/BxOZ+P6Z+xZQCeVu7viTOAXlmVQFZyOMD+2Kx7wDkF1CGcbk3N1IzQjjwZB3eounZs6qUu1F7wV641jgI0BJ4OQQldZePIY6Un/oPHI7S6yzs1MazShmoVvZPrcJy9wF+PQ7xHrrTBWwtsb/pqn9CxMLg6e5yQ0etwOSdVDx1UAnBM/BJZjQjwqLHWXsUx0yhKUt9dyxwk6RwNAalyDJY/ZPMyHbYDWzE4ntJ0N3fEDOS97nfG32j4nYIf1Lgnf8HUtZCWgt7u7FvjZ9NEpFllEc236AZoEE5nbjIzgLgazkCvhWPdQQreLlB2+yfJ4s2VPwuBhd1nzAHasu/lzJZUnXvGkNLYB5At/JW+Sk5SwPM0mTumJj9sFHE2uo/DdvZlnCtv0wxkUqaET/K80WGE0RFY0i3miCBlY3YcYY83Q6VXWHywqbjRvsfEE1gGbrfVvtEalcr4IXWhfE52Rmk3HyIBOKc3L5bzARlVYhzNiRMZobpueOXT6Ws3DnJePi9GD2DWnXUFuP9alHBe1pz2eecQNokNLAYDNSNVEyPGJIN80eJvzQRm3ohufCqXpcV8KW9/cgFkoLJlNCJwXjWwFu9Zw70xQgF9Jkbj7EmLO17KTF27Oo4Va6Sebyt5028ifOSe/LarJrmHXyT0yokOVR2YrsZ69QnZAKvAW/SzXDnfx88eQYgnAzc+0PW8WwD0YsyVWhNapU/+aGwWptiG7+JzKtyypc2C9phc9KX+c3VKdY72QqWEyS5X/FG2oYvzcGn/8SAbMzZj0VPGrO/LuBAWGAbf1YGtrRQicuz4MJlrqvmdilWHsov+59eTzh3su9rgjzRQCKjESwrfRdbqhJSoC77pGZJuC3GqOKmijiNamhgf0+O5lSGfFelLtKp9WyVONwlvtLJPIuDO04Ijd3Ob7CX8NmpG23rR2XqbTAnZgEewGKiHKNRK32+TghmnlXRvJGx3343MiCbavJewsiCpfaccWOict47+B+3YeBfUBWrmHtMONKScg5p0a4Qwr14hhGQSnyPmWxZIdskDMXlpwqj81rvXFIbpUeyb1XO2eelBbasQep5B2CWBBVOL9qFcKI3YoQsdFZMVIEra72MveuOXPefkcSA+GsnqUMXWwaEGNIwAQpGIfsyIRHfxJKAsOeHLQAP6MuDzL7iiSIFy/DUmoO7S+pCKtBlKl5ifXtBhuiSBXMpTZe9Lko+gphLsIvH8Ky4yo31eOMsjvA7OqagJfBLSno0kU1QwrlOD2ZJLFbxwRbsmoJKbHh76YBzge/rhglRSDQecPjvZJd6XYHQ3rggfTbTdlDT7f4ZL1jdLqJf8+kqzeFkzWGh1nNEmhS4GYOuCSZYbWUsIBRbcO8oo6PBvwPsboNGEnKTKwIEcx6xGJ40NSv8cL90meLhoMy4j0Fgh8ERo9/SNq9gxOZ+FZlmcMm2Ut9OFEidieHfxYjZHh8DGJtcfaiQmXK0Cdy0ntMZqreUorh+lyh9piS5lKEyobRookqySEs9dazPYIOj+VdLSS+vGj1QIoPGnGSN8mUoXtdwfoDgCdl5iZhQeb9j7kw0kjF2iorVWlQvh0GF9XkNsgRpRpfE4balaZ2zbPX7qcQwHn5Z3E/OTpbYgvghTLtJZI5tJWHh9SErU2bcT+nSrW/Y+lm8+2M6bibQCmLS8RF3VMd0ihr3lbPbB8b/87lYMHB/ERsSiQVPBSHn9qu/rH/j10r0ElGLy8CEfxX9pHIvHoRTzk2+ie3Uogyr32YXySJfYywTqrniv9w4WLkf8ih0Vq3T9kY7RTyCdg5HxTULV4HcroinPNZGXL3jhblIYyTfIo2YZlQ3Od2L8Vtbrkh6op+G3Zoxm6qYJzKfcw4qe2ZCpG37UJAqrSiinNdYK1HxpdKhPFcJxrrqr0WtJj+V9ATN0lgHE29FfjWF7X7KkgL2GB2aps5eZb7z3hk/lkzKr0tnM/qQsF6Mn/lf2v/3zWtnlcZOWaOzq1uNdK1GBBVtEgouwKP9fRE8KiO3lyG2XSYXc9f5aX+i5q0hQAyCrLMaKORdKZNj6An849veH7NomcqsOMUNkyke9t+Wh51OOISphF171+pWPnrTLIRB8NKQDtlyKXwNy6T/svYSEBkgaPJAUVSUILPITC/eAXUlVzI4MZxX7XOSzDTATj3JwhGVTXStcZWMVEUCqT36prSR1Opp1U4dP/V95xrD2ZGmI4MH8h9anQUkRVfs/hgSThRG7kg3jCGH1F8beqPFbEs6hs7m4ucpoPYnMswOZWDyC+Xq8TaINO8iv21Z3w0Oxc1a2FS1bdblmDT1vmUeJd/LwPvsnY3JkfHNj0iQgu1ZS6VEJd/xuW4LvqqM4MCXP8c+7ao6JxHidooKN5asCaPnb3JIdh/LMC1y8pOqetlV4pzry3cWSfVsYp/jsjsaPt8J8BYh/Z2+r3UJExE+KkuRf0p61zl+zAeJQ/wVW+mU2iub9mbg+9SihTAzJH8VOj1raI0y3YIIuToSWIQYaJ2k3Og7WzxCvw4dW4b0uNprJ2hKnZkw+vaE1reoMt+dNNzP5ooaZFZWd5Btfnv+1ll5MXjen45ahlEW1FFeKrE5hWLuQ03m17xGrIoFJDkGIauDwltQYNELMRjdwKLHYFhCum63wrK3TbIceIfo7+AASA2yXj9RAmtwvvzuFcj6V3WVNNWywiwJGiuE+AM75PazlU/GVGCrQQOwtxuhcxBhDDaqWf2SK15LBtFdHzO+5eJin+CZMh5a6t7tEIp6W2B0pJT8WUiTJChfJvxGGnMRkl8VGw31biuZMsv2+0Ig5qz1gpTEdrf513DCmOo1wa3wf8Ye6kSxVvMKCdlsh2UTgnEk1Gnn2Xthq/mpgD8NJVnSJJS4Wc/CRJGL18ZobU28kAqdTkMwzM3MNHUEbR6VQqBIRy7UGKcj+YvTb4BjUYObzA7MIbohu7djLbyS46HxfWQWJZw9VexB83feiQ+v/2nsHObpAo66ibjez8ZadLRSs1VS2J0DmxX+k0MUdJQLItO41f0h2jGCCxhbnQ4f50hjeWzgpRa1cjiOvKd7ZObQdQLYqMiuDecFHGD16obWMgCnmKDWpAkAa5kmyVn8aBhNC0ZzORKtL3gcH2A/9gcmoDXBkLpK4jdoEQM89FOB3F/X1wurCnk02bd18jTqHYzM5jO68SibVkV2kIisRXhzBBLihp3RAwCQBH5jf9YScg+sok8YGXeG18oSc2t3kTl/nVPO33vUDQAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",oil:10000},
@@ -25,12 +25,74 @@ const seed={settings:{currency:"PLN",tax:{vat:"no",method:"ryczalt",ryczaltRate:
  {id:"c1",modelKey:"toyota-prius-3",year:2013,plate:"WA 1234A",vin:"",tenant:"Иван",status:"active",mileage:245620,oilInterval:10000,lastOil:240000,weeklyRent:700,insurance:addDays(today(),90),inspection:addDays(today(),180),history:[{date:today(),value:245620}]},
  {id:"c2",modelKey:"skoda-octavia",year:2020,plate:"WZ 5678K",vin:"",tenant:"Александр",status:"active",mileage:178900,oilInterval:15000,lastOil:165000,weeklyRent:800,insurance:addDays(today(),18),inspection:addDays(today(),40),history:[{date:today(),value:178900}]}
 ],repairs:[],payments:[],expenses:[],documents:[]};
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed),selectedCarId=null;
+function isFleetDatabase(value){
+ return value&&typeof value==="object"&&Array.isArray(value.cars)&&Array.isArray(value.repairs)&&Array.isArray(value.payments)&&Array.isArray(value.expenses)&&Array.isArray(value.documents)
+}
+function readJsonStorage(key){
+ try{
+  const raw=localStorage.getItem(key);
+  return raw?JSON.parse(raw):null
+ }catch{return null}
+}
+function findLegacyDatabase(){
+ const preferred=[
+  "fleetpilot.v3.9","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
+  "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
+  "fleetpilot.v1"
+ ];
+ for(const key of preferred){
+  const value=readJsonStorage(key);
+  if(isFleetDatabase(value))return{key,value}
+ }
+ for(let i=0;i<localStorage.length;i++){
+  const key=localStorage.key(i);
+  if(!key||key===DATA_KEY||!key.startsWith("fleetpilot."))continue;
+  const value=readJsonStorage(key);
+  if(isFleetDatabase(value))return{key,value}
+ }
+ return null
+}
+function loadDatabase(){
+ const current=readJsonStorage(DATA_KEY);
+ if(isFleetDatabase(current))return current;
+ const legacy=findLegacyDatabase();
+ if(legacy){
+  try{
+   localStorage.setItem(DATA_KEY,JSON.stringify(legacy.value));
+   localStorage.setItem(META_KEY,JSON.stringify({lastSaved:new Date().toISOString(),migratedFrom:legacy.key}))
+  }catch{}
+  return legacy.value
+ }
+ return structuredClone(seed)
+}
+let db=loadDatabase(),selectedCarId=null;
+db.settings=db.settings||structuredClone(seed.settings);
+db.cars=db.cars||[];
+db.repairs=db.repairs||[];
+db.payments=db.payments||[];
+db.expenses=db.expenses||[];
+db.documents=db.documents||[];
 db.cars.forEach(c=>{
  if(c.inFleet===undefined)c.inFleet=true;
  if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3";
 });
-const save=()=>localStorage.setItem(KEY,JSON.stringify(db)),car=id=>db.cars.find(x=>x.id===id),model=c=>MODELS[c.modelKey]||MODELS["toyota-prius-3"];
+function save(){
+ try{
+  const savedAt=new Date().toISOString();
+  localStorage.setItem(DATA_KEY,JSON.stringify(db));
+  localStorage.setItem(META_KEY,JSON.stringify({lastSaved:savedAt,version:"3.8"}));
+  scheduleAutoBackup(savedAt);
+  return true
+ }catch(error){
+  console.error("FleetPilot save error",error);
+  toast(error?.name==="QuotaExceededError"
+   ?"Недостаточно памяти браузера. Скачайте резервную копию и уменьшите фотографии."
+   :"Не удалось сохранить данные");
+  return false
+ }
+}
+const car=id=>db.cars.find(x=>x.id===id),model=c=>MODELS[c.modelKey]||MODELS["toyota-prius-3"];
 const money=v=>new Intl.NumberFormat("pl-PL",{style:"currency",currency:db.settings.currency||"PLN",maximumFractionDigits:2}).format(Number(v||0));
 const km=v=>new Intl.NumberFormat("ru-RU").format(Math.round(v||0))+" км",date=d=>d?new Date(d+"T12:00:00").toLocaleDateString("ru-RU"):"—";
 const days=d=>d?Math.ceil((new Date(d+"T12:00:00")-new Date(today()+"T12:00:00"))/86400000):9999,oil=c=>c.lastOil+c.oilInterval-c.mileage;
@@ -40,11 +102,166 @@ function opts(selected=""){return fleetCars().map(c=>`<option value="${c.id}" ${
 function statusText(s){return {active:"На линии",repair:"В ремонте",free:"Свободен"}[s]||s}
 function paymentStatus(p){const rest=Math.max(0,p.expected-p.received);return rest===0?"paid":p.received>0?"partial":"unpaid"}
 function paymentStatusText(s){return {paid:"Оплачено",partial:"Частично",unpaid:"Не оплачено"}[s]}
-function showPage(id){$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id==="carPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics()}
+function showPage(id){$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id==="carPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
 
+
+const BACKUP_DB_NAME="FleetPilotBackups";
+const BACKUP_STORE="snapshots";
+let backupTimer=null;
+function openBackupDatabase(){
+ return new Promise((resolve,reject)=>{
+  if(!("indexedDB" in window))return reject(new Error("IndexedDB недоступна"));
+  const request=indexedDB.open(BACKUP_DB_NAME,1);
+  request.onupgradeneeded=()=>{
+   const database=request.result;
+   if(!database.objectStoreNames.contains(BACKUP_STORE))database.createObjectStore(BACKUP_STORE,{keyPath:"id"})
+  };
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error||new Error("Не удалось открыть автокопии"))
+ })
+}
+async function writeAutoBackup(savedAt=new Date().toISOString()){
+ try{
+  const database=await openBackupDatabase();
+  await new Promise((resolve,reject)=>{
+   const tx=database.transaction(BACKUP_STORE,"readwrite");
+   tx.objectStore(BACKUP_STORE).put({
+    id:"latest",
+    savedAt,
+    version:"3.8",
+    data:structuredClone(db)
+   });
+   tx.oncomplete=()=>resolve();
+   tx.onerror=()=>reject(tx.error)
+  });
+  database.close();
+  if($("#dataBackupStatus"))renderDataPage()
+ }catch(error){
+  console.warn("Auto backup failed",error)
+ }
+}
+function scheduleAutoBackup(savedAt){
+ clearTimeout(backupTimer);
+ backupTimer=setTimeout(()=>writeAutoBackup(savedAt),250)
+}
+async function readAutoBackup(){
+ const database=await openBackupDatabase();
+ const result=await new Promise((resolve,reject)=>{
+  const tx=database.transaction(BACKUP_STORE,"readonly");
+  const request=tx.objectStore(BACKUP_STORE).get("latest");
+  request.onsuccess=()=>resolve(request.result||null);
+  request.onerror=()=>reject(request.error)
+ });
+ database.close();
+ return result
+}
+function databaseStats(){
+ return{
+  cars:db.cars.length,
+  records:db.cars.length+db.repairs.length+db.payments.length+db.expenses.length+db.documents.length
+ }
+}
+function backupPayload(){
+ return{
+  application:"FleetPilot",
+  formatVersion:1,
+  appVersion:"3.8",
+  exportedAt:new Date().toISOString(),
+  data:structuredClone(db)
+ }
+}
+function downloadBackup(){
+ const payload=backupPayload();
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download=`FleetPilot_backup_${today()}.json`;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ toast("Резервная копия скачана")
+}
+function validateImportedBackup(parsed){
+ const candidate=parsed?.application==="FleetPilot"&&parsed?.data?parsed.data:parsed;
+ if(!isFleetDatabase(candidate))throw new Error("Это не резервная копия FleetPilot");
+ return candidate
+}
+async function importBackupFile(file){
+ if(!file)return;
+ if(file.size>35*1024*1024)throw new Error("Файл слишком большой");
+ const parsed=JSON.parse(await file.text());
+ const imported=validateImportedBackup(parsed);
+ if(!confirm(`Восстановить ${imported.cars.length} автомобилей? Текущие данные будут заменены.`))return;
+ db=structuredClone(imported);
+ db.settings=db.settings||structuredClone(seed.settings);
+ db.cars.forEach(c=>{
+  if(c.inFleet===undefined)c.inFleet=true;
+  if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3"
+ });
+ save();
+ await writeAutoBackup();
+ showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
+ toast("Данные восстановлены")
+}
+async function restoreLatestAutoBackup(){
+ try{
+  const snapshot=await readAutoBackup();
+  if(!snapshot?.data)throw new Error("Автокопия не найдена");
+  if(!confirm(`Восстановить автокопию от ${new Date(snapshot.savedAt).toLocaleString("ru-RU")}?`))return;
+  db=structuredClone(snapshot.data);
+  save();
+  showPage("fleetPage");
+  toast("Автокопия восстановлена")
+ }catch(error){
+  toast(error.message||"Не удалось восстановить автокопию")
+ }
+}
+async function renderDataPage(){
+ const stats=databaseStats();
+ $("#dataCarsCount").textContent=stats.cars;
+ $("#dataRecordsCount").textContent=stats.records;
+ const meta=readJsonStorage(META_KEY);
+ $("#dataLastSaved").textContent=meta?.lastSaved
+  ?new Date(meta.lastSaved).toLocaleString("ru-RU",{dateStyle:"short",timeStyle:"short"})
+  :"—";
+ try{
+  const backup=await readAutoBackup();
+  $("#dataBackupStatus").textContent=backup?.savedAt
+   ?new Date(backup.savedAt).toLocaleString("ru-RU",{dateStyle:"short",timeStyle:"short"})
+   :"Не создана";
+  $("#restoreAutoBackup").disabled=!backup
+ }catch{
+  $("#dataBackupStatus").textContent="Недоступна";
+  $("#restoreAutoBackup").disabled=true
+ }
+}
+
+function analyticsSelectedPeriod(){
+ const mode=$("#analyticsPeriod")?.value||"year";
+ if(mode==="selectedMonth"){
+  if(!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
+  return`month:${$("#analyticsMonth").value}`
+ }
+ return mode
+}
+function syncAnalyticsPeriodControls(){
+ const selected=$("#analyticsPeriod").value==="selectedMonth";
+ $("#analyticsMonth").disabled=!selected;
+ $("#analyticsMonth").classList.toggle("disabled-control",!selected)
+}
 function renderAnalytics(){
- const period=$("#analyticsPeriod")?.value||"year";
+ if(!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
+ syncAnalyticsPeriodControls();
+ const period=analyticsSelectedPeriod();
+ const title=period.startsWith("month:")
+  ?monthLabel(period.slice(6))
+  :period==="year"
+    ?`текущий ${new Date().getFullYear()} год`
+    :"за всё время";
+ $("#analyticsPeriodTitle").textContent=title;
  const rows=fleetCars().map(c=>({c,data:financialData(period,c.id)})).sort((a,b)=>b.data.finalProfit-a.data.finalProfit);
  const all=financialData(period),avg=rows.length?rows.reduce((s,x)=>s+x.data.finalProfit,0)/rows.length:0;
  $("#analyticsSummary").innerHTML=[
@@ -69,19 +286,10 @@ function renderAnalytics(){
 }
 
 function renderFleet(){
- if(!$("#fleetMonth").value)$("#fleetMonth").value=today().slice(0,7);
- const selectedMonth=selectedFleetMonth(),period=`month:${selectedMonth}`,monthText=monthLabel(selectedMonth);
- $("#fleetMonthTitle").textContent=`Результат за ${monthText}`;
+ const period="month",monthText="текущий месяц";
  const q=$("#fleetSearch").value.toLowerCase(),f=$("#fleetFilter").value;
  const list=fleetCars().filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant}`.toLowerCase();return hay.includes(q)&&(f==="all"||(f==="attention"?attention(c):c.status===f))});
  const debt=db.payments.reduce((s,p)=>s+Math.max(0,p.expected-p.received),0);
- const monthly=financialData(period);
- $("#fleetMonthSummary").innerHTML=[
-  ["Получено за аренду",money(monthly.grossRevenue),"good"],
-  ["Ремонты и расходы",money(monthly.grossCosts),monthly.grossCosts?"danger":""],
-  ["Налоги и взносы",money(monthly.vatDue+monthly.pit+monthly.contributions),""],
-  ["Чистая прибыль",money(monthly.finalProfit),monthly.finalProfit>=0?"good":"danger"]
- ].map(x=>`<div class="summary-card ${x[2]}"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetSummary").innerHTML=[["Всего",fleetCars().length],["На линии",fleetCars().filter(c=>c.status==="active").length],["В ремонте",fleetCars().filter(c=>c.status==="repair").length],["Требуют внимания",fleetCars().filter(attention).length],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
@@ -100,7 +308,7 @@ function renderFleet(){
   <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
  </div>
  <div class="hero-profit ${monthProfit<0?"negative":""}">
-  <small>Чистая прибыль · ${monthText}</small>
+  <small>Прибыль за текущий месяц</small>
   <strong>${money(monthProfit)}</strong>
  </div>
 </div>
@@ -109,8 +317,6 @@ function renderFleet(){
 </div>
 <div class="car-body"><div class="metrics no-photo-metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div><div class="metric ${ins<=30?"warn":""}"><small>Страховка</small><strong>${ins<0?"Просрочена":ins+" дн."}</strong></div><div class="metric ${insp<0?"bad":insp<=30?"warn":""}"><small>Техосмотр</small><strong>${insp<0?"Просрочен":insp+" дн."}</strong></div><div class="metric"><small>Аренда / нед.</small><strong>${money(c.weeklyRent)}</strong></div><div class="metric"><small>Последняя оплата</small><strong>${last?money(last.received):"—"}</strong></div>
 
-<div class="metric"><small>Аренда за ${monthText}</small><strong>${money(monthData.grossRevenue)}</strong></div>
-<div class="metric ${monthData.grossCosts>0?"warn":""}"><small>Расходы за ${monthText}</small><strong>${money(monthData.grossCosts)}</strong></div>
 <div class="metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Следующее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"—"}</strong></div></div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article>`}).join("")||`<div class="card">Автомобили не найдены</div>`;
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${r.status}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
@@ -118,9 +324,6 @@ function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCom
 function taxSettings(){
  db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:0,deductVatCosts:true};
  return db.settings.tax
-}
-function selectedFleetMonth(){
- return $("#fleetMonth")?.value||today().slice(0,7)
 }
 function monthLabel(value){
  const [year,month]=value.split("-").map(Number);
@@ -280,9 +483,9 @@ function openCar(id){selectedCarId=id;const c=car(id),m=model(c),payments=db.pay
  </div>
  <div class="detail-summary-profit">
   <small>Прибыль за месяц</small>
-  <strong>${money(financialData(`month:${selectedFleetMonth()}`,c.id).finalProfit)}</strong>
+  <strong>${money(financialData("month",c.id).finalProfit)}</strong>
  </div>
-</div><div class="detail-grid"><div><div class="card"><h3>Пробег и обслуживание</h3><div class="metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric"><small>До масла</small><strong>${km(Math.max(0,oil(c)))}</strong></div><div class="metric"><small>Страховка</small><strong>${date(c.insurance)}</strong></div><div class="metric"><small>Техосмотр</small><strong>${date(c.inspection)}</strong></div></div><button class="btn full" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn full" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div><div class="card" style="margin-top:12px"><h3>Ремонты</h3>${rep.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет записей"}</div></div><div><div class="card"><h3>Аренда</h3><p>Ставка: <strong>${money(c.weeklyRent)} / нед.</strong></p><p>Получено: <strong>${money(received)}</strong></p><p>Долг: <strong>${money(debt)}</strong></p><p>Прибыль за выбранный месяц после ремонтов и налогов: <strong>${money(financialData(`month:${selectedFleetMonth()}`,c.id).finalProfit)}</strong></p><p>Прибыль за год: <strong>${money(financialData("year",c.id).finalProfit)}</strong></p><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card" style="margin-top:12px"><h3>Страховка в рассрочку</h3>${db.documents.filter(d=>d.carId===c.id&&d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div><div class="card" style="margin-top:12px"><h3>Плановые расходы</h3>${exp.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div><div class="card" style="margin-top:12px"><button class="btn full" onclick="openCarDialog('${c.id}')">Редактировать авто</button><button class="btn danger full" onclick="deleteCar('${c.id}')">Удалить авто</button></div></div></div>`}
+</div><div class="detail-grid"><div><div class="card"><h3>Пробег и обслуживание</h3><div class="metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric"><small>До масла</small><strong>${km(Math.max(0,oil(c)))}</strong></div><div class="metric"><small>Страховка</small><strong>${date(c.insurance)}</strong></div><div class="metric"><small>Техосмотр</small><strong>${date(c.inspection)}</strong></div></div><button class="btn full" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn full" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div><div class="card" style="margin-top:12px"><h3>Ремонты</h3>${rep.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет записей"}</div></div><div><div class="card"><h3>Аренда</h3><p>Ставка: <strong>${money(c.weeklyRent)} / нед.</strong></p><p>Получено: <strong>${money(received)}</strong></p><p>Долг: <strong>${money(debt)}</strong></p><p>Прибыль за текущий месяц после ремонтов и налогов: <strong>${money(financialData("month",c.id).finalProfit)}</strong></p><p>Прибыль за год: <strong>${money(financialData("year",c.id).finalProfit)}</strong></p><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card" style="margin-top:12px"><h3>Страховка в рассрочку</h3>${db.documents.filter(d=>d.carId===c.id&&d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div><div class="card" style="margin-top:12px"><h3>Плановые расходы</h3>${exp.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div><div class="card" style="margin-top:12px"><button class="btn full" onclick="openCarDialog('${c.id}')">Редактировать авто</button><button class="btn danger full" onclick="deleteCar('${c.id}')">Удалить авто</button></div></div></div>`}
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){return Object.entries(MODELS).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.brand} ${m.model} (${m.years})</option>`).join("")}
 
@@ -338,11 +541,10 @@ $("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||
 $("#paymentForm").onsubmit=e=>{e.preventDefault();const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),from:$("#paymentFrom").value,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):db.payments.push(obj);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
 $("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim()};old?Object.assign(old,obj):db.expenses.push(obj);save();$("#expenseDialog").close();renderExpenses();toast("Расход сохранён")};
 $("#documentForm").onsubmit=e=>{e.preventDefault();const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),note:$("#documentNote").value.trim()};old?Object.assign(old,obj):db.documents.push(obj);save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")};
-$$(".bottom-nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));$$("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).close());$("#headerAdd").onclick=()=>openCarDialog();$("#addRepair").onclick=()=>openRepairDialog();$("#addPayment").onclick=()=>openPaymentDialog();$("#addExpense").onclick=()=>openExpenseDialog();$("#addDocument").onclick=()=>openDocumentDialog();$("#backToFleet").onclick=()=>showPage("fleetPage");$("#fleetSearch").oninput=renderFleet;$("#fleetFilter").onchange=renderFleet;$("#calendarRange").onchange=renderCalendar;$("#analyticsPeriod").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none")}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
+$$(".bottom-nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));$$("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).close());$("#headerAdd").onclick=()=>openCarDialog();$("#addRepair").onclick=()=>openRepairDialog();$("#addPayment").onclick=()=>openPaymentDialog();$("#addExpense").onclick=()=>openExpenseDialog();$("#addDocument").onclick=()=>openDocumentDialog();$("#backToFleet").onclick=()=>showPage("fleetPage");$("#fleetSearch").oninput=renderFleet;$("#fleetFilter").onchange=renderFleet;$("#calendarRange").onchange=renderCalendar;$("#analyticsPeriod").onchange=renderAnalytics;$("#analyticsMonth").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none")}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
 $("#profitPeriod").onchange=renderProfitability;
 $("#taxMethod").onchange=syncTaxMethodFields;
 $("#taxVat").onchange=syncTaxMethodFields;
-$("#fleetMonth").onchange=renderFleet;
 
 $("#saveTaxSettings").onclick=()=>{
  const tax=taxSettings();
@@ -378,5 +580,26 @@ $("#removeCarPhoto").onclick=()=>{
  $("#carPhotoFile").value="";
  renderCarPhotoPreview();
  toast("Фотография удалена")
+};
+
+$("#exportBackup").onclick=downloadBackup;
+$("#importBackup").onchange=async e=>{
+ const file=e.target.files?.[0];
+ try{
+  await importBackupFile(file)
+ }catch(error){
+  toast(error.message||"Не удалось импортировать файл")
+ }finally{
+  e.target.value=""
+ }
+};
+$("#restoreAutoBackup").onclick=restoreLatestAutoBackup;
+$("#eraseAllData").onclick=()=>{
+ if(!confirm("Удалить все автомобили и записи на этом устройстве?"))return;
+ if(!confirm("Это действие нельзя отменить без резервной копии. Продолжить?"))return;
+ db=structuredClone(seed);
+ save();
+ showPage("fleetPage");
+ toast("Все данные удалены")
 };
 showPage("fleetPage");
