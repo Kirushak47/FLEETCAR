@@ -380,3 +380,195 @@ dialog{border:0;border-radius:22px;width:min(700px,calc(100% - 24px));max-height
   .premium-metrics .metric{min-height:62px}
   .detail-hero{aspect-ratio:4/3}
 }
+
+/* V3.5 — no vehicle photos */
+.car-card.no-photo-card{
+  border-radius:24px;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid rgba(203,213,225,.85);
+  box-shadow:0 16px 40px rgba(15,23,42,.09);
+}
+.no-photo-hero{
+  position:relative;
+  min-height:220px;
+  padding:16px;
+  overflow:hidden;
+  color:#fff;
+  background:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.18),transparent 30%),
+    linear-gradient(135deg,#1e3a8a,#2563eb);
+}
+.no-photo-hero.repair{
+  background:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.16),transparent 30%),
+    linear-gradient(135deg,#075985,#0284c7);
+}
+.no-photo-hero.free{
+  background:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.14),transparent 30%),
+    linear-gradient(135deg,#475569,#64748b);
+}
+.no-photo-hero.attention{
+  background:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.16),transparent 30%),
+    linear-gradient(135deg,#991b1b,#dc2626);
+}
+.hero-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  position:relative;
+  z-index:2;
+}
+.no-photo-hero .status{
+  position:static;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.24);
+  backdrop-filter:blur(8px);
+}
+.no-photo-hero .model-year{
+  background:rgba(255,255,255,.16);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.22);
+}
+.vehicle-symbol{
+  position:absolute;
+  right:18px;
+  top:54px;
+  font-size:82px;
+  line-height:1;
+  opacity:.18;
+  filter:drop-shadow(0 10px 16px rgba(15,23,42,.2));
+  transform:rotate(-4deg);
+}
+.hero-title{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:70px;
+  z-index:2;
+}
+.hero-title h3{
+  margin:0;
+  font-size:26px;
+  line-height:1.1;
+  letter-spacing:-.02em;
+}
+.hero-title p{
+  margin:6px 0 0;
+  color:rgba(255,255,255,.82);
+  font-size:14px;
+}
+.hero-profit{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:15px;
+  z-index:2;
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.22);
+}
+.hero-profit small{
+  color:rgba(255,255,255,.78);
+  font-weight:800;
+}
+.hero-profit strong{
+  font-size:24px;
+  color:#dcfce7;
+}
+.hero-profit.negative strong{
+  color:#fee2e2;
+}
+.no-photo-heading{
+  padding:13px 16px 4px;
+}
+.section-label{
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.no-photo-card .car-body{
+  padding:10px 16px 16px;
+}
+.no-photo-metrics{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.no-photo-metrics .metric{
+  min-height:70px;
+  border:1px solid #e8eef5;
+  border-radius:14px;
+  background:linear-gradient(180deg,#fcfdff,#f6f9fc);
+}
+.no-photo-metrics .metric small{
+  font-size:11px;
+  font-weight:800;
+}
+.no-photo-metrics .metric strong{
+  display:block;
+  margin-top:5px;
+  font-size:15px;
+}
+.detail-summary{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:20px;
+  padding:24px;
+  margin-bottom:16px;
+  color:#fff;
+  border-radius:24px;
+  background:linear-gradient(135deg,#1e3a8a,#2563eb);
+  box-shadow:0 16px 40px rgba(15,23,42,.12);
+}
+.detail-summary.repair{background:linear-gradient(135deg,#075985,#0284c7)}
+.detail-summary.free{background:linear-gradient(135deg,#475569,#64748b)}
+.detail-summary.attention{background:linear-gradient(135deg,#991b1b,#dc2626)}
+.detail-summary .status{
+  position:static;
+  display:inline-flex;
+  margin-bottom:12px;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.24);
+}
+.detail-summary h2{
+  margin:0;
+  font-size:30px;
+}
+.detail-summary p{
+  margin:6px 0 0;
+  color:rgba(255,255,255,.82);
+}
+.detail-summary-profit{
+  text-align:right;
+}
+.detail-summary-profit small{
+  display:block;
+  color:rgba(255,255,255,.78);
+  margin-bottom:4px;
+}
+.detail-summary-profit strong{
+  font-size:28px;
+  color:#dcfce7;
+}
+.car-image,.premium-image,.detail-hero{display:none!important}
+@media(max-width:520px){
+  .no-photo-hero{min-height:205px}
+  .vehicle-symbol{font-size:70px;top:58px}
+  .hero-title h3{font-size:23px}
+  .hero-profit strong{font-size:21px}
+  .detail-summary{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .detail-summary-profit{text-align:left}
+}
