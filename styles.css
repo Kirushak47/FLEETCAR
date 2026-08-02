@@ -572,3 +572,114 @@ dialog{border:0;border-radius:22px;width:min(700px,calc(100% - 24px));max-height
   }
   .detail-summary-profit{text-align:left}
 }
+
+/* V3.6 — custom vehicle photos */
+.car-photo-editor{
+  margin-top:12px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#f8fafc;
+}
+.car-photo-preview{
+  min-height:190px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  overflow:hidden;
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+  background:#fff;
+  color:var(--muted);
+}
+.car-photo-preview span{font-size:38px}
+.car-photo-preview img{
+  width:100%;
+  height:230px;
+  display:block;
+  object-fit:cover;
+  object-position:center;
+}
+.photo-controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.photo-upload-btn{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.photo-help{
+  margin:9px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.4;
+}
+#removeCarPhoto:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.no-photo-hero.has-custom-photo{
+  background:#0f172a;
+}
+.custom-car-photo{
+  position:absolute;
+  z-index:0;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+.custom-photo-shade{
+  display:none;
+}
+.no-photo-hero.has-custom-photo .custom-photo-shade{
+  display:block;
+  position:absolute;
+  z-index:1;
+  inset:0;
+  background:
+    linear-gradient(180deg,rgba(15,23,42,.18),rgba(15,23,42,.08) 36%,rgba(15,23,42,.86) 100%);
+}
+.no-photo-hero.has-custom-photo .hero-top,
+.no-photo-hero.has-custom-photo .hero-title,
+.no-photo-hero.has-custom-photo .hero-profit{
+  z-index:2;
+}
+.detail-summary.has-custom-photo{
+  position:relative;
+  min-height:300px;
+  align-items:flex-end;
+  overflow:hidden;
+  background:#0f172a;
+}
+.detail-custom-photo{
+  position:absolute;
+  z-index:0;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+.detail-photo-shade{
+  position:absolute;
+  z-index:1;
+  inset:0;
+  background:linear-gradient(180deg,rgba(15,23,42,.12),rgba(15,23,42,.86));
+}
+.detail-content,
+.detail-summary-profit{
+  position:relative;
+  z-index:2;
+}
+@media(max-width:520px){
+  .photo-controls{grid-template-columns:1fr}
+  .car-photo-preview img{height:190px}
+  .detail-summary.has-custom-photo{min-height:250px}
+}

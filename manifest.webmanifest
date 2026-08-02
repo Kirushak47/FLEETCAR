@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V3.5",
+  "name": "FleetPilot V3.6",
   "short_name": "FleetPilot",
-  "start_url": "./?v=350",
+  "start_url": "./?v=360",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
