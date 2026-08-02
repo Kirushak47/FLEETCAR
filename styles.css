@@ -25,3 +25,67 @@ dialog{border:0;border-radius:22px;width:min(700px,calc(100% - 24px));max-height
 .toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);opacity:0;background:#0f172a;color:#fff;padding:10px 14px;border-radius:999px;transition:.2s;z-index:100}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:850px){.summary-grid,.summary-grid.compact{grid-template-columns:repeat(2,1fr)}.fleet-grid,.document-grid,.detail-grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}}
 @media(max-width:520px){.grid2{grid-template-columns:1fr}.car-image{height:165px}.bottom-nav span{font-size:9px}}
+
+/* V2.1 — автомобиль полностью виден на главной */
+.car-image{
+  height:220px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:linear-gradient(145deg,#f8fafc,#e2e8f0);
+  padding:8px 12px 0;
+}
+.car-image::after{display:none}
+.car-image img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
+  object-position:center;
+  filter:drop-shadow(0 12px 15px rgba(15,23,42,.18));
+}
+.car-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 14px 0;
+}
+.car-heading h3{margin:0;font-size:20px}
+.car-heading p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.model-year{
+  flex:none;
+  padding:6px 8px;
+  border-radius:10px;
+  background:#f1f5f9;
+  color:#475569;
+  font-size:11px;
+  font-weight:900;
+}
+.status{top:12px;left:12px}
+.detail-hero{
+  height:auto;
+  min-height:300px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+  background:linear-gradient(145deg,#f8fafc,#e2e8f0);
+}
+.detail-hero::after{
+  background:linear-gradient(transparent 55%,rgba(15,23,42,.82));
+}
+.detail-hero img{
+  width:100%;
+  height:300px;
+  display:block;
+  object-fit:contain;
+  filter:drop-shadow(0 16px 18px rgba(15,23,42,.20));
+}
+@media(max-width:520px){
+  .car-image{height:190px}
+  .detail-hero img{height:230px}
+}
