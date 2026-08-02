@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V2.3</title>
-  <link rel="manifest" href="manifest.webmanifest?v=230">
-  <link rel="stylesheet" href="styles.css?v=230">
+  <title>FleetPilot V3</title>
+  <link rel="manifest" href="manifest.webmanifest?v=300">
+  <link rel="stylesheet" href="styles.css?v=300">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V2.3</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V3</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -92,7 +92,43 @@
       <div id="documentList" class="document-grid"></div>
     </section>
 
-    <section id="carPage" class="page">
+    
+    <section id="calendarPage" class="page">
+      <div class="section-head">
+        <div><span class="eyebrow">Все ближайшие события</span><h2>Календарь автопарка</h2></div>
+        <select id="calendarRange">
+          <option value="30">30 дней</option>
+          <option value="90" selected>90 дней</option>
+          <option value="365">Год</option>
+        </select>
+      </div>
+      <div id="calendarSummary" class="summary-grid compact"></div>
+      <div id="calendarList" class="calendar-list"></div>
+    </section>
+
+    <section id="analyticsPage" class="page">
+      <div class="section-head">
+        <div><span class="eyebrow">Результаты автопарка</span><h2>Аналитика</h2></div>
+        <select id="analyticsPeriod">
+          <option value="month">Текущий месяц</option>
+          <option value="year" selected>Текущий год</option>
+          <option value="all">За всё время</option>
+        </select>
+      </div>
+      <div id="analyticsSummary" class="summary-grid compact"></div>
+      <div class="card">
+        <h3>Прибыль по автомобилям</h3>
+        <div id="analyticsCars" class="analytics-cars"></div>
+      </div>
+      <div class="analytics-grid">
+        <div class="card"><h3>Самая прибыльная машина</h3><div id="bestCar"></div></div>
+        <div class="card"><h3>Самый дорогой ремонт</h3><div id="largestRepair"></div></div>
+        <div class="card"><h3>Самая дорогая страховка</h3><div id="largestInsurance"></div></div>
+        <div class="card"><h3>Средняя прибыль машины</h3><div id="averageProfit"></div></div>
+      </div>
+    </section>
+
+<section id="carPage" class="page">
       <button id="backToFleet" class="back">← Назад</button>
       <div id="carDetail"></div>
     </section>
@@ -104,6 +140,8 @@
     <button data-page="paymentsPage">💳<span>Аренда</span></button>
     <button data-page="expensesPage">📅<span>Расходы</span></button>
     <button data-page="documentsPage">📄<span>Документы</span></button>
+    <button data-page="calendarPage">🗓️<span>Календарь</span></button>
+    <button data-page="analyticsPage">📊<span>Аналитика</span></button>
   </nav>
 </div>
 
@@ -202,5 +240,5 @@
 </form></dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=230"></script>
+<script src="app.js?v=300"></script>
 </body></html>
