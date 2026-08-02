@@ -1,0 +1,1 @@
+const C="fleetpilot-v1";const A=["./","./index.html","./styles.css?v=100","./app.js?v=100","./manifest.webmanifest?v=100"];self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));

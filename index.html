@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>FleetPilot</title>
+  <link rel="manifest" href="manifest.webmanifest?v=100">
+  <link rel="stylesheet" href="styles.css?v=100">
+</head>
+<body>
+<div class="app">
+<header><div><small>FleetPilot</small><h1 id="pageTitle">Автопарк</h1></div><button id="addCar">＋</button></header>
+<main>
+<section id="fleetPage" class="page active">
+  <div id="summary" class="summary"></div>
+  <div class="toolbar"><input id="search" placeholder="Поиск по номеру, модели или водителю"><select id="filter"><option value="all">Все</option><option value="active">На линии</option><option value="repair">В ремонте</option><option value="free">Свободен</option><option value="attention">Требует внимания</option></select></div>
+  <div id="fleet" class="grid"></div>
+</section>
+<section id="repairsPage" class="page">
+  <div class="section-head"><h2>Планы ремонтов</h2><button id="addRepair" class="primary">+ Добавить</button></div>
+  <div id="repairs"></div>
+</section>
+<section id="financePage" class="page">
+  <div class="section-head"><h2>Финансы</h2><button id="addFinance" class="primary">+ Добавить</button></div>
+  <div id="financeSummary" class="summary"></div><div id="finance"></div>
+</section>
+<section id="documentsPage" class="page"><h2>Страховка и техосмотр</h2><div id="documents" class="grid"></div></section>
+<section id="settingsPage" class="page">
+  <div class="card"><h2>Настройки</h2><label>Название автопарка<input id="fleetName"></label><label>Валюта<select id="currency"><option>PLN</option><option>EUR</option><option>USD</option><option>UAH</option></select></label><button id="saveSettings" class="primary full">Сохранить</button></div>
+  <div class="card"><button id="exportData" class="full">Экспортировать данные</button><label class="file full">Импортировать данные<input id="importData" type="file" accept="application/json" hidden></label><button id="resetData" class="danger full">Сбросить всё</button></div>
+</section>
+<section id="carPage" class="page"><button id="back">← Назад</button><div id="carDetail"></div></section>
+</main>
+<nav>
+<button data-page="fleetPage" class="active">🚘<span>Автопарк</span></button>
+<button data-page="repairsPage">🔧<span>Ремонты</span></button>
+<button data-page="financePage">💰<span>Финансы</span></button>
+<button data-page="documentsPage">📄<span>Документы</span></button>
+<button data-page="settingsPage">⚙️<span>Настройки</span></button>
+</nav>
+</div>
+
+<dialog id="carDialog"><form id="carForm" class="modal">
+<h2>Автомобиль</h2><input id="carId" type="hidden">
+<div class="two"><label>Марка<input id="brand" required></label><label>Модель<input id="model" required></label><label>Год<input id="year" type="number" required></label><label>Госномер<input id="plate" required></label><label>Водитель<input id="driver"></label><label>Статус<select id="status"><option value="active">На линии</option><option value="repair">В ремонте</option><option value="free">Свободен</option></select></label><label>Текущий пробег<input id="mileage" type="number" required></label><label>Интервал масла<input id="oilInterval" type="number" value="10000" required></label><label>Последняя замена масла<input id="lastOil" type="number" required></label><label>Страховка до<input id="insurance" type="date"></label><label>Техосмотр до<input id="inspection" type="date"></label><label>Фото URL<input id="image"></label></div>
+<button class="primary full">Сохранить</button><button type="button" class="full" data-close="carDialog">Отмена</button>
+</form></dialog>
+
+<dialog id="mileageDialog"><form id="mileageForm" class="modal"><h2>Обновить пробег</h2><input id="mileageCarId" type="hidden"><div id="mileageInfo"></div><label>Новый пробег<input id="newMileage" type="number" required></label><label>Дата<input id="mileageDate" type="date" required></label><button class="primary full">Сохранить</button><button type="button" class="full" data-close="mileageDialog">Отмена</button></form></dialog>
+
+<dialog id="repairDialog"><form id="repairForm" class="modal"><h2>План ремонта</h2><label>Автомобиль<select id="repairCar"></select></label><label>Работа<input id="repairTitle" required></label><div class="two"><label>Дата<input id="repairDate" type="date" required></label><label>Пробег<input id="repairMileage" type="number"></label><label>Бюджет<input id="repairBudget" type="number"></label><label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option></select></label></div><label>Комментарий<textarea id="repairNote"></textarea></label><button class="primary full">Сохранить</button><button type="button" class="full" data-close="repairDialog">Отмена</button></form></dialog>
+
+<dialog id="financeDialog"><form id="financeForm" class="modal"><h2>Финансовая запись</h2><label>Автомобиль<select id="financeCar"></select></label><div class="two"><label>Тип<select id="financeType"><option value="income">Доход</option><option value="repair">Ремонт</option><option value="insurance">Страховка</option><option value="service">Обслуживание</option><option value="leasing">Лизинг</option></select></label><label>Сумма<input id="financeAmount" type="number" required></label><label>Дата<input id="financeDate" type="date" required></label><label>Неделя<input id="financeWeek"></label></div><label>Описание<input id="financeNote"></label><button class="primary full">Сохранить</button><button type="button" class="full" data-close="financeDialog">Отмена</button></form></dialog>
+
+<div id="toast"></div>
+<script src="app.js?v=100"></script>
+</body></html>

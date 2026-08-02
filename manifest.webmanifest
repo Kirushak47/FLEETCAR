@@ -1,0 +1,8 @@
+{
+  "name": "FleetPilot",
+  "short_name": "FleetPilot",
+  "start_url": "./?v=100",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0f172a"
+}
