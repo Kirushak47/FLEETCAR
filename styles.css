@@ -1432,3 +1432,219 @@ html[data-theme="dark"] .installment.paid {
 html[data-theme="dark"] .file-viewer iframe {
   background: #11182a !important;
 }
+
+/* FleetPilot V5.5 — animated owner dashboard and living vehicle cards */
+.owner-dashboard{
+ position:relative;
+ overflow:hidden;
+ margin-bottom:14px;
+ padding:22px;
+ border:1px solid rgba(99,102,241,.20);
+ border-radius:28px;
+ background:
+  radial-gradient(circle at 92% 4%,rgba(124,58,237,.20),transparent 30%),
+  radial-gradient(circle at 8% 100%,rgba(37,99,235,.14),transparent 34%),
+  linear-gradient(135deg,rgba(22,28,52,.98),rgba(27,36,67,.96));
+ color:#f8fafc;
+ box-shadow:0 24px 60px rgba(15,23,42,.20);
+}
+.owner-dashboard::before{
+ content:"";
+ position:absolute;
+ inset:-60% auto auto -10%;
+ width:55%;
+ height:180%;
+ background:linear-gradient(100deg,transparent,rgba(255,255,255,.055),transparent);
+ transform:rotate(18deg);
+ animation:dashboardSheen 9s linear infinite;
+ pointer-events:none;
+}
+.owner-dashboard-head{
+ position:relative;
+ z-index:1;
+ display:flex;
+ justify-content:space-between;
+ align-items:flex-start;
+ gap:18px;
+ margin-bottom:17px;
+}
+.owner-dashboard-head h2{margin:4px 0 2px;font-size:29px;letter-spacing:-.035em}
+.owner-dashboard-head p{margin:0;color:#a9b4c8}
+.owner-dashboard-status{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ padding:9px 12px;
+ border:1px solid rgba(255,255,255,.10);
+ border-radius:999px;
+ background:rgba(255,255,255,.07);
+ font-size:12px;
+}
+.owner-dashboard-status span{
+ width:9px;height:9px;border-radius:50%;
+ background:#22c55e;
+ box-shadow:0 0 0 5px rgba(34,197,94,.13);
+}
+.owner-dashboard-status.warning span{background:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.13)}
+.owner-dashboard-status.danger span{background:#ef4444;box-shadow:0 0 0 5px rgba(239,68,68,.13)}
+.owner-dashboard-grid{
+ position:relative;
+ z-index:1;
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:10px;
+}
+.owner-kpi{
+ display:flex;
+ align-items:center;
+ gap:12px;
+ min-height:92px;
+ padding:15px;
+ border:1px solid rgba(255,255,255,.09);
+ border-radius:19px;
+ background:rgba(255,255,255,.055);
+ backdrop-filter:blur(12px);
+ opacity:0;
+ transform:translateY(12px);
+ animation:kpiReveal .55s cubic-bezier(.2,.8,.2,1) forwards;
+ animation-delay:calc(var(--index) * 85ms);
+ transition:transform .22s ease,border-color .22s ease,background .22s ease;
+}
+.owner-kpi:hover{
+ transform:translateY(-3px);
+ border-color:rgba(129,140,248,.42);
+ background:rgba(255,255,255,.08);
+}
+.owner-kpi-icon{
+ display:grid;
+ place-items:center;
+ flex:0 0 42px;
+ height:42px;
+ border-radius:14px;
+ font-size:20px;
+ font-weight:900;
+ background:rgba(99,102,241,.18);
+ color:#c7d2fe;
+}
+.owner-kpi.revenue .owner-kpi-icon,.owner-kpi.profit .owner-kpi-icon{
+ background:rgba(34,197,94,.15);color:#86efac
+}
+.owner-kpi.costs .owner-kpi-icon{background:rgba(245,158,11,.15);color:#fdba74}
+.owner-kpi.expected .owner-kpi-icon{background:rgba(59,130,246,.16);color:#93c5fd}
+.owner-kpi small{display:block;color:#a9b4c8;font-size:10px;font-weight:850}
+.owner-kpi strong{display:block;margin-top:7px;font-size:21px;letter-spacing:-.025em}
+
+/* Smooth page and profile entry */
+.page.page-enter{animation:pageEnter .34s cubic-bezier(.2,.8,.2,1)}
+#carDetail.profile-enter .detail-summary{animation:profileHeroEnter .48s cubic-bezier(.16,1,.3,1)}
+#carDetail.profile-enter .car-detail-tabs{animation:profileTabsEnter .48s .08s both cubic-bezier(.16,1,.3,1)}
+#carDetail.profile-enter .car-tab-content{animation:profileContentEnter .5s .12s both cubic-bezier(.16,1,.3,1)}
+::view-transition-old(root){animation:fadeOut .18s ease}
+::view-transition-new(root){animation:fadeIn .28s ease}
+
+/* Living vehicle cards */
+.animated-car-card{
+ opacity:0;
+ transform:translateY(16px) scale(.985);
+ animation:carCardReveal .58s cubic-bezier(.16,1,.3,1) forwards;
+ animation-delay:calc(var(--card-index) * 70ms);
+ transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease,border-color .25s ease;
+}
+.animated-car-card:hover{
+ transform:translateY(-5px) scale(1.006);
+ box-shadow:0 28px 70px rgba(15,23,42,.17)!important;
+}
+.no-photo-card.health-good{
+ border:1px solid rgba(34,197,94,.35)!important;
+ box-shadow:0 0 0 1px rgba(34,197,94,.06),var(--v5-shadow)!important;
+}
+.no-photo-card.health-good:hover{
+ border-color:rgba(34,197,94,.70)!important;
+ box-shadow:0 0 0 3px rgba(34,197,94,.08),0 28px 70px rgba(15,23,42,.18)!important;
+}
+.no-photo-card.health-warning{
+ animation:carCardReveal .58s cubic-bezier(.16,1,.3,1) forwards,amberBreath 3.4s 1s ease-in-out infinite;
+ animation-delay:calc(var(--card-index) * 70ms),1s;
+}
+.no-photo-card.health-danger{
+ animation:carCardReveal .58s cubic-bezier(.16,1,.3,1) forwards,redBreath 2.4s 1s ease-in-out infinite;
+ animation-delay:calc(var(--card-index) * 70ms),1s;
+}
+.animated-health-tile{
+ opacity:0;
+ transform:translateY(10px);
+ animation:tileReveal .45s cubic-bezier(.2,.8,.2,1) forwards;
+ animation-delay:calc(var(--tile-index) * 65ms);
+ transition:transform .2s ease,box-shadow .2s ease;
+}
+.animated-health-tile:hover{transform:translateY(-3px);box-shadow:0 16px 35px rgba(15,23,42,.12)}
+.deposit-progress i,.animated-progress-fill{transition:width .9s cubic-bezier(.16,1,.3,1)}
+
+/* Subtle moving photo overlay */
+.animated-car-card .custom-photo-shade{
+ transition:opacity .35s ease,background .35s ease;
+}
+.animated-car-card:hover .custom-photo-shade{
+ opacity:.82;
+ background:linear-gradient(180deg,rgba(8,15,35,.05),rgba(8,15,35,.86));
+}
+.animated-car-card .custom-car-photo{
+ transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .35s ease;
+}
+.animated-car-card:hover .custom-car-photo{
+ transform:scale(1.035);
+ filter:saturate(1.06) contrast(1.03);
+}
+
+@keyframes dashboardSheen{
+ 0%{transform:translateX(-140%) rotate(18deg)}
+ 55%,100%{transform:translateX(330%) rotate(18deg)}
+}
+@keyframes kpiReveal{to{opacity:1;transform:none}}
+@keyframes carCardReveal{to{opacity:1;transform:none}}
+@keyframes tileReveal{to{opacity:1;transform:none}}
+@keyframes pageEnter{
+ from{opacity:0;transform:translateY(8px)}
+ to{opacity:1;transform:none}
+}
+@keyframes profileHeroEnter{
+ from{opacity:0;transform:translateY(18px) scale(.985)}
+ to{opacity:1;transform:none}
+}
+@keyframes profileTabsEnter{
+ from{opacity:0;transform:translateY(12px)}
+ to{opacity:1;transform:none}
+}
+@keyframes profileContentEnter{
+ from{opacity:0;transform:translateY(16px)}
+ to{opacity:1;transform:none}
+}
+@keyframes amberBreath{
+ 0%,100%{box-shadow:0 0 0 3px rgba(245,158,11,.07),var(--v5-shadow)}
+ 50%{box-shadow:0 0 0 6px rgba(245,158,11,.12),0 24px 62px rgba(245,158,11,.13)}
+}
+@keyframes redBreath{
+ 0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,.08),var(--v5-shadow)}
+ 50%{box-shadow:0 0 0 7px rgba(239,68,68,.13),0 25px 65px rgba(239,68,68,.17)}
+}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes fadeIn{from{opacity:0}}
+
+@media(max-width:900px){
+ .owner-dashboard-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+ .owner-dashboard{padding:17px;border-radius:23px}
+ .owner-dashboard-head{flex-direction:column}
+ .owner-dashboard-grid{grid-template-columns:1fr}
+ .owner-kpi{min-height:76px}
+ .owner-dashboard-status{align-self:flex-start}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{
+  animation-duration:.01ms!important;
+  animation-iteration-count:1!important;
+  scroll-behavior:auto!important;
+  transition-duration:.01ms!important;
+ }
+}

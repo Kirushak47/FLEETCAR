@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v5.4.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v5.5","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -130,7 +130,9 @@ function preferredTheme(mode){if(mode==="system")return window.matchMedia&&windo
 function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){document.documentElement.dataset.theme=preferredTheme(mode);document.documentElement.dataset.themeMode=mode;$$('.theme-switcher button').forEach(b=>b.classList.toggle('active',b.dataset.themeMode===mode))}
 function setTheme(mode){localStorage.setItem(THEME_KEY,mode);applyTheme(mode)}
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
-function showPage(id){$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
+function showPage(id){
+ const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("fleetPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
@@ -646,6 +648,94 @@ function weekPlanData(){
   expectedBalance:plannedRevenue-totalPlannedCosts
  }
 }
+
+function financialDataForVisibleCars(period){
+ const visible=cityFilteredCars();
+ if(selectedFleetCity==="all")return financialData(period);
+ const rows=visible.map(c=>financialData(period,c.id));
+ return{
+  grossRevenue:rows.reduce((s,x)=>s+Number(x.grossRevenue||0),0),
+  grossCosts:rows.reduce((s,x)=>s+Number(x.grossCosts||0),0),
+  vatDue:rows.reduce((s,x)=>s+Number(x.vatDue||0),0),
+  pit:rows.reduce((s,x)=>s+Number(x.pit||0),0),
+  finalProfit:rows.reduce((s,x)=>s+Number(x.finalProfit||0),0)
+ }
+}
+function actualWeekRevenue(){
+ const from=startOfWeek(),to=endOfWeek();
+ const allowed=new Set(cityFilteredCars().map(c=>c.id));
+ return db.payments.filter(p=>{
+  if(!allowed.has(p.carId))return false;
+  const value=p.date||p.to;
+  if(!value)return false;
+  const d=new Date(value+"T12:00:00");
+  return d>=from&&d<=to
+ }).reduce((s,p)=>s+Number(p.received||0),0)
+}
+function ownerDashboardData(){
+ const month=financialDataForVisibleCars("month");
+ const plan=weekPlanData();
+ const weekRevenue=actualWeekRevenue();
+ return{
+  monthProfit:month.finalProfit,
+  weekRevenue,
+  plannedCosts:plan.totalPlannedCosts,
+  expectedProfit:plan.expectedBalance,
+  status:plan.expectedBalance<0?"danger":plan.totalPlannedCosts>plan.plannedRevenue*.55?"warning":"good"
+ }
+}
+function animateNumber(el,target,formatter="money"){
+ if(!el)return;
+ const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+ const duration=reduce?0:850;
+ const start=performance.now();
+ const from=0;
+ const render=value=>{
+  if(formatter==="integer")el.textContent=Math.round(value).toLocaleString("ru-RU");
+  else el.textContent=money(value)
+ };
+ if(!duration){render(target);return}
+ const tick=now=>{
+  const progress=Math.min(1,(now-start)/duration);
+  const eased=1-Math.pow(1-progress,3);
+  render(from+(target-from)*eased);
+  if(progress<1)requestAnimationFrame(tick)
+ };
+ requestAnimationFrame(tick)
+}
+function animateDashboard(){
+ $$("[data-animate-value]").forEach((el,index)=>{
+  const target=Number(el.dataset.animateValue||0);
+  const formatter=el.dataset.animateFormat||"money";
+  setTimeout(()=>animateNumber(el,target,formatter),index*70)
+ });
+}
+function animateProgressBars(root=document){
+ root.querySelectorAll(".deposit-progress i,.animated-progress-fill").forEach((el,index)=>{
+  const target=el.style.width||el.dataset.width||"0%";
+  el.style.width="0%";
+  setTimeout(()=>requestAnimationFrame(()=>{el.style.width=target}),80+index*70)
+ })
+}
+function renderOwnerDashboard(){
+ const data=ownerDashboardData();
+ const cards=[
+  ["Чистая прибыль месяца",data.monthProfit,"profit","wallet"],
+  ["Доход текущей недели",data.weekRevenue,"revenue","trend"],
+  ["Плановые расходы недели",data.plannedCosts,"costs","expense"],
+  ["Ожидаемый результат недели",data.expectedProfit,"expected","check"]
+ ];
+ $("#ownerDashboardContext").textContent=`${cityLabel()} · данные обновлены автоматически`;
+ $("#ownerDashboardGrid").innerHTML=cards.map((x,index)=>`<article class="owner-kpi ${x[2]}" style="--index:${index}">
+   <div class="owner-kpi-icon ${x[3]}">${x[3]==="wallet"?"₽":x[3]==="trend"?"↗":x[3]==="expense"?"↓":"✓"}</div>
+   <div><small>${x[0]}</small><strong data-animate-value="${x[1]}" data-animate-format="money">${money(0)}</strong></div>
+  </article>`).join("");
+ const status=$("#ownerDashboardStatus");
+ status.className=`owner-dashboard-status ${data.status}`;
+ status.innerHTML=`<span></span><strong>${data.status==="danger"?"Расходы выше плана":data.status==="warning"?"Нужен контроль":"Финансы стабильны"}</strong>`;
+ requestAnimationFrame(animateDashboard)
+}
+
 function renderWeekPlan(){
  const data=weekPlanData();
  $("#weekPlanTitle").textContent=`Неделя ${isoWeek(data.from)} · ${cityLabel()}`;
@@ -688,6 +778,7 @@ function cityLabel(){
 
 function renderFleet(){
  refreshCityControls();
+ renderOwnerDashboard();
  renderWeekPlan();
  const period="month",monthText="текущий месяц";
  const q=$("#fleetSearch").value.toLowerCase(),f=$("#fleetFilter").value;
@@ -700,12 +791,12 @@ function renderFleet(){
   ["🔴 Критические",healthRows.filter(x=>x.h.level==="danger").length,"danger"],
   ["🛢️ ТО скоро",healthRows.filter(x=>x.h.oilLeft>0&&x.h.oilLeft<=1500).length,"warning"],
   ["🛡️ Страховка",healthRows.filter(x=>x.h.insuranceDays>=0&&x.h.insuranceDays<=30).length,"warning"]
- ].map(x=>`<button class="health-tile ${x[2]}" onclick="showPage('attentionPage')"><span>${x[0]}</span><strong>${x[1]}</strong></button>`).join("");
+ ].map((x,index)=>`<button class="health-tile ${x[2]} animated-health-tile" style="--tile-index:${index}" onclick="showPage('attentionPage')"><span>${x[0]}</span><strong data-animate-value="${x[1]}" data-animate-format="integer">${x[1]}</strong></button>`).join("");
  $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>c.status==="active").length],["В ремонте",cityFilteredCars().filter(c=>c.status==="repair").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0];const health=healthDetails(c);return `<article class="car-card no-photo-card health-${health.level}">
+ const nextEvent=events[0];const health=healthDetails(c);return `<article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
 <div class="no-photo-hero ${att?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
@@ -731,7 +822,8 @@ function renderFleet(){
 <div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
 <div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>
-</div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article>`}).join("")||`<div class="card">Автомобили не найдены</div>`;
+</div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
+ requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
 
@@ -889,7 +981,23 @@ function renderCalendar(){
 
 function renderDocuments(){const expired=db.documents.filter(x=>x.expiry&&days(x.expiry)<0).length,soon=db.documents.filter(x=>x.expiry&&days(x.expiry)>=0&&days(x.expiry)<=30).length;$("#documentSummary").innerHTML=[["Всего",db.documents.length],["Истекают ≤30 дней",soon],["Просрочены",expired],["Без срока",db.documents.filter(x=>!x.expiry).length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#documentList").innerHTML=db.documents.map(d=>{const c=car(d.carId),left=d.expiry?days(d.expiry):null;return `<article class="doc-card"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${d.fileId?`<div class="document-file-actions"><button class="btn" onclick="openDocumentAttachment('${d.fileId}','${d.title.replaceAll("'","\'")}')">Открыть файл</button><button class="btn" onclick="downloadDocumentAttachment('${d.fileId}')">Скачать</button></div>`:""}${d.type==="insurance"&&d.paymentMode==="installments"?(()=>{const s=installmentSummary(d);return `<div class="insurance-summary"><span>Оплачено ${money(s.paid)}</span><span>Осталось ${money(s.left)}</span><span>${s.next?`Следующая: ${date(s.next.due)}`:"Все раты оплачены"}</span></div><div class="installment-list">${(d.installments||[]).map(x=>`<button class="installment ${x.paid?"paid":""}" onclick="toggleInsuranceInstallment('${d.id}','${x.id}')"><span>Рата ${x.number}</span><strong>${money(x.amount)}</strong><small>${date(x.due)} · ${x.paid?"Оплачена":"Ожидает"}</small></button>`).join("")}</div>`})():""}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Документов нет</div>`}
 function carTabButton(carId,key,label,activeTab){return `<button class="${activeTab===key?"active":""}" onclick="openCar('${carId}','${key}')">${label}</button>`}
+
 function openCar(id,activeTab="info"){
+ const run=()=>{
+  renderCarProfile(id,activeTab);
+  requestAnimationFrame(()=>{
+   $("#carDetail")?.classList.remove("profile-enter");
+   void $("#carDetail")?.offsetWidth;
+   $("#carDetail")?.classList.add("profile-enter");
+   animateProgressBars($("#carPage"))
+  })
+ };
+ if(document.startViewTransition){
+  document.startViewTransition(run)
+ }else run()
+}
+
+function renderCarProfile(id,activeTab="info"){
  selectedCarId=id;
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
  const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
