@@ -1333,3 +1333,102 @@ html[data-theme="dark"] .week-plan-card.warning,html[data-theme="dark"] .health-
 html[data-theme="dark"] .week-plan-card.danger,html[data-theme="dark"] .health-icon.danger{
  background:rgba(153,27,27,.28)!important;color:#fecaca!important
 }
+
+/* V5.4.1 — final dark-theme specificity fix */
+
+/* Vehicle metric blocks had older high-specificity white gradients. */
+html[data-theme="dark"] .no-photo-card .car-body .no-photo-metrics .metric,
+html[data-theme="dark"] .no-photo-card .car-body .compact-car-metrics .metric,
+html[data-theme="dark"] .no-photo-card .car-body .next-event-metric,
+html[data-theme="dark"] .car-card .metrics .metric,
+html[data-theme="dark"] .premium-metrics .metric {
+  background: #1b243b !important;
+  background-image: none !important;
+  color: #f8fafc !important;
+  border-color: rgba(255,255,255,.10) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025) !important;
+}
+
+html[data-theme="dark"] .no-photo-card .metric small,
+html[data-theme="dark"] .no-photo-card .next-event-metric small,
+html[data-theme="dark"] .premium-metrics .metric small {
+  color: #98a2b3 !important;
+}
+
+html[data-theme="dark"] .no-photo-card .metric strong,
+html[data-theme="dark"] .no-photo-card .next-event-metric strong,
+html[data-theme="dark"] .premium-metrics .metric strong {
+  color: #f8fafc !important;
+}
+
+/* Top attention tiles were still inheriting light warning backgrounds. */
+html[data-theme="dark"] .health-summary .health-tile {
+  background: #182137 !important;
+  background-image: none !important;
+  color: #f8fafc !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+
+html[data-theme="dark"] .health-summary .health-tile small,
+html[data-theme="dark"] .health-summary .health-tile span {
+  color: #a9b4c8 !important;
+}
+
+html[data-theme="dark"] .health-summary .health-tile.warning {
+  background: rgba(146,64,14,.30) !important;
+  border-color: #f59e0b !important;
+  color: #fed7aa !important;
+  box-shadow: 0 0 0 2px rgba(245,158,11,.08), 0 12px 28px rgba(0,0,0,.18) !important;
+}
+
+html[data-theme="dark"] .health-summary .health-tile.danger {
+  background: rgba(153,27,27,.34) !important;
+  border-color: #f87171 !important;
+  color: #fecaca !important;
+  box-shadow: 0 0 0 2px rgba(248,113,113,.09), 0 12px 28px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .health-summary .health-tile.warning strong,
+html[data-theme="dark"] .health-summary .health-tile.danger strong,
+html[data-theme="dark"] .health-summary .health-tile.warning span,
+html[data-theme="dark"] .health-summary .health-tile.danger span {
+  color: inherit !important;
+}
+
+/* Keep warning metrics readable instead of reverting to light mode. */
+html[data-theme="dark"] .metric.warn,
+html[data-theme="dark"] .next-event-metric.warn {
+  background: rgba(146,64,14,.28) !important;
+  color: #fed7aa !important;
+  border-color: #f59e0b !important;
+}
+
+html[data-theme="dark"] .metric.bad,
+html[data-theme="dark"] .next-event-metric.bad {
+  background: rgba(153,27,27,.32) !important;
+  color: #fecaca !important;
+  border-color: #f87171 !important;
+}
+
+/* Miscellaneous remaining light surfaces. */
+html[data-theme="dark"] .profitability-row,
+html[data-theme="dark"] .insurance-summary span,
+html[data-theme="dark"] .installment,
+html[data-theme="dark"] .damage-card,
+html[data-theme="dark"] .damage-album,
+html[data-theme="dark"] .car-photo-preview,
+html[data-theme="dark"] .persistence-note code {
+  background: #1b243b !important;
+  color: #f8fafc !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+
+html[data-theme="dark"] .installment.paid {
+  background: rgba(22,101,52,.24) !important;
+  color: #bbf7d0 !important;
+  border-color: #22c55e !important;
+}
+
+html[data-theme="dark"] .file-viewer iframe {
+  background: #11182a !important;
+}
