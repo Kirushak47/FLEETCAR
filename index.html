@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V4.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=410">
-  <link rel="stylesheet" href="styles.css?v=410">
+  <title>FleetPilot V4.2</title>
+  <link rel="manifest" href="manifest.webmanifest?v=420">
+  <link rel="stylesheet" href="styles.css?v=420">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V4.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V4.2</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -355,16 +355,37 @@
 
 
 <dialog id="damageDialog"><form id="damageForm" class="modal">
-  <div class="modal-head"><h2>Повреждение автомобиля</h2><button type="button" data-close="damageDialog">✕</button></div>
+  <div class="modal-head"><h2 id="damageDialogTitle">Повреждение автомобиля</h2><button type="button" data-close="damageDialog">✕</button></div>
+  <input id="damageId" type="hidden">
   <input id="damageCarId" type="hidden">
-  <label>Название повреждения<input id="damageTitle" required></label>
-  <label>Дата<input id="damageDate" type="date" required></label>
+  <div class="grid2">
+    <label>Название повреждения<input id="damageTitle" required></label>
+    <label>Дата<input id="damageDate" type="date" required></label>
+    <label>Этап<select id="damageStage"><option value="before">До ремонта</option><option value="during">В процессе</option><option value="after">После ремонта</option></select></label>
+    <label>Место<select id="damageLocation"><option value="front">Передняя часть</option><option value="rear">Задняя часть</option><option value="left">Левая сторона</option><option value="right">Правая сторона</option><option value="interior">Салон</option><option value="other">Другое</option></select></label>
+  </div>
   <label>Описание<textarea id="damageNote"></textarea></label>
-  <label>Фотография<input id="damagePhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
-  <div id="damagePhotoPreview" class="damage-preview"></div>
+  <label>Фотографии<input id="damagePhotoFile" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+  <p class="photo-help">Можно выбрать несколько фотографий одного повреждения.</p>
+  <div id="damagePhotoPreview" class="damage-preview-grid"></div>
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
+<dialog id="damageViewer" class="damage-viewer-dialog">
+  <div class="damage-viewer">
+    <button id="closeDamageViewer" class="viewer-close" type="button">✕</button>
+    <button id="damagePrev" class="viewer-nav viewer-prev" type="button">‹</button>
+    <div class="viewer-stage">
+      <img id="damageViewerImage" alt="Фотография повреждения">
+    </div>
+    <button id="damageNext" class="viewer-nav viewer-next" type="button">›</button>
+    <div class="viewer-footer">
+      <div><strong id="damageViewerTitle"></strong><small id="damageViewerMeta"></small></div>
+      <span id="damageViewerCounter"></span>
+    </div>
+  </div>
+</dialog>
+
 <div id="toast" class="toast"></div>
-<script src="app.js?v=410"></script>
+<script src="app.js?v=420"></script>
 </body></html>

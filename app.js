@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v4.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v4.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -75,6 +75,11 @@ db.expenses=db.expenses||[];
 db.documents=db.documents||[];
 db.timeline=db.timeline||[];
 db.damages=db.damages||[];
+db.damages.forEach(d=>{
+ if(!Array.isArray(d.photos))d.photos=d.photo?[d.photo]:[];
+ if(!d.stage)d.stage="before";
+ if(!d.location)d.location="other";
+});
 db.cars.forEach(c=>{
  if(c.inFleet===undefined)c.inFleet=true;
  if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3";
@@ -264,10 +269,39 @@ function renderTimeline(carId){
  const rows=(db.timeline||[]).filter(x=>x.carId===carId).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,50);
  return rows.length?rows.map(x=>`<div class="timeline-row"><div class="timeline-icon">${timelineIcon(x.type)}</div><div><strong>${x.title}</strong><small>${date(x.date)}${x.note?` · ${x.note}`:""}</small></div><b class="${x.amount<0?"negative":x.amount>0?"positive":""}">${x.amount?money(x.amount):""}</b></div>`).join(""):"История пока пуста"
 }
+function damageStageText(value){return{before:"До ремонта",during:"В процессе",after:"После ремонта"}[value]||value}
+function damageLocationText(value){return{front:"Передняя часть",rear:"Задняя часть",left:"Левая сторона",right:"Правая сторона",interior:"Салон",other:"Другое"}[value]||value}
 function renderDamageGallery(carId){
  const rows=(db.damages||[]).filter(x=>x.carId===carId).sort((a,b)=>b.date.localeCompare(a.date));
- return rows.length?rows.map(x=>`<article class="damage-card">${x.photo?`<img src="${x.photo}" alt="${x.title}">`:""}<div><strong>${x.title}</strong><small>${date(x.date)}</small><p>${x.note||""}</p><button class="btn danger" onclick="deleteDamage('${x.id}')">Удалить</button></div></article>`).join(""):"Фотографий повреждений нет"
+ return rows.length?rows.map(x=>{
+  const photos=x.photos||[];
+  const cover=photos[0];
+  return `<article class="damage-album">
+   <button class="damage-cover" onclick="openDamageViewer('${x.id}',0)">${cover?`<img src="${cover}" alt="${x.title}">`:`<span>📷</span>`}<b>${photos.length} фото</b></button>
+   <div class="damage-album-body"><div class="damage-album-head"><div><strong>${x.title}</strong><small>${date(x.date)} · ${damageStageText(x.stage)} · ${damageLocationText(x.location)}</small></div></div><p>${x.note||""}</p>
+   <div class="damage-thumbnails">${photos.slice(0,5).map((p,i)=>`<button onclick="openDamageViewer('${x.id}',${i})"><img src="${p}" alt="Фото ${i+1}"></button>`).join("")}${photos.length>5?`<button class="more-photos" onclick="openDamageViewer('${x.id}',5)">+${photos.length-5}</button>`:""}</div>
+   <div class="item-actions"><button class="btn" onclick="editDamage('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteDamage('${x.id}')">Удалить</button></div></div>
+  </article>`
+ }).join(""):"Фотографий повреждений нет"
 }
+let damageViewerState={damageId:null,index:0,scale:1};
+function openDamageViewer(damageId,index=0){
+ const damage=db.damages.find(x=>x.id===damageId);if(!damage?.photos?.length)return;
+ damageViewerState={damageId,index:Math.max(0,Math.min(index,damage.photos.length-1)),scale:1};
+ renderDamageViewer();$("#damageViewer").showModal()
+}
+function renderDamageViewer(){
+ const damage=db.damages.find(x=>x.id===damageViewerState.damageId);if(!damage)return;
+ const photos=damage.photos||[],index=(damageViewerState.index+photos.length)%photos.length;damageViewerState.index=index;
+ const image=$("#damageViewerImage");image.src=photos[index];image.style.transform=`scale(${damageViewerState.scale})`;
+ $("#damageViewerTitle").textContent=damage.title;
+ $("#damageViewerMeta").textContent=`${date(damage.date)} · ${damageStageText(damage.stage)} · ${damageLocationText(damage.location)}`;
+ $("#damageViewerCounter").textContent=`${index+1} / ${photos.length}`;
+ $("#damagePrev").hidden=photos.length<2;$("#damageNext").hidden=photos.length<2
+}
+function moveDamageViewer(step){damageViewerState.index+=step;damageViewerState.scale=1;renderDamageViewer()}
+function zoomDamageViewer(delta){damageViewerState.scale=Math.max(1,Math.min(3,damageViewerState.scale+delta));renderDamageViewer()}
+
 function ownershipData(c){
  const all=financialData("all",c.id);
  const insurance=db.documents.filter(d=>d.carId===c.id&&d.type==="insurance").reduce((s,d)=>s+Number(d.cost||0),0);
@@ -315,12 +349,20 @@ function forecastService(c){
  if(daily<=0)return null;
  return Math.ceil(Math.max(0,oil(c))/daily)
 }
-let pendingDamagePhoto="";
-function openDamageDialog(carId){
- $("#damageCarId").value=carId;$("#damageTitle").value="";$("#damageDate").value=today();$("#damageNote").value="";$("#damagePhotoFile").value="";pendingDamagePhoto="";$("#damagePhotoPreview").innerHTML="";$("#damageDialog").showModal()
+let pendingDamagePhotos=[];
+function renderPendingDamagePhotos(){
+ $("#damagePhotoPreview").innerHTML=pendingDamagePhotos.map((p,i)=>`<div class="pending-damage-photo"><img src="${p}" alt="Фото ${i+1}"><button type="button" onclick="removePendingDamagePhoto(${i})">✕</button></div>`).join("")
 }
+function removePendingDamagePhoto(index){pendingDamagePhotos.splice(index,1);renderPendingDamagePhotos()}
+function openDamageDialog(carId,id=""){
+ const damage=id?db.damages.find(x=>x.id===id):null;
+ $("#damageId").value=damage?.id||"";$("#damageCarId").value=damage?.carId||carId;$("#damageDialogTitle").textContent=damage?"Редактировать повреждение":"Повреждение автомобиля";
+ $("#damageTitle").value=damage?.title||"";$("#damageDate").value=damage?.date||today();$("#damageStage").value=damage?.stage||"before";$("#damageLocation").value=damage?.location||"other";$("#damageNote").value=damage?.note||"";$("#damagePhotoFile").value="";
+ pendingDamagePhotos=[...(damage?.photos||[])];renderPendingDamagePhotos();$("#damageDialog").showModal()
+}
+function editDamage(id){const damage=db.damages.find(x=>x.id===id);if(damage)openDamageDialog(damage.carId,id)}
 function deleteDamage(id){
- if(!confirm("Удалить запись о повреждении?"))return;
+ if(!confirm("Удалить запись о повреждении и все фотографии?"))return;
  db.damages=db.damages.filter(x=>x.id!==id);save();if(selectedCarId)openCar(selectedCarId)
 }
 
@@ -704,7 +746,7 @@ function openRepairDialog(carId="",id=""){if(!requireFleetCar())return;const r=i
 function openPaymentDialog(carId="",id=""){if(!requireFleetCar())return;const p=id?db.payments.find(x=>x.id===id):null,c=car(p?.carId||carId||db.cars[0]?.id);$("#paymentId").value=p?.id||"";$("#paymentCarId").innerHTML=opts(p?.carId||carId);$("#paymentTenant").value=p?.tenant||c?.tenant||"";$("#paymentFrom").value=p?.from||today();$("#paymentTo").value=p?.to||addDays(today(),6);$("#paymentExpected").value=p?.expected??c?.weeklyRent??0;$("#paymentReceived").value=p?.received??c?.weeklyRent??0;$("#paymentDate").value=p?.date||today();$("#paymentWeek").value=p?.week||"";$("#paymentNote").value=p?.note||"";$("#paymentAutoExpected").checked=!p;$("#paymentDialog").showModal();recalculateExpectedPayment()}
 function openExpenseDialog(carId="",id=""){if(!requireFleetCar())return;const x=id?db.expenses.find(v=>v.id===id):null;$("#expenseId").value=x?.id||"";$("#expenseCarId").innerHTML=opts(x?.carId||carId);$("#expenseTitle").value=x?.title||"";$("#expenseCategory").value=x?.category||"repair";$("#expenseDate").value=x?.date||today();$("#expenseAmount").value=x?.amount||"";$("#expenseStatus").value=x?.status||"planned";$("#expenseNote").value=x?.note||"";$("#expenseDialog").showModal()}
 function openDocumentDialog(carId="",id=""){if(!requireFleetCar())return;const d=id?db.documents.find(v=>v.id===id):null;$("#documentId").value=d?.id||"";$("#documentCarId").innerHTML=opts(d?.carId||carId);$("#documentType").value=d?.type||"insurance";$("#documentTitle").value=d?.title||"";$("#documentNumber").value=d?.number||"";$("#documentExpiry").value=d?.expiry||"";$("#documentCost").value=d?.cost||"";$("#documentPaymentMode").value=d?.paymentMode||"full";$("#documentInstallmentCount").value=d?.installmentCount||4;$("#documentFirstInstallment").value=d?.firstInstallment||today();$("#documentInstallmentFrequency").value=d?.installmentFrequency||"monthly";syncInsuranceFields();$("#documentFile").value=d?.file||"";$("#documentNote").value=d?.note||"";$("#documentDialog").showModal()}
-window.openDamageDialog=openDamageDialog;window.deleteDamage=deleteDamage;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openCar=openCar;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
+window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openCar=openCar;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
 window.editRepair=id=>openRepairDialog("",id);window.editPayment=id=>openPaymentDialog("",id);window.editExpense=id=>openExpenseDialog("",id);window.editDocument=id=>openDocumentDialog("",id);
 window.deleteRepair=id=>{if(confirm("Удалить ремонт?")){db.repairs=db.repairs.filter(x=>x.id!==id);save();renderRepairs()}};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=id=>{if(confirm("Удалить документ?")){db.documents=db.documents.filter(x=>x.id!==id);save();renderDocuments()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все его записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);save();showPage("fleetPage")}};
 $("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),weeklyRent:Number($("#carWeeklyRent").value),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
@@ -762,20 +804,26 @@ $("#removeCarPhoto").onclick=()=>{
 
 
 $("#damagePhotoFile").onchange=async e=>{
- const file=e.target.files?.[0];
- if(!file)return;
+ const files=[...(e.target.files||[])];if(!files.length)return;
  try{
-  pendingDamagePhoto=await compressCarPhoto(file);
-  $("#damagePhotoPreview").innerHTML=`<img src="${pendingDamagePhoto}" alt="Предпросмотр">`
- }catch(error){toast(error.message||"Не удалось обработать фото")}
+  const compressed=[];for(const file of files)compressed.push(await compressCarPhoto(file));
+  pendingDamagePhotos.push(...compressed);renderPendingDamagePhotos();toast(`${compressed.length} фото добавлено`)
+ }catch(error){toast(error.message||"Не удалось обработать фото")}finally{e.target.value=""}
 };
 $("#damageForm").onsubmit=e=>{
  e.preventDefault();
- const obj={id:uid(),carId:$("#damageCarId").value,title:$("#damageTitle").value.trim(),date:$("#damageDate").value,note:$("#damageNote").value.trim(),photo:pendingDamagePhoto};
- db.damages.push(obj);
- addTimeline(obj.carId,"damage",obj.title,0,obj.date,obj.note);
+ if(!pendingDamagePhotos.length&&!confirm("Сохранить повреждение без фотографий?"))return;
+ const id=$("#damageId").value||uid(),old=db.damages.find(x=>x.id===id);
+ const obj={id,carId:$("#damageCarId").value,title:$("#damageTitle").value.trim(),date:$("#damageDate").value,stage:$("#damageStage").value,location:$("#damageLocation").value,note:$("#damageNote").value.trim(),photos:[...pendingDamagePhotos]};
+ old?Object.assign(old,obj):db.damages.push(obj);
+ addTimeline(obj.carId,"damage",old?`Обновлено повреждение: ${obj.title}`:obj.title,0,obj.date,obj.note);
  save();$("#damageDialog").close();if(selectedCarId)openCar(selectedCarId);toast("Повреждение сохранено")
 };
+$("#closeDamageViewer").onclick=()=>$("#damageViewer").close();
+$("#damagePrev").onclick=()=>moveDamageViewer(-1);$("#damageNext").onclick=()=>moveDamageViewer(1);
+$("#damageViewerImage").ondblclick=()=>zoomDamageViewer(damageViewerState.scale>1?-2:1);
+$("#damageViewer").onclick=e=>{if(e.target===$("#damageViewer"))$("#damageViewer").close()};
+document.addEventListener("keydown",e=>{if(!$("#damageViewer").open)return;if(e.key==="ArrowLeft")moveDamageViewer(-1);if(e.key==="ArrowRight")moveDamageViewer(1);if(e.key==="Escape")$("#damageViewer").close();if(e.key==="+")zoomDamageViewer(.25);if(e.key==="-")zoomDamageViewer(-.25)});
 
 $("#exportBackup").onclick=downloadBackup;
 $("#importBackup").onchange=async e=>{
