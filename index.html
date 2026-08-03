@@ -4,19 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V3.9</title>
-  <link rel="manifest" href="manifest.webmanifest?v=390">
-  <link rel="stylesheet" href="styles.css?v=390">
+  <title>FleetPilot V4.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=400">
+  <link rel="stylesheet" href="styles.css?v=400">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V3.9</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V4.0</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
   <main>
     <section id="fleetPage" class="page active">
+      <div class="today-hero">
+        <div><span class="eyebrow">Сегодня</span><h2>Состояние автопарка</h2><p>Все важные события в одном месте</p></div>
+        <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
+      </div>
+      <div id="healthSummary" class="health-summary"></div>
       <div id="fleetSummary" class="summary-grid"></div>
       <div class="toolbar card">
         <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору">
@@ -205,6 +210,12 @@
       </div>
     </section>
 
+    <section id="attentionPage" class="page">
+      <div class="section-head"><div><span class="eyebrow">Центр уведомлений</span><h2>Требует внимания</h2></div><button id="backFromAttention" class="btn">← Назад</button></div>
+      <div id="attentionSummary" class="summary-grid compact"></div>
+      <div id="attentionList" class="list"></div>
+    </section>
+
 <section id="carPage" class="page">
       <button id="backToFleet" class="back">← Назад</button>
       <div id="carDetail"></div>
@@ -292,10 +303,13 @@
     <label>Период с<input id="paymentFrom" type="date" required></label>
     <label>Период по<input id="paymentTo" type="date" required></label>
     <label>Ожидалось<input id="paymentExpected" type="number" step="0.01" required></label>
+    <label class="check-label auto-rent-label"><input id="paymentAutoExpected" type="checkbox" checked> Рассчитать автоматически по дням</label>
     <label>Получено<input id="paymentReceived" type="number" step="0.01" required></label>
     <label>Дата поступления<input id="paymentDate" type="date"></label>
     <label>Неделя<input id="paymentWeek"></label>
   </div>
+  <div id="paymentCalculationInfo" class="payment-calculation-info"></div>
+  <div id="paymentDuplicateWarning" class="duplicate-warning" hidden></div>
   <label>Комментарий<input id="paymentNote"></label>
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
@@ -332,5 +346,5 @@
 </form></dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=390"></script>
+<script src="app.js?v=400"></script>
 </body></html>
