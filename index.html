@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V4.4</title>
-  <link rel="manifest" href="manifest.webmanifest?v=440">
-  <link rel="stylesheet" href="styles.css?v=440">
+  <title>FleetPilot V5.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=500">
+  <link rel="stylesheet" href="styles.css?v=500">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V4.4</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V5.0</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -238,7 +238,7 @@
       <div class="section-head">
         <div><span class="eyebrow">Дополнительные разделы</span><h2>Ещё</h2></div>
       </div>
-      <div class="more-grid">
+      <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="more-grid">
         <button class="more-card" onclick="showPage('analyticsPage')">
           <span class="more-icon">📊</span><strong>Аналитика</strong>
           <small>KPI, налоги, прибыль, окупаемость и рекомендации</small>
@@ -267,7 +267,7 @@
     <button data-page="expensesPage">💸<span>Расходы</span></button>
     <button data-page="calendarPage">🗓️<span>Календарь</span></button>
     <button data-page="morePage">•••<span>Ещё</span></button>
-  </nav>
+  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document"><span>📄</span>Документ</button></div>
 </div>
 
 <dialog id="carDialog"><form id="carForm" class="modal">
@@ -417,5 +417,5 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=440"></script>
+<script src="app.js?v=500"></script>
 </body></html>

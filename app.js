@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v4.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v5.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -122,6 +122,11 @@ function documentTypeText(value){
  return{insurance:"Страховка",inspection:"Техосмотр",registration:"Регистрация",leasing:"Лизинг",other:"Другое"}[value]||value
 }
 function paymentStatusText(s){return {paid:"Оплачено",partial:"Частично",unpaid:"Не оплачено"}[s]}
+const THEME_KEY="fleetpilot.theme.v1";
+function preferredTheme(mode){if(mode==="system")return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";return mode||"light"}
+function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){document.documentElement.dataset.theme=preferredTheme(mode);document.documentElement.dataset.themeMode=mode;$$('.theme-switcher button').forEach(b=>b.classList.toggle('active',b.dataset.themeMode===mode))}
+function setTheme(mode){localStorage.setItem(THEME_KEY,mode);applyTheme(mode)}
+function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 function showPage(id){$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage"){}}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
 
@@ -224,7 +229,7 @@ async function importBackupFile(file){
  });
  save();
  await writeAutoBackup();
- showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
+ applyTheme();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
  toast("Данные восстановлены")
 }
 async function restoreLatestAutoBackup(){
@@ -616,14 +621,7 @@ function renderFleet(){
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
 </div>
-<div class="car-body"><div class="car-health-icons">
- ${[
-  {icon:"🛢️",label:health.oilLeft<=0?"Просрочено":health.oilLeft+" км",level:health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"},
-  {icon:"🛡️",label:health.insuranceDays<0?"Просрочено":health.insuranceDays+" дн.",level:health.insuranceDays<0?"danger":health.insuranceDays<=30?"warning":"good"},
-  {icon:"📋",label:health.inspectionDays<0?"Просрочено":health.inspectionDays+" дн.",level:health.inspectionDays<0?"danger":health.inspectionDays<=30?"warning":"good"},
-  {icon:"🔧",label:health.items.filter(x=>x.type==="repair").length||"0",level:health.items.some(x=>x.type==="repair"&&x.level==="danger")?"danger":health.items.some(x=>x.type==="repair")?"warning":"good"}
- ].map(x=>`<div class="health-icon ${x.level}"><span>${x.icon}</span><small>${x.label}</small></div>`).join("")}
- </div><div class="metrics no-photo-metrics compact-car-metrics">
+<div class="car-body"><div class="vehicle-vitals"><div class="vehicle-vital ${health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"}"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"Просрочено":km(health.oilLeft)}</strong></div></div><div class="vehicle-vital ${health.insuranceDays<0?"danger":health.insuranceDays<=30?"warning":"good"}"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"Просрочена":health.insuranceDays+" дн."}</em></div></div><div class="vehicle-vital ${health.inspectionDays<0?"danger":health.inspectionDays<=30?"warning":"good"}"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"Просрочен":health.inspectionDays+" дн."}</em></div></div></div><div class="metrics no-photo-metrics compact-car-metrics">
 <div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
 <div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>
@@ -784,43 +782,19 @@ function renderCalendar(){
 }
 
 function renderDocuments(){const expired=db.documents.filter(x=>x.expiry&&days(x.expiry)<0).length,soon=db.documents.filter(x=>x.expiry&&days(x.expiry)>=0&&days(x.expiry)<=30).length;$("#documentSummary").innerHTML=[["Всего",db.documents.length],["Истекают ≤30 дней",soon],["Просрочены",expired],["Без срока",db.documents.filter(x=>!x.expiry).length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#documentList").innerHTML=db.documents.map(d=>{const c=car(d.carId),left=d.expiry?days(d.expiry):null;return `<article class="doc-card"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${d.type==="insurance"&&d.paymentMode==="installments"?(()=>{const s=installmentSummary(d);return `<div class="insurance-summary"><span>Оплачено ${money(s.paid)}</span><span>Осталось ${money(s.left)}</span><span>${s.next?`Следующая: ${date(s.next.due)}`:"Все раты оплачены"}</span></div><div class="installment-list">${(d.installments||[]).map(x=>`<button class="installment ${x.paid?"paid":""}" onclick="toggleInsuranceInstallment('${d.id}','${x.id}')"><span>Рата ${x.number}</span><strong>${money(x.amount)}</strong><small>${date(x.due)} · ${x.paid?"Оплачена":"Ожидает"}</small></button>`).join("")}</div>`})():""}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Документов нет</div>`}
-function openCar(id){selectedCarId=id;const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id);showPage("carPage");$("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">
- ${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}
- <div class="detail-content">
-  <span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span>
-  <h2>${m.brand} ${m.model}</h2>
-  <p>${c.plate} · ${c.year} · ${c.tenant||"Без арендатора"}</p>
- </div>
- <div class="detail-summary-profit">
-  <small>Прибыль за месяц</small>
-  <strong>${money(financialData("month",c.id).finalProfit)}</strong>
- </div>
-</div><div class="detail-grid"><div><div class="card"><h3>Пробег и обслуживание</h3><div class="metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric"><small>До масла</small><strong>${km(Math.max(0,oil(c)))}</strong></div><div class="metric"><small>Страховка</small><strong>${date(c.insurance)}</strong></div><div class="metric"><small>Техосмотр</small><strong>${date(c.inspection)}</strong></div></div><button class="btn full" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn full" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div><div class="card" style="margin-top:12px"><h3>Ремонты</h3>${rep.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет записей"}</div></div><div><div class="card"><h3>Аренда</h3><p>Ставка: <strong>${money(c.weeklyRent)} / нед.</strong></p><p>Получено: <strong>${money(received)}</strong></p><p>Долг: <strong>${money(debt)}</strong></p><p>Прибыль за текущий месяц после ремонтов и налогов: <strong>${money(financialData("month",c.id).finalProfit)}</strong></p><p>Прибыль за год: <strong>${money(financialData("year",c.id).finalProfit)}</strong></p><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card" style="margin-top:12px"><h3>Страховка в рассрочку</h3>${db.documents.filter(d=>d.carId===c.id&&d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div><div class="card" style="margin-top:12px"><h3>Плановые расходы</h3>${exp.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div><div class="card" style="margin-top:12px">
-  <h3>Себестоимость и окупаемость</h3>
-  ${renderOwnership(c)}
- </div>
- <div class="card" style="margin-top:12px">
-  <h3>Прогноз обслуживания</h3>
-  ${(()=>{
-  const forecast=forecastService(c);
-  if(!forecast)return `<p>Недостаточно корректной истории пробега для прогноза.</p>`;
-  return `<div class="service-forecast">
-    <div><small>Осталось до ТО</small><strong>${km(forecast.remainingKm)}</strong></div>
-    <div><small>Средний пробег в день</small><strong>${km(forecast.averageDailyKm)}</strong></div>
-    <div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div>
-  </div>
-  <p class="forecast-note">${forecast.confidence==="limited"?"Прогноз предварительный: пока мало записей пробега.":"Прогноз рассчитан по медиане последних записей пробега."}</p>`;
-})()}
- </div>
- <div class="card" style="margin-top:12px">
-  <div class="section-head"><h3>Лента событий</h3><button class="btn" onclick="openDamageDialog('${c.id}')">+ Повреждение</button></div>
-  <div class="timeline">${renderTimeline(c.id)}</div>
- </div>
- <div class="card" style="margin-top:12px">
-  <h3>Фотографии повреждений</h3>
-  <div class="damage-gallery">${renderDamageGallery(c.id)}</div>
- </div>
- <div class="card" style="margin-top:12px"><button class="btn full" onclick="openCarDialog('${c.id}')">Редактировать авто</button><button class="btn danger full" onclick="deleteCar('${c.id}')">Удалить авто</button></div></div></div>`}
+function carTabButton(carId,key,label,activeTab){return `<button class="${activeTab===key?"active":""}" onclick="openCar('${carId}','${key}')">${label}</button>`}
+function openCar(id,activeTab="info"){
+ selectedCarId=id;
+ const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
+ const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
+ const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><h3>Плановые расходы</h3>${exp.slice(0,10).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div></div>`;
+ const history=`<div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>`;
+ const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
+ const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
+ const tabContent={info,finance,history,documents,damages}[activeTab]||info;
+ showPage("carPage");
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button></div>`
+}
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){return Object.entries(MODELS).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.brand} ${m.model} (${m.years})</option>`).join("")}
 
@@ -876,6 +850,10 @@ $("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||
 $("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),from:$("#paymentFrom").value,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
 $("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim()};old?Object.assign(old,obj):(db.expenses.push(obj),addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,expenseStatusText(obj.status)));save();$("#expenseDialog").close();renderExpenses();toast("Расход сохранён")};
 $("#documentForm").onsubmit=e=>{e.preventDefault();const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),note:$("#documentNote").value.trim()};old?Object.assign(old,obj):(db.documents.push(obj),addTimeline(obj.carId,"document",obj.title,-Number(obj.cost||0),obj.expiry||today(),documentTypeText(obj.type)));save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")};
+$$(".theme-switcher button").forEach(button=>button.onclick=()=>setTheme(button.dataset.themeMode));
+$("#quickActionButton").onclick=()=>toggleQuickActions();
+$("#quickActionMenu").onclick=e=>{const action=e.target.closest("[data-quick-action]")?.dataset.quickAction;if(!action)return;toggleQuickActions(false);if(action==="car")openCarDialog();if(action==="payment")openPaymentDialog();if(action==="repair")openRepairDialog();if(action==="expense")openExpenseDialog();if(action==="document")openDocumentDialog()};
+document.addEventListener("click",e=>{if(!e.target.closest("#quickActionButton")&&!e.target.closest("#quickActionMenu"))toggleQuickActions(false)});
 $$(".bottom-nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));$$("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).close());$("#headerAdd").onclick=()=>openCarDialog();$("#addRepair").onclick=()=>openRepairDialog();$("#addPayment").onclick=()=>openPaymentDialog();$("#addExpense").onclick=()=>openExpenseDialog();$("#addDocument").onclick=()=>openDocumentDialog();$("#backToFleet").onclick=()=>showPage("fleetPage");$("#fleetSearch").oninput=renderFleet;$("#fleetFilter").onchange=renderFleet;$("#paymentCarId").onchange=recalculateExpectedPayment;
 $("#paymentFrom").onchange=recalculateExpectedPayment;
 $("#paymentTo").onchange=recalculateExpectedPayment;
