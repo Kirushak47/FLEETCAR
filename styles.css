@@ -879,3 +879,158 @@ dialog{border:0;border-radius:22px;width:min(700px,calc(100% - 24px));max-height
 .viewer-close,.viewer-nav{position:absolute;z-index:3;border:0;background:rgba(255,255,255,.12);color:#fff;backdrop-filter:blur(8px)}.viewer-close{right:18px;top:18px;width:44px;height:44px;border-radius:50%;font-size:19px}.viewer-nav{top:50%;transform:translateY(-50%);width:52px;height:72px;border-radius:16px;font-size:44px}.viewer-prev{left:14px}.viewer-next{right:14px}
 .viewer-footer{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 22px;background:rgba(15,23,42,.92)}.viewer-footer small{display:block;margin-top:4px;color:#94a3b8}.viewer-footer span{font-weight:900}
 @media(max-width:650px){.damage-gallery{grid-template-columns:1fr}.damage-cover{height:190px}.damage-preview-grid{grid-template-columns:repeat(2,1fr)}.viewer-stage{padding:60px 8px 15px}.viewer-nav{width:42px;height:58px;font-size:34px;background:rgba(15,23,42,.5)}.viewer-prev{left:5px}.viewer-next{right:5px}.viewer-footer{padding:12px}}
+
+/* FleetPilot V4.3 — reorganized premium UI */
+:root{
+ --bg:#eef3f9;
+ --card:rgba(255,255,255,.92);
+ --text:#101828;
+ --muted:#667085;
+ --line:rgba(148,163,184,.24);
+ --blue:#3659d9;
+ --green:#159455;
+ --red:#d92d20;
+ --yellow:#dc6803;
+ --shadow:0 18px 45px rgba(15,23,42,.08);
+}
+body{
+ background:
+  radial-gradient(circle at 8% -5%,rgba(99,102,241,.13),transparent 30%),
+  radial-gradient(circle at 95% 10%,rgba(14,165,233,.10),transparent 28%),
+  var(--bg);
+}
+.app{max-width:1240px;padding-bottom:112px}
+.topbar{
+ padding:18px 2px 12px;
+ backdrop-filter:blur(18px);
+ background:linear-gradient(rgba(238,243,249,.92) 78%,rgba(238,243,249,0));
+}
+.topbar h1{font-size:25px;letter-spacing:-.025em}
+.round{
+ background:linear-gradient(135deg,#3659d9,#6941c6);
+ box-shadow:0 10px 25px rgba(54,89,217,.28)
+}
+.card,.summary-card,.list-item,.doc-card,.kpi-card{
+ border-color:var(--line);
+ box-shadow:var(--shadow);
+ backdrop-filter:blur(14px);
+}
+.today-hero{
+ min-height:168px;
+ padding:28px;
+ border-radius:30px;
+ background:
+  radial-gradient(circle at 88% 12%,rgba(255,255,255,.20),transparent 26%),
+  linear-gradient(135deg,#253b80 0%,#3659d9 52%,#6941c6 100%);
+ box-shadow:0 26px 60px rgba(54,89,217,.24);
+}
+.today-hero h2{font-size:32px;letter-spacing:-.035em}
+.health-summary{grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.health-tile{
+ min-height:94px;
+ padding:15px;
+ border-radius:20px;
+ transition:.18s ease;
+}
+.health-tile:hover{transform:translateY(-2px)}
+.health-tile strong{display:block;margin-top:10px;font-size:27px}
+.operational-summary{display:none}
+.toolbar{
+ padding:10px;
+ border-radius:18px;
+ box-shadow:none;
+ background:rgba(255,255,255,.74);
+}
+.fleet-grid{gap:18px}
+.no-photo-card{
+ border-radius:28px!important;
+ box-shadow:0 22px 54px rgba(15,23,42,.09)!important;
+}
+.no-photo-hero{
+ min-height:205px;
+ background:
+  radial-gradient(circle at 88% 18%,rgba(255,255,255,.19),transparent 28%),
+  linear-gradient(135deg,#253b80,#3659d9 58%,#536de5);
+}
+.no-photo-hero.attention{
+ background:radial-gradient(circle at 88% 18%,rgba(255,255,255,.16),transparent 28%),linear-gradient(135deg,#7a271a,#d92d20)
+}
+.hero-title h3{font-size:25px}
+.hero-profit strong{font-size:23px}
+.car-health-icons{gap:8px}
+.health-icon{border-radius:14px;padding:9px 6px}
+.compact-car-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.next-event-metric{grid-column:1/-1}
+.no-photo-card .actions .btn{border-radius:14px}
+.bottom-nav{
+ width:min(760px,calc(100% - 22px));
+ grid-template-columns:repeat(6,1fr);
+ padding:7px;
+ border:1px solid rgba(255,255,255,.10);
+ border-radius:24px;
+ background:rgba(16,24,40,.94);
+ box-shadow:0 18px 48px rgba(15,23,42,.30);
+ backdrop-filter:blur(20px);
+ overflow:visible;
+}
+.bottom-nav button{
+ min-width:0;
+ color:#98a2b3;
+ font-size:18px;
+ border-radius:17px;
+}
+.bottom-nav button.active{
+ color:#fff;
+ background:linear-gradient(135deg,rgba(54,89,217,.88),rgba(105,65,198,.88));
+ box-shadow:0 7px 18px rgba(54,89,217,.25);
+}
+.bottom-nav span{font-size:10px;margin-top:3px}
+.more-grid{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:14px;
+}
+.more-card{
+ min-height:210px;
+ padding:22px;
+ border:1px solid var(--line);
+ border-radius:24px;
+ background:var(--card);
+ text-align:left;
+ color:var(--text);
+ box-shadow:var(--shadow);
+ transition:.18s ease;
+}
+.more-card:hover{transform:translateY(-3px)}
+.more-icon{display:block;font-size:37px;margin-bottom:20px}
+.more-card strong{display:block;font-size:18px}
+.more-card small{display:block;margin-top:9px;color:var(--muted);line-height:1.5}
+.tax-panel{margin-top:14px}
+.section-head h2{letter-spacing:-.025em}
+.summary-grid.compact,.kpi-grid{gap:11px}
+.analytics-period-title{border-left:4px solid #3659d9}
+.damage-album{border-radius:18px!important}
+.damage-album-cover{height:190px!important}
+.damage-viewer-dialog{
+ width:min(1120px,calc(100% - 18px))!important;
+ max-width:none;
+ border-radius:24px!important;
+ background:#070b14!important;
+}
+.viewer-stage{min-height:72vh!important}
+.viewer-stage img{max-height:72vh!important}
+@media(max-width:820px){
+ .more-grid{grid-template-columns:1fr}
+ .health-summary{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+ .app{padding-left:11px;padding-right:11px}
+ .today-hero{min-height:150px;padding:21px;border-radius:24px}
+ .today-hero h2{font-size:26px}
+ .health-tile{min-height:82px}
+ .bottom-nav{bottom:7px;width:calc(100% - 12px);border-radius:20px}
+ .bottom-nav button{padding:7px 1px;font-size:16px}
+ .bottom-nav span{font-size:8px}
+ .compact-car-metrics{grid-template-columns:1fr}
+ .next-event-metric{grid-column:auto}
+}

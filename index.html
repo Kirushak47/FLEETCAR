@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V4.2</title>
-  <link rel="manifest" href="manifest.webmanifest?v=420">
-  <link rel="stylesheet" href="styles.css?v=420">
+  <title>FleetPilot V4.3</title>
+  <link rel="manifest" href="manifest.webmanifest?v=430">
+  <link rel="stylesheet" href="styles.css?v=430">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V4.2</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V4.3</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -22,7 +22,7 @@
         <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
       </div>
       <div id="healthSummary" class="health-summary"></div>
-      <div id="fleetSummary" class="summary-grid"></div>
+      <div id="fleetSummary" class="summary-grid operational-summary"></div>
       <div class="toolbar card">
         <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору">
         <select id="fleetFilter">
@@ -45,43 +45,6 @@
     <section id="paymentsPage" class="page">
       <div class="section-head"><div><span class="eyebrow">Аренда</span><h2>Оплаты аренды</h2></div><button id="addPayment" class="btn primary">+ Оплата</button></div>
       <div id="paymentSummary" class="summary-grid compact"></div>
-      <div class="card tax-panel">
-        <div class="section-head">
-          <div><span class="eyebrow">Результат после расходов и налогов</span><h3>Прибыльность автопарка</h3></div>
-          <select id="profitPeriod">
-            <option value="month">Текущий месяц</option>
-            <option value="year">Текущий год</option>
-            <option value="all">За всё время</option>
-          </select>
-        </div>
-        <div id="profitSummary" class="summary-grid compact"></div>
-        <div class="tax-settings">
-          <label id="taxVatField">VAT
-            <select id="taxVat">
-              <option value="no">Не VATowiec</option>
-              <option value="yes">VATowiec 23%</option>
-            </select>
-          </label>
-          <label>Форма PIT
-            <select id="taxMethod">
-              <option value="none">Не плачу налоги</option>
-              <option value="ryczalt">Ryczałt</option>
-              <option value="linear">Liniowy 19%</option>
-              <option value="scale">Zasady ogólne</option>
-            </select>
-          </label>
-          <label id="taxRyczaltField">Ставка ryczałtu
-            <input id="taxRyczaltRate" type="number" min="0" max="100" step="0.1" value="8.5">
-          </label>
-          <label id="taxContributionsField">Ежемесячные ZUS/взносы
-            <input id="taxMonthlyContributions" type="number" min="0" step="0.01" value="0">
-          </label>
-          <label id="taxVatCostsField" class="check-label"><input id="taxDeductVatCosts" type="checkbox" checked> Отнимать VAT из ремонтов и оплаченных расходов</label>
-          <button id="saveTaxSettings" class="btn primary">Сохранить налоговый профиль</button>
-        </div>
-        <p class="tax-note">Расчёт ориентировочный. VAT и PIT считаются отдельно. Для ryczałtu ставка задаётся вручную, потому что она зависит от классификации фактической деятельности.</p>
-        <div id="carProfitability" class="profitability-list"></div>
-      </div>
 
       <div id="paymentList" class="list"></div>
     </section>
@@ -129,6 +92,44 @@
         <h3 id="analyticsPeriodTitle">Текущий год</h3>
       </div>
       <div id="analyticsSummary" class="summary-grid compact"></div>
+      <div class="card tax-panel">
+        <div class="section-head">
+          <div><span class="eyebrow">Налоговый профиль партнёра</span><h3>Налоги и прибыль после налогов</h3></div>
+          <select id="profitPeriod">
+            <option value="month">Текущий месяц</option>
+            <option value="year">Текущий год</option>
+            <option value="all">За всё время</option>
+          </select>
+        </div>
+        <div id="profitSummary" class="summary-grid compact"></div>
+        <div class="tax-settings">
+          <label id="taxVatField">VAT
+            <select id="taxVat">
+              <option value="no">Не VATowiec</option>
+              <option value="yes">VATowiec 23%</option>
+            </select>
+          </label>
+          <label>Форма PIT
+            <select id="taxMethod">
+              <option value="none">Не плачу налоги</option>
+              <option value="ryczalt">Ryczałt</option>
+              <option value="linear">Liniowy 19%</option>
+              <option value="scale">Zasady ogólne</option>
+            </select>
+          </label>
+          <label id="taxRyczaltField">Ставка ryczałtu
+            <input id="taxRyczaltRate" type="number" min="0" max="100" step="0.1" value="8.5">
+          </label>
+          <label id="taxContributionsField">Ежемесячные ZUS/взносы
+            <input id="taxMonthlyContributions" type="number" min="0" step="0.01" value="0">
+          </label>
+          <label id="taxVatCostsField" class="check-label"><input id="taxDeductVatCosts" type="checkbox" checked> Отнимать VAT из ремонтов и оплаченных расходов</label>
+          <button id="saveTaxSettings" class="btn primary">Сохранить налоговый профиль</button>
+        </div>
+        <p class="tax-note">Расчёт ориентировочный. VAT и PIT считаются отдельно. Для ryczałtu ставка задаётся вручную, потому что она зависит от классификации фактической деятельности.</p>
+        <div id="carProfitability" class="profitability-list"></div>
+      </div>
+
       <div id="fleetKpi" class="kpi-grid"></div>
       <div class="analytics-grid">
         <div class="card"><h3>Рекомендации владельцу</h3><div id="ownerRecommendations" class="recommendation-list"></div></div>
@@ -222,6 +223,27 @@
       <div id="attentionList" class="list"></div>
     </section>
 
+
+    <section id="morePage" class="page">
+      <div class="section-head">
+        <div><span class="eyebrow">Дополнительные разделы</span><h2>Ещё</h2></div>
+      </div>
+      <div class="more-grid">
+        <button class="more-card" onclick="showPage('expensesPage')">
+          <span class="more-icon">💸</span><strong>Плановые расходы</strong>
+          <small>Страховки, лизинг, шины и другие будущие платежи</small>
+        </button>
+        <button class="more-card" onclick="showPage('documentsPage')">
+          <span class="more-icon">📄</span><strong>Документы</strong>
+          <small>Полисы, техосмотры, договоры и страховые раты</small>
+        </button>
+        <button class="more-card" onclick="showPage('dataPage')">
+          <span class="more-icon">💾</span><strong>Данные и копии</strong>
+          <small>Экспорт, импорт и восстановление базы</small>
+        </button>
+      </div>
+    </section>
+
 <section id="carPage" class="page">
       <button id="backToFleet" class="back">← Назад</button>
       <div id="carDetail"></div>
@@ -229,14 +251,12 @@
   </main>
 
   <nav class="bottom-nav">
-    <button data-page="fleetPage" class="active">🚘<span>Автопарк</span></button>
-    <button data-page="repairsPage">🔧<span>Ремонты</span></button>
+    <button data-page="fleetPage" class="active">⌂<span>Сегодня</span></button>
+    <button data-page="repairsPage">🔧<span>Сервис</span></button>
     <button data-page="paymentsPage">💳<span>Аренда</span></button>
-    <button data-page="expensesPage">📅<span>Расходы</span></button>
-    <button data-page="documentsPage">📄<span>Документы</span></button>
     <button data-page="calendarPage">🗓️<span>Календарь</span></button>
     <button data-page="analyticsPage">📊<span>Аналитика</span></button>
-    <button data-page="dataPage">💾<span>Данные</span></button>
+    <button data-page="morePage">•••<span>Ещё</span></button>
   </nav>
 </div>
 
@@ -387,5 +407,5 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=420"></script>
+<script src="app.js?v=430"></script>
 </body></html>
