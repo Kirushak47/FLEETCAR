@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.1.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -154,6 +154,30 @@ function effectiveVisible(settings=uxSettings()){
  if(settings.mode==="simple")return["hero","finance","week","filters","cars"];
  return settings.visible
 }
+
+const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage"]);
+const SIMPLE_ALLOWED_TABS=new Set(["info","finance","documents","damages"]);
+
+function currentUiMode(){return uxSettings().mode==="simple"?"simple":"advanced"}
+function isSimpleMode(){return currentUiMode()==="simple"}
+
+function applyAdaptiveMode(){
+ const simple=isSimpleMode();
+ document.documentElement.dataset.uiMode=simple?"simple":"advanced";
+ $$("[data-feature='service'],[data-feature='calendar'],[data-feature='analytics']").forEach(el=>el.hidden=simple);
+ $$("[data-advanced-action='true']").forEach(el=>el.hidden=simple);
+ const active=$(".page.active");
+ if(simple&&active?.dataset.advancedPage==="true")showPage("fleetPage")
+}
+
+function simpleModeCarTab(key){
+ return !isSimpleMode()||SIMPLE_ALLOWED_TABS.has(key)
+}
+
+function simpleModeQuickActions(){
+ return isSimpleMode()?["car","payment","expense"]:["car","payment","repair","expense","document","deposit"]
+}
+
 function applyUxSettings(){
  const settings=uxSettings(),root=$("#fleetPage");
  if(!root)return;
@@ -167,6 +191,7 @@ function applyUxSettings(){
   el.hidden=!visible.has(el.dataset.dashboardBlock)
  });
  document.documentElement.dataset.uiMode=settings.mode;
+ applyAdaptiveMode();
  $$(".mode-switcher button").forEach(b=>b.classList.toggle("active",b.dataset.uiMode===settings.mode))
 }
 function renderDashboardSettings(){
@@ -206,10 +231,16 @@ function openCarQuickMenu(id,event){
  event?.stopPropagation();
  const menu=document.createElement("div");
  menu.className="car-context-menu";
- menu.innerHTML=`<button onclick="openCar('${id}');this.closest('.car-context-menu').remove()">Открыть профиль</button>
+ menu.innerHTML=isSimpleMode()?`<button onclick="openCar('${id}');this.closest('.car-context-menu').remove()">Открыть профиль</button>
+ <button onclick="openPaymentDialog('${id}');this.closest('.car-context-menu').remove()">Добавить оплату</button>
+ <button onclick="openExpenseDialog('${id}');this.closest('.car-context-menu').remove()">Добавить расход</button>
+ <button onclick="openMileage('${id}');this.closest('.car-context-menu').remove()">Обновить пробег</button>
+ <button onclick="toggleFavorite('${id}');this.closest('.car-context-menu').remove()">Избранное</button>`:`<button onclick="openCar('${id}');this.closest('.car-context-menu').remove()">Открыть профиль</button>
  <button onclick="openPaymentDialog('${id}');this.closest('.car-context-menu').remove()">Добавить оплату</button>
  <button onclick="openRepairDialog('${id}');this.closest('.car-context-menu').remove()">Добавить ремонт</button>
+ <button onclick="openExpenseDialog('${id}');this.closest('.car-context-menu').remove()">Добавить расход</button>
  <button onclick="openMileage('${id}');this.closest('.car-context-menu').remove()">Обновить пробег</button>
+ <button onclick="openDocumentDialog('${id}');this.closest('.car-context-menu').remove()">Документы</button>
  <button onclick="toggleFavorite('${id}');this.closest('.car-context-menu').remove()">Избранное</button>`;
  document.querySelectorAll(".car-context-menu").forEach(x=>x.remove());
  document.body.appendChild(menu);
@@ -224,6 +255,7 @@ function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){document.doc
 function setTheme(mode){localStorage.setItem(THEME_KEY,mode);applyTheme(mode)}
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 function showPage(id){
+ if(isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
@@ -358,7 +390,7 @@ async function importBackupFile(file){
  });
  save();
  await writeAutoBackup();
- applyTheme();applyUxSettings();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
+ applyTheme();applyUxSettings();applyAdaptiveMode();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
  toast("Данные восстановлены")
 }
 async function restoreLatestAutoBackup(){
@@ -621,7 +653,7 @@ function renderAnalytics(){renderProfitability();
   ["Налоги и взносы",money(all.vatDue+all.pit+all.contributions)],
   ["Чистая прибыль",money(all.finalProfit)]
  ].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
- const forecast=futureFinancialData(30);$("#financialForecast").innerHTML=[["Плановый доход",forecast.revenue],["Плановые расходы",forecast.expenses+forecast.repairs],["Оценка налогов",forecast.tax],["Ожидаемый остаток",forecast.balance]].map(x=>`<div class="forecast-row"><span>${x[0]}</span><strong>${money(x[1])}</strong></div>`).join("");
+ const forecast=futureFinancialData(30);$("#financialForecast").innerHTML=[["Плановый доход",forecast.revenue],["Плановые расходы",forecast.expenses+forecast.repairs],["Оценка налогов",forecast.tax],["Ожидаемая прибыль",forecast.balance]].map(x=>`<div class="forecast-row"><span>${x[0]}</span><strong>${money(x[1])}</strong></div>`).join("");
  const fh=fleetHealthData();$("#fleetHealthIndex").innerHTML=`<div class="health-index-main"><strong>${fh.overall}%</strong><span>Общий индекс</span></div>${[["Техника",fh.technical],["Документы",fh.documents],["Финансы",fh.finance]].map(x=>`<div class="health-progress"><div><span>${x[0]}</span><strong>${x[1]}%</strong></div><i><b style="width:${x[1]}%"></b></i></div>`).join("")}`;
 
  const max=Math.max(1,...rows.map(x=>Math.abs(x.data.finalProfit)));
@@ -896,7 +928,7 @@ function renderWeekPlan(){
   ["Машин на линии",data.activeCars,""],
   ["Плановый заработок",money(data.plannedRevenue),"good"],
   ["Плановые расходы",money(data.totalPlannedCosts),data.totalPlannedCosts?"warning":""],
-  ["Ожидаемый остаток",money(data.expectedBalance),data.expectedBalance>=0?"good":"danger"]
+  ["Ожидаемая прибыль",money(data.expectedBalance),data.expectedBalance>=0?"good":"danger"]
  ].map(x=>`<div class="week-plan-card ${x[2]}"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("")
 }
 
@@ -1142,7 +1174,10 @@ function renderCalendar(){
 }
 
 function renderDocuments(){const expired=db.documents.filter(x=>x.expiry&&days(x.expiry)<0).length,soon=db.documents.filter(x=>x.expiry&&days(x.expiry)>=0&&days(x.expiry)<=30).length;$("#documentSummary").innerHTML=[["Всего",db.documents.length],["Истекают ≤30 дней",soon],["Просрочены",expired],["Без срока",db.documents.filter(x=>!x.expiry).length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#documentList").innerHTML=db.documents.map(d=>{const c=car(d.carId),left=d.expiry?days(d.expiry):null;return `<article class="doc-card"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${d.fileId?`<div class="document-file-actions"><button class="btn" onclick="openDocumentAttachment('${d.fileId}','${d.title.replaceAll("'","\'")}')">Открыть файл</button><button class="btn" onclick="downloadDocumentAttachment('${d.fileId}')">Скачать</button></div>`:""}${d.type==="insurance"&&d.paymentMode==="installments"?(()=>{const s=installmentSummary(d);return `<div class="insurance-summary"><span>Оплачено ${money(s.paid)}</span><span>Осталось ${money(s.left)}</span><span>${s.next?`Следующая: ${date(s.next.due)}`:"Все раты оплачены"}</span></div><div class="installment-list">${(d.installments||[]).map(x=>`<button class="installment ${x.paid?"paid":""}" onclick="toggleInsuranceInstallment('${d.id}','${x.id}')"><span>Рата ${x.number}</span><strong>${money(x.amount)}</strong><small>${date(x.due)} · ${x.paid?"Оплачена":"Ожидает"}</small></button>`).join("")}</div>`})():""}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Документов нет</div>`}
-function carTabButton(carId,key,label,activeTab){return `<button class="${activeTab===key?"active":""}" onclick="openCar('${carId}','${key}')">${label}</button>`}
+function carTabButton(carId,key,label,activeTab){
+ if(!simpleModeCarTab(key))return"";
+ return `<button class="${activeTab===key?"active":""}" onclick="openCar('${carId}','${key}')">${label}</button>`
+}
 
 function openCar(id,activeTab="info"){
  const run=()=>{
@@ -1160,16 +1195,17 @@ function openCar(id,activeTab="info"){
 }
 
 function renderCarProfile(id,activeTab="info"){
+ if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
- const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
+ const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
  const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card"><h3>Плановые расходы</h3>${exp.slice(0,10).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div></div>`;
  const history=`<div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>`;
  const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
- $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button><button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button></div>`
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){return Object.entries(MODELS).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.brand} ${m.model} (${m.years})</option>`).join("")}
@@ -1234,7 +1270,8 @@ $("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value
 $("#documentForm").onsubmit=async e=>{e.preventDefault();try{const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const selectedFile=$("#documentAttachment").files?.[0],fileId=selectedFile?await saveDocumentFile(selectedFile,id,old?.fileId||""):old?.fileId||"";const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),fileId,note:$("#documentNote").value.trim()};old?Object.assign(old,obj):(db.documents.push(obj),addTimeline(obj.carId,"document",obj.title,-Number(obj.cost||0),obj.expiry||today(),documentTypeText(obj.type)));logActivity(old?"Изменён документ":"Добавлен документ","Документы",obj.title,obj.carId);save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")}catch(error){toast(error.message||"Не удалось сохранить документ")}};
 $$(".theme-switcher button").forEach(button=>button.onclick=()=>setTheme(button.dataset.themeMode));
 $("#quickActionButton").onclick=()=>toggleQuickActions();
-$("#quickActionMenu").onclick=e=>{const action=e.target.closest("[data-quick-action]")?.dataset.quickAction;if(!action)return;toggleQuickActions(false);if(action==="car")openCarDialog();if(action==="payment")openPaymentDialog();if(action==="repair")openRepairDialog();if(action==="expense")openExpenseDialog();if(action==="document")openDocumentDialog();if(action==="deposit")openDepositDialog()};
+$("#quickActionMenu").onclick=e=>{const action=e.target.closest("[data-quick-action]")?.dataset.quickAction;
+ if(action&&!simpleModeQuickActions().includes(action))return;if(!action)return;toggleQuickActions(false);if(action==="car")openCarDialog();if(action==="payment")openPaymentDialog();if(action==="repair")openRepairDialog();if(action==="expense")openExpenseDialog();if(action==="document")openDocumentDialog();if(action==="deposit")openDepositDialog()};
 document.addEventListener("click",e=>{if(!e.target.closest("#quickActionButton")&&!e.target.closest("#quickActionMenu"))toggleQuickActions(false)});
 $("#depositCarId").onchange=()=>{$("#depositTenant").value=car($("#depositCarId").value)?.tenant||""};$$(".bottom-nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));$$("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).close());$("#headerAdd").onclick=()=>openCarDialog();$("#addRepair").onclick=()=>openRepairDialog();$("#addPayment").onclick=()=>openPaymentDialog();$("#addExpense").onclick=()=>openExpenseDialog();$("#addDocument").onclick=()=>openDocumentDialog();$("#backToFleet").onclick=()=>showPage("fleetPage");$("#fleetSearch").oninput=renderFleet;$("#fleetFilter").onchange=renderFleet;
 $("#fleetCityFilter").onchange=e=>{selectedFleetCity=e.target.value;renderFleet()};$("#paymentCarId").onchange=()=>{const c=car($("#paymentCarId").value),timing=c?.paymentTiming||"advance",p=suggestedPaymentPeriod(timing);$("#paymentTiming").value=timing;$("#paymentFrom").value=p.from;$("#paymentTo").value=p.to;$("#paymentReferenceWeek").value=p.week;recalculateExpectedPayment()};$("#paymentTiming").onchange=()=>{const p=suggestedPaymentPeriod($("#paymentTiming").value);$("#paymentFrom").value=p.from;$("#paymentTo").value=p.to;$("#paymentReferenceWeek").value=p.week;recalculateExpectedPayment()};$("#paymentReferenceWeek").oninput=()=>{$("#paymentWeek").value=$("#paymentReferenceWeek").value;recalculateExpectedPayment()};

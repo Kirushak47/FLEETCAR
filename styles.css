@@ -1765,3 +1765,33 @@ html[data-ui-mode="simple"] .bottom-nav button[data-page="calendarPage"]{opacity
  .ux-settings-panel{grid-template-columns:1fr}
  .hero-tool-button span{display:none}
 }
+
+/* FleetPilot V6.1.0 — real simple/advanced mode */
+html[data-ui-mode="simple"] [data-feature="service"],
+html[data-ui-mode="simple"] [data-feature="calendar"],
+html[data-ui-mode="simple"] [data-feature="analytics"],
+html[data-ui-mode="simple"] [data-advanced-action="true"]{
+ display:none!important;
+}
+html[data-ui-mode="simple"] .bottom-nav{
+ grid-template-columns:repeat(5,minmax(0,1fr));
+}
+html[data-ui-mode="simple"] [data-dashboard-block="intelligence"],
+html[data-ui-mode="simple"] .intelligence-grid{
+ display:none!important;
+}
+html[data-ui-mode="simple"] .animated-car-card .health-score,
+html[data-ui-mode="simple"] .animated-car-card .condition-pill{
+ display:none!important;
+}
+html[data-ui-mode="simple"] .car-management-card{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+}
+html[data-ui-mode="simple"] .quick-action-menu{
+ min-width:190px;
+}
+@media(max-width:680px){
+ html[data-ui-mode="simple"] .bottom-nav{
+  grid-template-columns:repeat(5,minmax(56px,1fr));
+ }
+}

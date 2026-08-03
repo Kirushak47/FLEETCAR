@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V6.0</title>
-  <link rel="manifest" href="manifest.webmanifest?v=600">
-  <link rel="stylesheet" href="styles.css?v=600">
+  <title>FleetPilot V6.1.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=610">
+  <link rel="stylesheet" href="styles.css?v=610">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V6.0</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V6.1.0</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -40,10 +40,10 @@
       <section class="intelligence-grid" data-dashboard-block="intelligence">
         <article class="fleet-score-card card">
           <div class="fleet-score-ring" id="fleetScoreRing"><div><strong id="fleetScoreValue">0</strong><span>/100</span></div></div>
-          <div class="fleet-score-copy"><span class="eyebrow">FleetPilot Score</span><h3 id="fleetScoreLabel">Оценка автопарка</h3><p id="fleetScoreReason">Анализируем состояние автомобилей…</p></div>
+          <div class="fleet-score-copy"><span class="eyebrow">Состояние автопарка</span><h3 id="fleetScoreLabel">Оценка автопарка</h3><p id="fleetScoreReason">Анализируем состояние автомобилей…</p></div>
         </article>
         <article class="assistant-card card">
-          <div class="assistant-head"><div class="assistant-orb"><span></span></div><div><span class="eyebrow">FleetPilot Intelligence</span><h3>Краткая сводка</h3></div></div>
+          <div class="assistant-head"><div class="assistant-orb"><span></span></div><div><span class="eyebrow">Автоматическая сводка</span><h3>Краткая сводка</h3></div></div>
           <div id="assistantInsights" class="assistant-insights"></div>
         </article>
       </section>
@@ -74,7 +74,7 @@
       <div id="fleetGrid" class="fleet-grid" data-dashboard-block="cars"></div>
     </section>
 
-    <section id="repairsPage" class="page">
+    <section id="repairsPage" class="page" data-advanced-page="true">
       <div class="section-head"><div><span class="eyebrow">Техническая часть</span><h2>Ремонты</h2></div><button id="addRepair" class="btn primary">+ Ремонт</button></div>
       <div id="repairSummary" class="summary-grid compact"></div>
       <div id="repairList" class="list"></div>
@@ -100,7 +100,7 @@
     </section>
 
     
-    <section id="calendarPage" class="page">
+    <section id="calendarPage" class="page" data-advanced-page="true">
       <div class="section-head">
         <div><span class="eyebrow">Все ближайшие события</span><h2>Календарь автопарка</h2></div>
         <select id="calendarRange">
@@ -113,7 +113,7 @@
       <div id="calendarList" class="calendar-list"></div>
     </section>
 
-    <section id="analyticsPage" class="page">
+    <section id="analyticsPage" class="page" data-advanced-page="true">
       <div class="section-head">
         <div><span class="eyebrow">Результаты автопарка</span><h2>Аналитика</h2></div>
         <div class="analytics-period-controls">
@@ -285,7 +285,7 @@
         </div>
         <button id="openDashboardSettings" class="btn">Настроить главную</button>
       </div>
-      <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="card assistant-card"><span class="eyebrow">FleetPilot Intelligence</span><h3>Утренний помощник</h3><div id="dailyAssistant"></div></div>
+      <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="card assistant-card"><span class="eyebrow">Автоматическая сводка</span><h3>Утренний помощник</h3><div id="dailyAssistant"></div></div>
       <div class="card activity-card"><div class="section-head"><div><span class="eyebrow">Контроль изменений</span><h3>Журнал действий</h3></div><button id="exportActivityLog" class="btn">Скачать CSV</button></div><div id="activityLog"></div></div>
       <div class="more-grid">
         <button class="more-card" onclick="showPage('analyticsPage')">
@@ -317,12 +317,12 @@
 
   <nav class="bottom-nav">
     <button data-page="fleetPage" class="active">⌂<span>Сегодня</span></button>
-    <button data-page="repairsPage">🔧<span>Сервис</span></button>
+    <button data-page="repairsPage" data-feature="service">🔧<span>Сервис</span></button>
     <button data-page="paymentsPage">💳<span>Аренда</span></button>
     <button data-page="expensesPage">💸<span>Расходы</span></button>
-    <button data-page="calendarPage">🗓️<span>Календарь</span></button>
+    <button data-page="calendarPage" data-feature="calendar">🗓️<span>Календарь</span></button>
     <button data-page="morePage">•••<span>Ещё</span></button>
-  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit"><span>🔐</span>Кауция</button></div>
+  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
 </div>
 
 <dialog id="dashboardSettingsDialog"><form id="dashboardSettingsForm" class="modal dashboard-settings-modal">
@@ -491,5 +491,5 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=600"></script>
+<script src="app.js?v=610"></script>
 </body></html>
