@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v5.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v5.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -696,10 +696,10 @@ function renderFleet(){
  const healthRows=cityFilteredCars().map(c=>({c,h:healthDetails(c)}));
  $("#attentionCount").textContent=healthRows.reduce((s,x)=>s+x.h.items.length,0);
  $("#healthSummary").innerHTML=[
-  ["🚨 Требуют внимания",healthRows.filter(x=>x.h.level==="danger").length,"danger"],
-  ["🟡 Предупреждения",healthRows.filter(x=>x.h.level==="warning").length,"warning"],
-  ["🛢️ ТО скоро",healthRows.filter(x=>x.h.oilLeft>0&&x.h.oilLeft<=1500).length,""],
-  ["🛡️ Страховка",healthRows.filter(x=>x.h.insuranceDays>=0&&x.h.insuranceDays<=30).length,""]
+  ["🚨 Требуют внимания",healthRows.filter(x=>x.h.level!=="good").length,healthRows.some(x=>x.h.level==="danger")?"danger":"warning"],
+  ["🔴 Критические",healthRows.filter(x=>x.h.level==="danger").length,"danger"],
+  ["🛢️ ТО скоро",healthRows.filter(x=>x.h.oilLeft>0&&x.h.oilLeft<=1500).length,"warning"],
+  ["🛡️ Страховка",healthRows.filter(x=>x.h.insuranceDays>=0&&x.h.insuranceDays<=30).length,"warning"]
  ].map(x=>`<button class="health-tile ${x[2]}" onclick="showPage('attentionPage')"><span>${x[0]}</span><strong>${x[1]}</strong></button>`).join("");
  $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>c.status==="active").length],["В ремонте",cityFilteredCars().filter(c=>c.status==="repair").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
@@ -727,7 +727,7 @@ function renderFleet(){
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
 </div>
-<div class="car-body"><div class="vehicle-vitals"><div class="vehicle-vital ${health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"}"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"Просрочено":km(health.oilLeft)}</strong></div></div><div class="vehicle-vital ${health.insuranceDays<0?"danger":health.insuranceDays<=30?"warning":"good"}"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"Просрочена":health.insuranceDays+" дн."}</em></div></div><div class="vehicle-vital ${health.inspectionDays<0?"danger":health.inspectionDays<=30?"warning":"good"}"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"Просрочен":health.inspectionDays+" дн."}</em></div></div></div><div class="metrics no-photo-metrics compact-car-metrics">
+<div class="car-body"><div class="vehicle-vitals"><div class="vehicle-vital ${health.oilLeft<=0?"danger urgent":health.oilLeft<=500?"danger soon":health.oilLeft<=1500?"warning soon":"good"}"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"ПРОСРОЧЕНО":km(health.oilLeft)}</strong><em>${health.oilLeft>0&&health.oilLeft<=1500?`Осталось ${km(health.oilLeft)}`:""}</em></div></div><div class="vehicle-vital insurance-vital ${health.insuranceDays<0?"danger urgent":health.insuranceDays<=7?"danger soon":health.insuranceDays<=30?"warning soon":"good"}"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"ПРОСРОЧЕНА":health.insuranceDays<=7?`Осталось ${health.insuranceDays} дн.`:health.insuranceDays+" дн."}</em></div></div><div class="vehicle-vital inspection-vital ${health.inspectionDays<0?"danger urgent":health.inspectionDays<=7?"danger soon":health.inspectionDays<=30?"warning soon":"good"}"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"ПРОСРОЧЕН":health.inspectionDays<=7?`Осталось ${health.inspectionDays} дн.`:health.inspectionDays+" дн."}</em></div></div></div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);return alerts.length?`<div class="vehicle-alert-banner ${alerts.some(x=>x.includes("просроч"))?"danger":"warning"}"><span>!</span><strong>${alerts.join(" · ")}</strong></div>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
 <div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
 <div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>

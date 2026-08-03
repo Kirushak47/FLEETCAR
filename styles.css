@@ -1192,3 +1192,144 @@ body{color:var(--v5-text);background:radial-gradient(circle at 8% -8%,rgba(79,70
   min-width:0;
  }
 }
+
+/* FleetPilot V5.4 — dark theme consistency and stronger alerts */
+:root{
+ --surface-main:#ffffff;
+ --surface-soft:#f8fafc;
+ --surface-muted:#f1f5f9;
+ --surface-input:#ffffff;
+ --button-secondary:#eef2ff;
+ --button-secondary-text:#3730a3;
+ --alert-warning-bg:#fff7ed;
+ --alert-warning-border:#f59e0b;
+ --alert-warning-text:#9a3412;
+ --alert-danger-bg:#fef2f2;
+ --alert-danger-border:#ef4444;
+ --alert-danger-text:#991b1b;
+}
+:root[data-theme="dark"]{
+ --surface-main:#151c30;
+ --surface-soft:#1b243b;
+ --surface-muted:#202b46;
+ --surface-input:#11182a;
+ --button-secondary:#273352;
+ --button-secondary-text:#dbeafe;
+ --alert-warning-bg:rgba(146,64,14,.30);
+ --alert-warning-border:#f59e0b;
+ --alert-warning-text:#fed7aa;
+ --alert-danger-bg:rgba(153,27,27,.34);
+ --alert-danger-border:#f87171;
+ --alert-danger-text:#fecaca;
+}
+.metric,.next-event-metric,.vehicle-vital,.detail-stat-grid>div,.service-forecast>div,.ownership-grid>div,.week-plan-card,.health-tile,.summary-card,.kpi-card,.list-item,.doc-card,.timeline-row,.deposit-summary-grid>div,.deposit-row,.payment-reference-grid>div,.recommendation-item,.tenant-row,.payment-calculation-info,.more-card,.toolbar,.card{
+ background:var(--surface-main);
+ color:var(--v5-text,var(--text));
+ border-color:var(--v5-border,var(--line));
+}
+.metric,.next-event-metric,.vehicle-vital,.detail-stat-grid>div,.service-forecast>div,.ownership-grid>div,.week-plan-card,.payment-reference-grid>div,.timeline-row,.tenant-row,.deposit-summary-grid>div{
+ background:var(--surface-soft);
+}
+input,select,textarea{
+ background:var(--surface-input)!important;
+ color:var(--v5-text,var(--text))!important;
+ border-color:var(--v5-border,var(--line))!important;
+}
+input::placeholder,textarea::placeholder{color:var(--v5-muted,var(--muted))!important}
+dialog,.modal{background:var(--surface-main)!important;color:var(--v5-text,var(--text))!important}
+.btn:not(.primary):not(.danger){
+ background:var(--button-secondary)!important;
+ color:var(--button-secondary-text)!important;
+ border-color:var(--v5-border,var(--line))!important;
+}
+html[data-theme="dark"] .no-photo-card,
+html[data-theme="dark"] .car-card,
+html[data-theme="dark"] .week-plan,
+html[data-theme="dark"] .appearance-panel,
+html[data-theme="dark"] .quick-action-menu{
+ background:var(--surface-main)!important;
+ color:var(--v5-text)!important;
+}
+html[data-theme="dark"] .car-body{background:var(--surface-main)!important}
+html[data-theme="dark"] .metric,
+html[data-theme="dark"] .next-event-metric{box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+html[data-theme="dark"] .payment-calculation-info{background:rgba(37,99,235,.18);color:#bfdbfe}
+html[data-theme="dark"] .duplicate-warning{background:rgba(154,52,18,.28);color:#fed7aa}
+
+.vehicle-vital.warning{
+ position:relative;
+ background:var(--alert-warning-bg)!important;
+ border:2px solid var(--alert-warning-border)!important;
+ color:var(--alert-warning-text)!important;
+ box-shadow:0 0 0 3px rgba(245,158,11,.10),0 10px 24px rgba(245,158,11,.13);
+}
+.vehicle-vital.danger{
+ position:relative;
+ background:var(--alert-danger-bg)!important;
+ border:2px solid var(--alert-danger-border)!important;
+ color:var(--alert-danger-text)!important;
+ box-shadow:0 0 0 3px rgba(239,68,68,.12),0 12px 28px rgba(239,68,68,.16);
+}
+.vehicle-vital.soon::after,.vehicle-vital.urgent::after{
+ content:"";
+ position:absolute;
+ right:8px;top:8px;
+ width:8px;height:8px;
+ border-radius:50%;
+ background:currentColor;
+ box-shadow:0 0 0 5px color-mix(in srgb,currentColor 18%,transparent);
+}
+.vehicle-vital.urgent{animation:urgentPulse 1.7s infinite}
+.vehicle-vital.warning strong,.vehicle-vital.warning em,.vehicle-vital.danger strong,.vehicle-vital.danger em{
+ color:inherit!important;
+ font-weight:900;
+}
+.vehicle-vital.warning em,.vehicle-vital.danger em{
+ margin-top:4px;
+ text-transform:uppercase;
+ letter-spacing:.03em;
+}
+@keyframes urgentPulse{
+ 0%,100%{transform:translateY(0);box-shadow:0 0 0 3px rgba(239,68,68,.10),0 12px 28px rgba(239,68,68,.16)}
+ 50%{transform:translateY(-1px);box-shadow:0 0 0 7px rgba(239,68,68,.08),0 16px 34px rgba(239,68,68,.23)}
+}
+.vehicle-alert-banner{
+ display:flex;
+ align-items:center;
+ gap:9px;
+ margin:0 0 11px;
+ padding:10px 12px;
+ border:1px solid;
+ border-radius:14px;
+ font-size:12px;
+}
+.vehicle-alert-banner span{
+ display:grid;
+ place-items:center;
+ flex:0 0 25px;
+ height:25px;
+ border-radius:999px;
+ font-size:15px;
+ font-weight:950;
+}
+.vehicle-alert-banner.warning{background:var(--alert-warning-bg);border-color:var(--alert-warning-border);color:var(--alert-warning-text)}
+.vehicle-alert-banner.warning span{background:#f59e0b;color:#fff}
+.vehicle-alert-banner.danger{background:var(--alert-danger-bg);border-color:var(--alert-danger-border);color:var(--alert-danger-text)}
+.vehicle-alert-banner.danger span{background:#ef4444;color:#fff}
+.no-photo-card.health-warning{
+ border:2px solid #f59e0b!important;
+ box-shadow:0 0 0 3px rgba(245,158,11,.08),var(--v5-shadow)!important;
+}
+.no-photo-card.health-danger{
+ border:2px solid #ef4444!important;
+ box-shadow:0 0 0 4px rgba(239,68,68,.10),var(--v5-shadow)!important;
+}
+html[data-theme="dark"] .week-plan-card.good,html[data-theme="dark"] .health-icon.good{
+ background:rgba(22,101,52,.24)!important;color:#bbf7d0!important
+}
+html[data-theme="dark"] .week-plan-card.warning,html[data-theme="dark"] .health-icon.warning{
+ background:rgba(146,64,14,.27)!important;color:#fed7aa!important
+}
+html[data-theme="dark"] .week-plan-card.danger,html[data-theme="dark"] .health-icon.danger{
+ background:rgba(153,27,27,.28)!important;color:#fecaca!important
+}
