@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V4.0</title>
-  <link rel="manifest" href="manifest.webmanifest?v=400">
-  <link rel="stylesheet" href="styles.css?v=400">
+  <title>FleetPilot V4.1</title>
+  <link rel="manifest" href="manifest.webmanifest?v=410">
+  <link rel="stylesheet" href="styles.css?v=410">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V4.0</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V4.1</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -129,6 +129,12 @@
         <h3 id="analyticsPeriodTitle">Текущий год</h3>
       </div>
       <div id="analyticsSummary" class="summary-grid compact"></div>
+      <div id="fleetKpi" class="kpi-grid"></div>
+      <div class="analytics-grid">
+        <div class="card"><h3>Рекомендации владельцу</h3><div id="ownerRecommendations" class="recommendation-list"></div></div>
+        <div class="card"><h3>Рейтинг арендаторов</h3><div id="tenantRatings" class="tenant-list"></div></div>
+      </div>
+
       <div class="card">
         <h3>Прибыль по автомобилям</h3>
         <div id="analyticsCars" class="analytics-cars"></div>
@@ -248,6 +254,8 @@
     <label>Интервал масла, км<input id="carOilInterval" type="number" value="10000" required></label>
     <label>Последняя замена масла, км<input id="carLastOil" type="number" required></label>
     <label>Аренда за неделю<input id="carWeeklyRent" type="number" step="0.01" required></label>
+    <label>Стоимость покупки<input id="carPurchasePrice" type="number" step="0.01" min="0"></label>
+    <label>Дата покупки<input id="carPurchaseDate" type="date"></label>
     <label>Страховка до<input id="carInsurance" type="date"></label>
     <label>Техосмотр до<input id="carInspection" type="date"></label>
   </div>
@@ -345,6 +353,18 @@
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
+
+<dialog id="damageDialog"><form id="damageForm" class="modal">
+  <div class="modal-head"><h2>Повреждение автомобиля</h2><button type="button" data-close="damageDialog">✕</button></div>
+  <input id="damageCarId" type="hidden">
+  <label>Название повреждения<input id="damageTitle" required></label>
+  <label>Дата<input id="damageDate" type="date" required></label>
+  <label>Описание<textarea id="damageNote"></textarea></label>
+  <label>Фотография<input id="damagePhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
+  <div id="damagePhotoPreview" class="damage-preview"></div>
+  <button class="btn primary full">Сохранить</button>
+</form></dialog>
+
 <div id="toast" class="toast"></div>
-<script src="app.js?v=400"></script>
+<script src="app.js?v=410"></script>
 </body></html>

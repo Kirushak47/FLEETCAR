@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v4.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v4.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -73,6 +73,8 @@ db.repairs=db.repairs||[];
 db.payments=db.payments||[];
 db.expenses=db.expenses||[];
 db.documents=db.documents||[];
+db.timeline=db.timeline||[];
+db.damages=db.damages||[];
 db.cars.forEach(c=>{
  if(c.inFleet===undefined)c.inFleet=true;
  if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3";
@@ -252,6 +254,76 @@ function syncAnalyticsPeriodControls(){
  $("#analyticsMonth").disabled=!selected;
  $("#analyticsMonth").classList.toggle("disabled-control",!selected)
 }
+
+function addTimeline(carId,type,title,amount=0,dateValue=today(),note=""){
+ db.timeline=db.timeline||[];
+ db.timeline.push({id:uid(),carId,type,title,amount:Number(amount||0),date:dateValue,note})
+}
+function timelineIcon(type){return{payment:"💳",repair:"🔧",expense:"💰",document:"📄",mileage:"🛣️",damage:"📷",car:"🚘"}[type]||"•"}
+function renderTimeline(carId){
+ const rows=(db.timeline||[]).filter(x=>x.carId===carId).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,50);
+ return rows.length?rows.map(x=>`<div class="timeline-row"><div class="timeline-icon">${timelineIcon(x.type)}</div><div><strong>${x.title}</strong><small>${date(x.date)}${x.note?` · ${x.note}`:""}</small></div><b class="${x.amount<0?"negative":x.amount>0?"positive":""}">${x.amount?money(x.amount):""}</b></div>`).join(""):"История пока пуста"
+}
+function renderDamageGallery(carId){
+ const rows=(db.damages||[]).filter(x=>x.carId===carId).sort((a,b)=>b.date.localeCompare(a.date));
+ return rows.length?rows.map(x=>`<article class="damage-card">${x.photo?`<img src="${x.photo}" alt="${x.title}">`:""}<div><strong>${x.title}</strong><small>${date(x.date)}</small><p>${x.note||""}</p><button class="btn danger" onclick="deleteDamage('${x.id}')">Удалить</button></div></article>`).join(""):"Фотографий повреждений нет"
+}
+function ownershipData(c){
+ const all=financialData("all",c.id);
+ const insurance=db.documents.filter(d=>d.carId===c.id&&d.type==="insurance").reduce((s,d)=>s+Number(d.cost||0),0);
+ const totalCosts=all.grossCosts+insurance;
+ const purchase=Number(c.purchasePrice||0);
+ const remaining=Math.max(0,purchase+totalCosts-all.grossRevenue);
+ return{...all,insurance,totalCosts,purchase,remaining,paidOff:purchase>0&&remaining===0,netAfterPurchase:all.grossRevenue-totalCosts-purchase}
+}
+function renderOwnership(c){
+ const d=ownershipData(c);
+ return `<div class="ownership-grid">
+  <div><small>Стоимость покупки</small><strong>${money(d.purchase)}</strong></div>
+  <div><small>Доход за всё время</small><strong>${money(d.grossRevenue)}</strong></div>
+  <div><small>Ремонты, расходы и страховки</small><strong>${money(d.totalCosts)}</strong></div>
+  <div><small>Результат с учётом покупки</small><strong class="${d.netAfterPurchase<0?"negative":"positive"}">${money(d.netAfterPurchase)}</strong></div>
+ </div><div class="payback-status ${d.paidOff?"done":""}">${!d.purchase?"Укажите стоимость покупки автомобиля":d.paidOff?"✅ Автомобиль окупился":`До окупаемости осталось ${money(d.remaining)}`}</div>`
+}
+function tenantStats(){
+ const map=new Map();
+ for(const p of db.payments){
+  const c=car(p.carId),name=p.tenant||c?.tenant||"Без имени";
+  if(!map.has(name))map.set(name,{name,expected:0,received:0,records:0,late:0});
+  const row=map.get(name);
+  row.expected+=Number(p.expected||0);row.received+=Number(p.received||0);row.records++;
+  if(Number(p.received||0)<Number(p.expected||0))row.late++
+ }
+ return[...map.values()].map(x=>({...x,debt:Math.max(0,x.expected-x.received),score:Math.max(0,100-x.late*15-Math.min(40,x.debt/100))})).sort((a,b)=>b.score-a.score)
+}
+function ownerRecommendations(period){
+ const out=[],rows=fleetCars().map(c=>({c,d:financialData(period,c.id),h:healthDetails(c)}));
+ rows.filter(x=>x.d.grossCosts>x.d.grossRevenue*.35&&x.d.grossCosts>0).forEach(x=>out.push(`${model(x.c).brand} ${model(x.c).model}: расходы превышают 35% полученной аренды.`));
+ rows.filter(x=>x.h.level==="danger").forEach(x=>out.push(`${model(x.c).brand} ${model(x.c).model}: есть критические предупреждения.`));
+ const best=[...rows].sort((a,b)=>b.d.finalProfit-a.d.finalProfit)[0];
+ if(best&&best.d.finalProfit>0)out.push(`${model(best.c).brand} ${model(best.c).model} — самая прибыльная машина за выбранный период.`);
+ const unpaid=tenantStats().filter(x=>x.debt>0);
+ if(unpaid.length)out.push(`Арендаторов с задолженностью: ${unpaid.length}.`);
+ return out.slice(0,8)
+}
+function daysBetween(a,b){return Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/86400000)}
+function forecastService(c){
+ const hist=(c.history||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ if(hist.length<2)return null;
+ const first=hist[0],last=hist[hist.length-1],diff=Math.max(1,daysBetween(first.date,last.date));
+ const daily=(last.value-first.value)/diff;
+ if(daily<=0)return null;
+ return Math.ceil(Math.max(0,oil(c))/daily)
+}
+let pendingDamagePhoto="";
+function openDamageDialog(carId){
+ $("#damageCarId").value=carId;$("#damageTitle").value="";$("#damageDate").value=today();$("#damageNote").value="";$("#damagePhotoFile").value="";pendingDamagePhoto="";$("#damagePhotoPreview").innerHTML="";$("#damageDialog").showModal()
+}
+function deleteDamage(id){
+ if(!confirm("Удалить запись о повреждении?"))return;
+ db.damages=db.damages.filter(x=>x.id!==id);save();if(selectedCarId)openCar(selectedCarId)
+}
+
 function renderAnalytics(){
  if(!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
  syncAnalyticsPeriodControls();
@@ -283,6 +355,24 @@ function renderAnalytics(){
  const insurance=[...db.documents].filter(x=>x.type==="insurance").sort((a,b)=>b.cost-a.cost)[0];
  $("#largestInsurance").innerHTML=insurance?`<strong class="big-stat">${insurance.title}</strong><p>${car(insurance.carId).plate} · ${money(insurance.cost)}</p>`:"Нет данных";
  $("#averageProfit").innerHTML=`<strong class="big-stat">${money(avg)}</strong><p>на один автомобиль</p>`;
+ const active=fleetCars().filter(c=>c.status==="active").length;
+ const repairing=fleetCars().filter(c=>c.status==="repair").length;
+ const free=fleetCars().filter(c=>c.status==="free").length;
+ $("#fleetKpi").innerHTML=[
+  ["Всего машин",fleetCars().length],
+  ["На линии",active],
+  ["В ремонте",repairing],
+  ["Свободны",free],
+  ["Доход периода",money(all.grossRevenue)],
+  ["Расходы периода",money(all.grossCosts)],
+  ["Чистая прибыль",money(all.finalProfit)],
+  ["Средняя прибыль",money(avg)]
+ ].map(x=>`<div class="kpi-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+ const recs=ownerRecommendations(period);
+ $("#ownerRecommendations").innerHTML=recs.length?recs.map(x=>`<div class="recommendation-item">💡 ${x}</div>`).join(""):"Рекомендаций пока нет";
+ const tenants=tenantStats();
+ $("#tenantRatings").innerHTML=tenants.length?tenants.map(x=>`<div class="tenant-row"><div><strong>${x.name}</strong><small>Записей: ${x.records} · Просрочек: ${x.late}</small></div><span>${Math.round(x.score)}%</span><b>${x.debt?money(x.debt):"Без долга"}</b></div>`).join(""):"Данных об арендаторах пока нет";
+
 }
 
 
@@ -551,7 +641,23 @@ function openCar(id){selectedCarId=id;const c=car(id),m=model(c),payments=db.pay
   <small>Прибыль за месяц</small>
   <strong>${money(financialData("month",c.id).finalProfit)}</strong>
  </div>
-</div><div class="detail-grid"><div><div class="card"><h3>Пробег и обслуживание</h3><div class="metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric"><small>До масла</small><strong>${km(Math.max(0,oil(c)))}</strong></div><div class="metric"><small>Страховка</small><strong>${date(c.insurance)}</strong></div><div class="metric"><small>Техосмотр</small><strong>${date(c.inspection)}</strong></div></div><button class="btn full" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn full" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div><div class="card" style="margin-top:12px"><h3>Ремонты</h3>${rep.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет записей"}</div></div><div><div class="card"><h3>Аренда</h3><p>Ставка: <strong>${money(c.weeklyRent)} / нед.</strong></p><p>Получено: <strong>${money(received)}</strong></p><p>Долг: <strong>${money(debt)}</strong></p><p>Прибыль за текущий месяц после ремонтов и налогов: <strong>${money(financialData("month",c.id).finalProfit)}</strong></p><p>Прибыль за год: <strong>${money(financialData("year",c.id).finalProfit)}</strong></p><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card" style="margin-top:12px"><h3>Страховка в рассрочку</h3>${db.documents.filter(d=>d.carId===c.id&&d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div><div class="card" style="margin-top:12px"><h3>Плановые расходы</h3>${exp.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div><div class="card" style="margin-top:12px"><button class="btn full" onclick="openCarDialog('${c.id}')">Редактировать авто</button><button class="btn danger full" onclick="deleteCar('${c.id}')">Удалить авто</button></div></div></div>`}
+</div><div class="detail-grid"><div><div class="card"><h3>Пробег и обслуживание</h3><div class="metrics"><div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div class="metric"><small>До масла</small><strong>${km(Math.max(0,oil(c)))}</strong></div><div class="metric"><small>Страховка</small><strong>${date(c.insurance)}</strong></div><div class="metric"><small>Техосмотр</small><strong>${date(c.inspection)}</strong></div></div><button class="btn full" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn full" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div><div class="card" style="margin-top:12px"><h3>Ремонты</h3>${rep.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет записей"}</div></div><div><div class="card"><h3>Аренда</h3><p>Ставка: <strong>${money(c.weeklyRent)} / нед.</strong></p><p>Получено: <strong>${money(received)}</strong></p><p>Долг: <strong>${money(debt)}</strong></p><p>Прибыль за текущий месяц после ремонтов и налогов: <strong>${money(financialData("month",c.id).finalProfit)}</strong></p><p>Прибыль за год: <strong>${money(financialData("year",c.id).finalProfit)}</strong></p><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card" style="margin-top:12px"><h3>Страховка в рассрочку</h3>${db.documents.filter(d=>d.carId===c.id&&d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div><div class="card" style="margin-top:12px"><h3>Плановые расходы</h3>${exp.map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div><div class="card" style="margin-top:12px">
+  <h3>Себестоимость и окупаемость</h3>
+  ${renderOwnership(c)}
+ </div>
+ <div class="card" style="margin-top:12px">
+  <h3>Прогноз обслуживания</h3>
+  <p>${forecastService(c)!==null?`При текущем среднем пробеге замена масла ориентировочно через ${forecastService(c)} дн.`:"Недостаточно истории пробега для прогноза."}</p>
+ </div>
+ <div class="card" style="margin-top:12px">
+  <div class="section-head"><h3>Лента событий</h3><button class="btn" onclick="openDamageDialog('${c.id}')">+ Повреждение</button></div>
+  <div class="timeline">${renderTimeline(c.id)}</div>
+ </div>
+ <div class="card" style="margin-top:12px">
+  <h3>Фотографии повреждений</h3>
+  <div class="damage-gallery">${renderDamageGallery(c.id)}</div>
+ </div>
+ <div class="card" style="margin-top:12px"><button class="btn full" onclick="openCarDialog('${c.id}')">Редактировать авто</button><button class="btn danger full" onclick="deleteCar('${c.id}')">Удалить авто</button></div></div></div>`}
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){return Object.entries(MODELS).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.brand} ${m.model} (${m.years})</option>`).join("")}
 
@@ -592,21 +698,21 @@ function renderCarPhotoPreview(){
  $("#removeCarPhoto").disabled=!pendingCarPhoto
 }
 
-function openCarDialog(id=""){const c=id?car(id):null;$("#carId").value=c?.id||"";$("#carModelKey").innerHTML=modelOptions(c?.modelKey||"toyota-prius-3");$("#carYear").value=c?.year||new Date().getFullYear();$("#carPlate").value=c?.plate||"";$("#carVin").value=c?.vin||"";$("#carTenant").value=c?.tenant||"";$("#carStatus").value=c?.status||"active";$("#carMileage").value=c?.mileage||0;$("#carOilInterval").value=c?.oilInterval||10000;$("#carLastOil").value=c?.lastOil||0;$("#carWeeklyRent").value=c?.weeklyRent||700;$("#carInsurance").value=c?.insurance||addDays(today(),365);$("#carInspection").value=c?.inspection||addDays(today(),365);pendingCarPhoto=c?.customPhoto||"";$("#carPhotoFile").value="";renderCarPhotoPreview();$("#carDialog").showModal()}
+function openCarDialog(id=""){const c=id?car(id):null;$("#carId").value=c?.id||"";$("#carModelKey").innerHTML=modelOptions(c?.modelKey||"toyota-prius-3");$("#carYear").value=c?.year||new Date().getFullYear();$("#carPlate").value=c?.plate||"";$("#carVin").value=c?.vin||"";$("#carTenant").value=c?.tenant||"";$("#carStatus").value=c?.status||"active";$("#carMileage").value=c?.mileage||0;$("#carOilInterval").value=c?.oilInterval||10000;$("#carLastOil").value=c?.lastOil||0;$("#carWeeklyRent").value=c?.weeklyRent||700;$("#carPurchasePrice").value=c?.purchasePrice||"";$("#carPurchaseDate").value=c?.purchaseDate||"";$("#carInsurance").value=c?.insurance||addDays(today(),365);$("#carInspection").value=c?.inspection||addDays(today(),365);pendingCarPhoto=c?.customPhoto||"";$("#carPhotoFile").value="";renderCarPhotoPreview();$("#carDialog").showModal()}
 function openMileage(id){const c=car(id);$("#mileageCarId").value=id;$("#newMileage").value=c.mileage;$("#mileageDate").value=today();$("#mileageInfo").textContent=`${model(c).brand} ${model(c).model} · ${c.plate} · до масла ${km(Math.max(0,oil(c)))}`;$("#mileageDialog").showModal()}
 function openRepairDialog(carId="",id=""){if(!requireFleetCar())return;const r=id?db.repairs.find(x=>x.id===id):null;$("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(r?.carId||carId);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=r?.mileage||"";$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairNote").value=r?.note||"";$("#repairDialog").showModal()}
 function openPaymentDialog(carId="",id=""){if(!requireFleetCar())return;const p=id?db.payments.find(x=>x.id===id):null,c=car(p?.carId||carId||db.cars[0]?.id);$("#paymentId").value=p?.id||"";$("#paymentCarId").innerHTML=opts(p?.carId||carId);$("#paymentTenant").value=p?.tenant||c?.tenant||"";$("#paymentFrom").value=p?.from||today();$("#paymentTo").value=p?.to||addDays(today(),6);$("#paymentExpected").value=p?.expected??c?.weeklyRent??0;$("#paymentReceived").value=p?.received??c?.weeklyRent??0;$("#paymentDate").value=p?.date||today();$("#paymentWeek").value=p?.week||"";$("#paymentNote").value=p?.note||"";$("#paymentAutoExpected").checked=!p;$("#paymentDialog").showModal();recalculateExpectedPayment()}
 function openExpenseDialog(carId="",id=""){if(!requireFleetCar())return;const x=id?db.expenses.find(v=>v.id===id):null;$("#expenseId").value=x?.id||"";$("#expenseCarId").innerHTML=opts(x?.carId||carId);$("#expenseTitle").value=x?.title||"";$("#expenseCategory").value=x?.category||"repair";$("#expenseDate").value=x?.date||today();$("#expenseAmount").value=x?.amount||"";$("#expenseStatus").value=x?.status||"planned";$("#expenseNote").value=x?.note||"";$("#expenseDialog").showModal()}
 function openDocumentDialog(carId="",id=""){if(!requireFleetCar())return;const d=id?db.documents.find(v=>v.id===id):null;$("#documentId").value=d?.id||"";$("#documentCarId").innerHTML=opts(d?.carId||carId);$("#documentType").value=d?.type||"insurance";$("#documentTitle").value=d?.title||"";$("#documentNumber").value=d?.number||"";$("#documentExpiry").value=d?.expiry||"";$("#documentCost").value=d?.cost||"";$("#documentPaymentMode").value=d?.paymentMode||"full";$("#documentInstallmentCount").value=d?.installmentCount||4;$("#documentFirstInstallment").value=d?.firstInstallment||today();$("#documentInstallmentFrequency").value=d?.installmentFrequency||"monthly";syncInsuranceFields();$("#documentFile").value=d?.file||"";$("#documentNote").value=d?.note||"";$("#documentDialog").showModal()}
-window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openCar=openCar;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
+window.openDamageDialog=openDamageDialog;window.deleteDamage=deleteDamage;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openCar=openCar;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
 window.editRepair=id=>openRepairDialog("",id);window.editPayment=id=>openPaymentDialog("",id);window.editExpense=id=>openExpenseDialog("",id);window.editDocument=id=>openDocumentDialog("",id);
 window.deleteRepair=id=>{if(confirm("Удалить ремонт?")){db.repairs=db.repairs.filter(x=>x.id!==id);save();renderRepairs()}};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=id=>{if(confirm("Удалить документ?")){db.documents=db.documents.filter(x=>x.id!==id);save();renderDocuments()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все его записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);save();showPage("fleetPage")}};
-$("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),weeklyRent:Number($("#carWeeklyRent").value),insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
-$("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
-$("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),obj={id,carId:$("#repairCarId").value,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage:Number($("#repairMileage").value||0),planned:Number($("#repairPlanned").value||0),actual:Number($("#repairActual").value||0),status:$("#repairStatus").value,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim()};old?Object.assign(old,obj):db.repairs.push(obj);save();$("#repairDialog").close();renderRepairs();toast("Ремонт сохранён")};
-$("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),from:$("#paymentFrom").value,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):db.payments.push(obj);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
-$("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim()};old?Object.assign(old,obj):db.expenses.push(obj);save();$("#expenseDialog").close();renderExpenses();toast("Расход сохранён")};
-$("#documentForm").onsubmit=e=>{e.preventDefault();const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),note:$("#documentNote").value.trim()};old?Object.assign(old,obj):db.documents.push(obj);save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")};
+$("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),weeklyRent:Number($("#carWeeklyRent").value),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
+$("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
+$("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),obj={id,carId:$("#repairCarId").value,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage:Number($("#repairMileage").value||0),planned:Number($("#repairPlanned").value||0),actual:Number($("#repairActual").value||0),status:$("#repairStatus").value,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim()};old?Object.assign(old,obj):db.repairs.push(obj);addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,obj.status);save();$("#repairDialog").close();renderRepairs();toast("Ремонт сохранён")};
+$("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),from:$("#paymentFrom").value,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):db.payments.push(obj);addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
+$("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim()};old?Object.assign(old,obj):db.expenses.push(obj);addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,obj.status);save();$("#expenseDialog").close();renderExpenses();toast("Расход сохранён")};
+$("#documentForm").onsubmit=e=>{e.preventDefault();const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),note:$("#documentNote").value.trim()};old?Object.assign(old,obj):db.documents.push(obj);addTimeline(obj.carId,"document",obj.title,-Number(obj.cost||0),obj.expiry||today(),obj.type);save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")};
 $$(".bottom-nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));$$("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).close());$("#headerAdd").onclick=()=>openCarDialog();$("#addRepair").onclick=()=>openRepairDialog();$("#addPayment").onclick=()=>openPaymentDialog();$("#addExpense").onclick=()=>openExpenseDialog();$("#addDocument").onclick=()=>openDocumentDialog();$("#backToFleet").onclick=()=>showPage("fleetPage");$("#fleetSearch").oninput=renderFleet;$("#fleetFilter").onchange=renderFleet;$("#paymentCarId").onchange=recalculateExpectedPayment;
 $("#paymentFrom").onchange=recalculateExpectedPayment;
 $("#paymentTo").onchange=recalculateExpectedPayment;
@@ -652,6 +758,23 @@ $("#removeCarPhoto").onclick=()=>{
  $("#carPhotoFile").value="";
  renderCarPhotoPreview();
  toast("Фотография удалена")
+};
+
+
+$("#damagePhotoFile").onchange=async e=>{
+ const file=e.target.files?.[0];
+ if(!file)return;
+ try{
+  pendingDamagePhoto=await compressCarPhoto(file);
+  $("#damagePhotoPreview").innerHTML=`<img src="${pendingDamagePhoto}" alt="Предпросмотр">`
+ }catch(error){toast(error.message||"Не удалось обработать фото")}
+};
+$("#damageForm").onsubmit=e=>{
+ e.preventDefault();
+ const obj={id:uid(),carId:$("#damageCarId").value,title:$("#damageTitle").value.trim(),date:$("#damageDate").value,note:$("#damageNote").value.trim(),photo:pendingDamagePhoto};
+ db.damages.push(obj);
+ addTimeline(obj.carId,"damage",obj.title,0,obj.date,obj.note);
+ save();$("#damageDialog").close();if(selectedCarId)openCar(selectedCarId);toast("Повреждение сохранено")
 };
 
 $("#exportBackup").onclick=downloadBackup;
