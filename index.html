@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V5.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=510">
-  <link rel="stylesheet" href="styles.css?v=510">
+  <title>FleetPilot V5.3</title>
+  <link rel="manifest" href="manifest.webmanifest?v=530">
+  <link rel="stylesheet" href="styles.css?v=530">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V5.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V5.3</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -34,7 +34,9 @@
       <div id="healthSummary" class="health-summary"></div>
       <div id="fleetSummary" class="summary-grid operational-summary"></div>
       <div class="toolbar card">
-        <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору">
+        <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору"><select id="fleetCityFilter" aria-label="Фильтр по городу">
+  <option value="all">Все города</option>
+</select>
         <select id="fleetFilter">
           <option value="all">Все автомобили</option>
           <option value="active">На линии</option>
@@ -282,7 +284,7 @@
     <button data-page="expensesPage">💸<span>Расходы</span></button>
     <button data-page="calendarPage">🗓️<span>Календарь</span></button>
     <button data-page="morePage">•••<span>Ещё</span></button>
-  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document"><span>📄</span>Документ</button></div>
+  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit"><span>🔐</span>Кауция</button></div>
 </div>
 
 <dialog id="carDialog"><form id="carForm" class="modal">
@@ -298,7 +300,10 @@
     <label>Текущий пробег<input id="carMileage" type="number" required></label>
     <label>Интервал масла, км<input id="carOilInterval" type="number" value="10000" required></label>
     <label>Последняя замена масла, км<input id="carLastOil" type="number" required></label>
-    <label>Аренда за неделю<input id="carWeeklyRent" type="number" step="0.01" required></label>
+    <label>Город эксплуатации
+  <input id="carCity" list="fleetCityOptions" placeholder="Например: Warszawa" required>
+  <datalist id="fleetCityOptions"></datalist>
+</label><label>Аренда за неделю<input id="carWeeklyRent" type="number" step="0.01" required></label><label>Порядок оплаты<select id="carPaymentTiming"><option value="advance">Авансом за неделю</option><option value="arrears">После отработанной недели</option></select></label><label>Требуемая кауция<input id="carDepositTarget" type="number" step="0.01" min="0" value="0"></label>
     <label>Стоимость покупки<input id="carPurchasePrice" type="number" step="0.01" min="0"></label>
     <label>Дата покупки<input id="carPurchaseDate" type="date"></label>
     <label>Страховка до<input id="carInsurance" type="date"></label>
@@ -351,7 +356,7 @@
   <div class="modal-head"><h2>Оплата аренды</h2><button type="button" data-close="paymentDialog">✕</button></div>
   <input id="paymentId" type="hidden">
   <label>Автомобиль<select id="paymentCarId"></select></label>
-  <label>Арендатор<input id="paymentTenant"></label>
+  <label>Арендатор<input id="paymentTenant"></label><div id="paymentModeBanner" class="payment-mode-banner"></div><div class="grid2"><label>Схема оплаты<select id="paymentTiming"><option value="advance">Авансом</option><option value="arrears">После недели</option></select></label><label>За какую неделю<input id="paymentReferenceWeek" placeholder="2026-W32"></label></div>
   <div class="grid2">
     <label>Период с<input id="paymentFrom" type="date" required></label>
     <label>Период по<input id="paymentTo" type="date" required></label>
@@ -359,7 +364,7 @@
     <label class="check-label auto-rent-label"><input id="paymentAutoExpected" type="checkbox" checked> Рассчитать автоматически по дням</label>
     <label>Получено<input id="paymentReceived" type="number" step="0.01" required></label>
     <label>Дата поступления<input id="paymentDate" type="date"></label>
-    <label>Неделя<input id="paymentWeek"></label>
+    <label>Учётная неделя<input id="paymentWeek"></label>
   </div>
   <div id="paymentCalculationInfo" class="payment-calculation-info"></div>
   <div id="paymentDuplicateWarning" class="duplicate-warning" hidden></div>
@@ -434,6 +439,6 @@
   </div>
 </dialog>
 
-<div id="toast" class="toast"></div>
-<script src="app.js?v=510"></script>
+<dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
+<script src="app.js?v=530"></script>
 </body></html>
