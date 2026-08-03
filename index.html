@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V5.0</title>
-  <link rel="manifest" href="manifest.webmanifest?v=500">
-  <link rel="stylesheet" href="styles.css?v=500">
+  <title>FleetPilot V5.1</title>
+  <link rel="manifest" href="manifest.webmanifest?v=510">
+  <link rel="stylesheet" href="styles.css?v=510">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V5.0</span><h1 id="pageTitle">Автопарк</h1></div>
-    <button id="headerAdd" class="round">＋</button>
+    <div><span class="eyebrow">FleetPilot V5.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
   <main>
@@ -102,6 +102,11 @@
         <h3 id="analyticsPeriodTitle">Текущий год</h3>
       </div>
       <div id="analyticsSummary" class="summary-grid compact"></div>
+      <div class="intelligence-grid">
+        <div class="card intelligence-card"><span class="eyebrow">Следующие 30 дней</span><h3>Финансовый прогноз</h3><div id="financialForecast"></div></div>
+        <div class="card intelligence-card"><span class="eyebrow">Общее состояние</span><h3>Здоровье автопарка</h3><div id="fleetHealthIndex"></div></div>
+      </div>
+
       <div class="card tax-panel">
         <div class="section-head">
           <div><span class="eyebrow">Налоговый профиль партнёра</span><h3>Налоги и прибыль после налогов</h3></div>
@@ -186,6 +191,8 @@
         </div>
       </div>
 
+      <div class="card storage-status-card"><div><span class="eyebrow">Файлы документов</span><h3>Локальное хранилище IndexedDB</h3></div><div id="fileStorageStats">Подсчёт…</div></div>
+      <div class="card backup-history-card"><div class="section-head"><div><span class="eyebrow">История</span><h3>Последние автокопии</h3></div><button id="createManualSnapshot" class="btn">Создать снимок</button></div><div id="backupHistory"></div></div>
       <div class="backup-grid">
         <div class="card backup-card">
           <div class="backup-icon">💾</div>
@@ -238,7 +245,9 @@
       <div class="section-head">
         <div><span class="eyebrow">Дополнительные разделы</span><h2>Ещё</h2></div>
       </div>
-      <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="more-grid">
+      <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="card assistant-card"><span class="eyebrow">FleetPilot Intelligence</span><h3>Утренний помощник</h3><div id="dailyAssistant"></div></div>
+      <div class="card activity-card"><div class="section-head"><div><span class="eyebrow">Контроль изменений</span><h3>Журнал действий</h3></div><button id="exportActivityLog" class="btn">Скачать CSV</button></div><div id="activityLog"></div></div>
+      <div class="more-grid">
         <button class="more-card" onclick="showPage('analyticsPage')">
           <span class="more-icon">📊</span><strong>Аналитика</strong>
           <small>KPI, налоги, прибыль, окупаемость и рекомендации</small>
@@ -254,6 +263,12 @@
       </div>
     </section>
 
+
+    <section id="searchPage" class="page">
+      <div class="section-head"><div><span class="eyebrow">По всей базе</span><h2>Глобальный поиск</h2></div><button id="closeGlobalSearch" class="btn">Закрыть</button></div>
+      <div class="card global-search-box"><input id="globalSearchInput" placeholder="Автомобиль, номер, арендатор, ремонт, документ…" autocomplete="off"><span id="globalSearchCount"></span></div>
+      <div id="globalSearchResults" class="global-search-results"></div>
+    </section>
 <section id="carPage" class="page">
       <button id="backToFleet" class="back">← Назад</button>
       <div id="carDetail"></div>
@@ -377,12 +392,15 @@
     <label>Номер<input id="documentNumber"></label>
     <label>Действует до<input id="documentExpiry" type="date"></label>
     <label>Стоимость<input id="documentCost" type="number" step="0.01"></label><label>Оплата страховки<select id="documentPaymentMode"><option value="full">Одним платежом</option><option value="installments">В рассрочку</option></select></label><label class="insurance-installment-field">Количество рат<input id="documentInstallmentCount" type="number" min="2" max="24" value="4"></label><label class="insurance-installment-field">Дата первой раты<input id="documentFirstInstallment" type="date"></label><label class="insurance-installment-field">Периодичность<select id="documentInstallmentFrequency"><option value="monthly">Каждый месяц</option><option value="quarterly">Каждые 3 месяца</option></select></label>
-    <label>Ссылка на файл<input id="documentFile"></label>
+    <label>Ссылка на файл<input id="documentFile" placeholder="Необязательно"></label>
+    <label>Прикрепить файл<input id="documentAttachment" type="file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
   </div>
-  <label>Комментарий<input id="documentNote"></label>
+  <div id="documentAttachmentPreview" class="attachment-preview"></div><label>Комментарий<input id="documentNote"></label>
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
+
+<dialog id="fileViewerDialog" class="file-viewer-dialog"><div class="file-viewer"><div class="modal-head"><div><span class="eyebrow">Документ</span><h2 id="fileViewerTitle">Просмотр</h2></div><button id="closeFileViewer" type="button">✕</button></div><iframe id="fileViewerFrame" title="Просмотр документа"></iframe><img id="fileViewerImage" alt="Просмотр изображения"><p id="fileViewerFallback"></p></div></dialog>
 
 <dialog id="damageDialog"><form id="damageForm" class="modal">
   <div class="modal-head"><h2 id="damageDialogTitle">Повреждение автомобиля</h2><button type="button" data-close="damageDialog">✕</button></div>
@@ -417,5 +435,5 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=500"></script>
+<script src="app.js?v=510"></script>
 </body></html>
