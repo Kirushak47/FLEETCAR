@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v5.5","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v5.6","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -549,6 +549,8 @@ function renderAnalytics(){renderProfitability();
  const tenants=tenantStats();
  $("#tenantRatings").innerHTML=tenants.length?tenants.map(x=>`<div class="tenant-row"><div><strong>${x.name}</strong><small>Записей: ${x.records} · Просрочек: ${x.late}</small></div><span>${Math.round(x.score)}%</span><b>${x.debt?money(x.debt):"Без долга"}</b></div>`).join(""):"Данных об арендаторах пока нет";
 
+
+ requestAnimationFrame(()=>{animateLineCharts($("#analyticsPage"));animateProgressBars($("#analyticsPage"));animateDashboard()})
 }
 
 
@@ -717,6 +719,50 @@ function animateProgressBars(root=document){
   setTimeout(()=>requestAnimationFrame(()=>{el.style.width=target}),80+index*70)
  })
 }
+
+function fleetScoreData(){
+ const cars=cityFilteredCars();
+ if(!cars.length)return{score:0,label:"Нет данных",reasons:["Добавьте автомобили для расчёта рейтинга."]};
+ let score=100;const reasons=[];let repairs=0;
+ for(const c of cars){
+  const h=healthDetails(c),name=`${model(c).brand} ${model(c).model}`;
+  if(h.level==="danger"){score-=18;reasons.push(`${name}: критическое событие`)}
+  else if(h.level==="warning"){score-=8;reasons.push(`${name}: требуется внимание`)}
+  if(c.status==="repair"){score-=5;repairs++}
+ }
+ const incomplete=db.payments.filter(p=>cars.some(c=>c.id===p.carId)&&Number(p.expected||0)>Number(p.received||0)).length;
+ score-=Math.min(18,incomplete*3);score=Math.max(0,Math.round(score));
+ if(repairs)reasons.push(`В ремонте: ${repairs}`);
+ if(incomplete)reasons.push(`Неполных оплат: ${incomplete}`);
+ if(!reasons.length)reasons.push("Все основные показатели в норме.");
+ return{score,label:score>=90?"Отличное состояние":score>=75?"Хорошее состояние":score>=55?"Нужен контроль":"Высокий риск",reasons:reasons.slice(0,4)}
+}
+function assistantInsightData(){
+ const cars=cityFilteredCars(),plan=weekPlanData(),month=financialDataForVisibleCars("month"),items=[];
+ const ins=cars.filter(c=>{const d=days(c.insurance);return d>=0&&d<=14});
+ const insp=cars.filter(c=>{const d=days(c.inspection);return d>=0&&d<=14});
+ const oilRows=cars.filter(c=>{const d=oil(c);return d>0&&d<=1000});
+ const free=cars.filter(c=>c.status==="free");
+ items.push({type:plan.expectedBalance>=0?"good":"danger",text:plan.expectedBalance>=0?`Ожидаемый результат недели: ${money(plan.expectedBalance)}.`:`Расходы превышают доход на ${money(Math.abs(plan.expectedBalance))}.`});
+ items.push({type:month.finalProfit>=0?"good":"danger",text:`Чистая прибыль месяца: ${money(month.finalProfit)}.`});
+ if(ins.length)items.push({type:"warning",text:`У ${ins.length} авто страховка заканчивается в течение 14 дней.`});
+ if(insp.length)items.push({type:"warning",text:`У ${insp.length} авто техосмотр заканчивается в течение 14 дней.`});
+ if(oilRows.length)items.push({type:"warning",text:`${oilRows.length} авто скоро потребуют замену масла.`});
+ if(free.length)items.push({type:"info",text:`Свободных автомобилей без аренды: ${free.length}.`});
+ return items.slice(0,5)
+}
+function renderFleetIntelligence(){
+ const data=fleetScoreData(),ring=$("#fleetScoreRing");
+ $("#fleetScoreLabel").textContent=data.label;$("#fleetScoreReason").textContent=data.reasons.join(" · ");
+ ring.style.setProperty("--score",data.score);
+ ring.className=`fleet-score-ring ${data.score>=90?"excellent":data.score>=75?"good":data.score>=55?"warning":"danger"}`;
+ animateNumber($("#fleetScoreValue"),data.score,"integer");
+ $("#assistantInsights").innerHTML=assistantInsightData().map((x,i)=>`<div class="assistant-insight ${x.type}" style="--insight-index:${i}"><span></span><p>${x.text}</p></div>`).join("")
+}
+function animateLineCharts(root=document){
+ root.querySelectorAll("svg polyline,svg path[data-animate-line]").forEach((el,index)=>{try{const len=el.getTotalLength();el.style.strokeDasharray=len;el.style.strokeDashoffset=len;el.style.transition="none";requestAnimationFrame(()=>setTimeout(()=>{el.style.transition="stroke-dashoffset 1s cubic-bezier(.16,1,.3,1)";el.style.strokeDashoffset="0"},70+index*70))}catch{}})
+}
+
 function renderOwnerDashboard(){
  const data=ownerDashboardData();
  const cards=[
@@ -779,6 +825,7 @@ function cityLabel(){
 function renderFleet(){
  refreshCityControls();
  renderOwnerDashboard();
+ renderFleetIntelligence();
  renderWeekPlan();
  const period="month",monthText="текущий месяц";
  const q=$("#fleetSearch").value.toLowerCase(),f=$("#fleetFilter").value;
@@ -801,7 +848,7 @@ function renderFleet(){
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="hero-top">
-  <span class="status ${att?"attention":c.status}">${att?"Требует внимания":statusText(c.status)}</span>
+  <div class="hero-status-row"><span class="status ${att?"attention":c.status}">${att?"Требует внимания":statusText(c.status)}</span><span class="condition-pill ${health.level}">${health.level==="danger"?"Критично":health.level==="warning"?"Нужен контроль":"Отличное состояние"}</span></div>
   <span class="model-year">${c.year}</span>
  </div>
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
@@ -809,9 +856,10 @@ function renderFleet(){
   <h3>${m.brand} ${m.model}</h3>
   <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
  </div>
- <div class="hero-profit ${monthProfit<0?"negative":""}">
+ <div class="hero-profit animated-profit ${monthProfit<0?"negative":""}">
   <small>Прибыль за текущий месяц</small>
-  <strong>${money(monthProfit)}</strong>
+  <strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong>
+  <span class="profit-trend ${monthProfit>=0?"up":"down"}">${monthProfit>=0?"↗":"↘"}</span>
  </div>
  <div class="health-score ${health.level}"><span>Состояние</span><strong>${health.score}%</strong></div>
 </div>
