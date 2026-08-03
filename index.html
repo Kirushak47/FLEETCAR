@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V4.3</title>
-  <link rel="manifest" href="manifest.webmanifest?v=430">
-  <link rel="stylesheet" href="styles.css?v=430">
+  <title>FleetPilot V4.4</title>
+  <link rel="manifest" href="manifest.webmanifest?v=440">
+  <link rel="stylesheet" href="styles.css?v=440">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V4.3</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V4.4</span><h1 id="pageTitle">Автопарк</h1></div>
     <button id="headerAdd" class="round">＋</button>
   </header>
 
@@ -20,6 +20,16 @@
       <div class="today-hero">
         <div><span class="eyebrow">Сегодня</span><h2>Состояние автопарка</h2><p>Все важные события в одном месте</p></div>
         <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
+      </div>
+      <div class="week-plan card">
+        <div class="week-plan-head">
+          <div>
+            <span class="eyebrow">План недели</span>
+            <h3 id="weekPlanTitle">Текущая неделя</h3>
+          </div>
+          <div class="week-plan-period" id="weekPlanPeriod"></div>
+        </div>
+        <div id="weekPlanSummary" class="week-plan-summary"></div>
       </div>
       <div id="healthSummary" class="health-summary"></div>
       <div id="fleetSummary" class="summary-grid operational-summary"></div>
@@ -229,9 +239,9 @@
         <div><span class="eyebrow">Дополнительные разделы</span><h2>Ещё</h2></div>
       </div>
       <div class="more-grid">
-        <button class="more-card" onclick="showPage('expensesPage')">
-          <span class="more-icon">💸</span><strong>Плановые расходы</strong>
-          <small>Страховки, лизинг, шины и другие будущие платежи</small>
+        <button class="more-card" onclick="showPage('analyticsPage')">
+          <span class="more-icon">📊</span><strong>Аналитика</strong>
+          <small>KPI, налоги, прибыль, окупаемость и рекомендации</small>
         </button>
         <button class="more-card" onclick="showPage('documentsPage')">
           <span class="more-icon">📄</span><strong>Документы</strong>
@@ -254,8 +264,8 @@
     <button data-page="fleetPage" class="active">⌂<span>Сегодня</span></button>
     <button data-page="repairsPage">🔧<span>Сервис</span></button>
     <button data-page="paymentsPage">💳<span>Аренда</span></button>
+    <button data-page="expensesPage">💸<span>Расходы</span></button>
     <button data-page="calendarPage">🗓️<span>Календарь</span></button>
-    <button data-page="analyticsPage">📊<span>Аналитика</span></button>
     <button data-page="morePage">•••<span>Ещё</span></button>
   </nav>
 </div>
@@ -407,5 +417,5 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
-<script src="app.js?v=430"></script>
+<script src="app.js?v=440"></script>
 </body></html>

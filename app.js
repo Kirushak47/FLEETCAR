@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v4.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v4.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -356,12 +356,54 @@ function ownerRecommendations(period){
 }
 function daysBetween(a,b){return Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/86400000)}
 function forecastService(c){
- const hist=(c.history||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
- if(hist.length<2)return null;
- const first=hist[0],last=hist[hist.length-1],diff=Math.max(1,daysBetween(first.date,last.date));
- const daily=(last.value-first.value)/diff;
- if(daily<=0)return null;
- return Math.ceil(Math.max(0,oil(c))/daily)
+ const history=(c.history||[])
+  .filter(x=>x&&x.date&&Number.isFinite(Number(x.value)))
+  .map(x=>({date:x.date,value:Number(x.value)}))
+  .sort((a,b)=>a.date.localeCompare(b.date));
+
+ if(history.length<2)return null;
+
+ // Use up to the latest 8 unique readings, avoiding duplicate dates.
+ const unique=[];
+ for(const item of history){
+  const last=unique[unique.length-1];
+  if(last&&last.date===item.date){
+   if(item.value>last.value)unique[unique.length-1]=item;
+  }else{
+   unique.push(item)
+  }
+ }
+ const recent=unique.slice(-8);
+ if(recent.length<2)return null;
+
+ const dailyRates=[];
+ for(let i=1;i<recent.length;i++){
+  const prev=recent[i-1],curr=recent[i];
+  const dayDiff=daysBetween(prev.date,curr.date);
+  const kmDiff=curr.value-prev.value;
+  if(dayDiff>0&&kmDiff>=0){
+   const rate=kmDiff/dayDiff;
+   // Reject impossible/outlier fleet readings above 1000 km/day.
+   if(rate>0&&rate<=1000)dailyRates.push(rate)
+  }
+ }
+ if(!dailyRates.length)return null;
+
+ // Median is more stable than first-vs-last and resists one bad reading.
+ const sorted=[...dailyRates].sort((a,b)=>a-b);
+ const middle=Math.floor(sorted.length/2);
+ const median=sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+ if(!Number.isFinite(median)||median<=0)return null;
+
+ const remaining=Math.max(0,oil(c));
+ const daysLeft=Math.ceil(remaining/median);
+
+ return{
+  days:daysLeft,
+  averageDailyKm:Math.round(median),
+  remainingKm:remaining,
+  confidence:dailyRates.length>=3?"good":"limited"
+ }
 }
 let pendingDamagePhotos=[];
 function renderPendingDamagePhotos(){
@@ -481,7 +523,61 @@ function renderAttention(){
  $("#attentionList").innerHTML=rows.length?rows.map(x=>`<article class="list-item attention-item ${x.item.level}"><div class="attention-icon">${healthIcon(x.item.type)}</div><div><h3>${x.m.brand} ${x.m.model}</h3><p>${x.c.plate} · ${x.item.title}</p></div><strong>${x.item.value}</strong></article>`).join(""):`<div class="card">Всё хорошо — предупреждений нет.</div>`
 }
 
+
+function startOfWeek(dateValue=new Date()){
+ const d=dateValue instanceof Date?new Date(dateValue):new Date(dateValue+"T12:00:00");
+ const day=(d.getDay()+6)%7;
+ d.setDate(d.getDate()-day);
+ d.setHours(0,0,0,0);
+ return d
+}
+function endOfWeek(dateValue=new Date()){
+ const d=startOfWeek(dateValue);
+ d.setDate(d.getDate()+6);
+ d.setHours(23,59,59,999);
+ return d
+}
+function isoDateFromDate(d){return d.toISOString().slice(0,10)}
+function weekPlanData(){
+ const from=startOfWeek(),to=endOfWeek();
+ const activeCars=fleetCars().filter(c=>c.status==="active");
+ const plannedRevenue=activeCars.reduce((sum,c)=>sum+Number(c.weeklyRent||0),0);
+ const plannedExpenses=db.expenses.filter(x=>{
+  if(x.status!=="planned"||!x.date)return false;
+  const d=new Date(x.date+"T12:00:00");
+  return d>=from&&d<=to
+ }).reduce((sum,x)=>sum+Number(x.amount||0),0);
+ const plannedRepairs=db.repairs.filter(r=>{
+  if(r.status==="done"||!r.date)return false;
+  const d=new Date(r.date+"T12:00:00");
+  return d>=from&&d<=to
+ }).reduce((sum,r)=>sum+Number(r.planned||0),0);
+ const totalPlannedCosts=plannedExpenses+plannedRepairs;
+ return{
+  from:isoDateFromDate(from),
+  to:isoDateFromDate(to),
+  activeCars:activeCars.length,
+  plannedRevenue,
+  plannedExpenses,
+  plannedRepairs,
+  totalPlannedCosts,
+  expectedBalance:plannedRevenue-totalPlannedCosts
+ }
+}
+function renderWeekPlan(){
+ const data=weekPlanData();
+ $("#weekPlanTitle").textContent=`Неделя ${isoWeek(data.from)}`;
+ $("#weekPlanPeriod").textContent=`${date(data.from)} — ${date(data.to)}`;
+ $("#weekPlanSummary").innerHTML=[
+  ["Машин на линии",data.activeCars,""],
+  ["Плановый заработок",money(data.plannedRevenue),"good"],
+  ["Плановые расходы",money(data.totalPlannedCosts),data.totalPlannedCosts?"warning":""],
+  ["Ожидаемый остаток",money(data.expectedBalance),data.expectedBalance>=0?"good":"danger"]
+ ].map(x=>`<div class="week-plan-card ${x[2]}"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("")
+}
+
 function renderFleet(){
+ renderWeekPlan();
  const period="month",monthText="текущий месяц";
  const q=$("#fleetSearch").value.toLowerCase(),f=$("#fleetFilter").value;
  const list=fleetCars().filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant}`.toLowerCase();return hay.includes(q)&&(f==="all"||(f==="attention"?attention(c):c.status===f))});
@@ -705,7 +801,16 @@ function openCar(id){selectedCarId=id;const c=car(id),m=model(c),payments=db.pay
  </div>
  <div class="card" style="margin-top:12px">
   <h3>Прогноз обслуживания</h3>
-  <p>${forecastService(c)!==null?`При текущем среднем пробеге замена масла ориентировочно через ${forecastService(c)} дн.`:"Недостаточно истории пробега для прогноза."}</p>
+  ${(()=>{
+  const forecast=forecastService(c);
+  if(!forecast)return `<p>Недостаточно корректной истории пробега для прогноза.</p>`;
+  return `<div class="service-forecast">
+    <div><small>Осталось до ТО</small><strong>${km(forecast.remainingKm)}</strong></div>
+    <div><small>Средний пробег в день</small><strong>${km(forecast.averageDailyKm)}</strong></div>
+    <div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div>
+  </div>
+  <p class="forecast-note">${forecast.confidence==="limited"?"Прогноз предварительный: пока мало записей пробега.":"Прогноз рассчитан по медиане последних записей пробега."}</p>`;
+})()}
  </div>
  <div class="card" style="margin-top:12px">
   <div class="section-head"><h3>Лента событий</h3><button class="btn" onclick="openDamageDialog('${c.id}')">+ Повреждение</button></div>
