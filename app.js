@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v5.6","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -85,6 +85,8 @@ db.damages.forEach(d=>{
 db.cars.forEach(c=>{
  if(c.inFleet===undefined)c.inFleet=true;
   if(c.city===undefined)c.city="";
+  if(c.favorite===undefined)c.favorite=false;
+  if(c.archived===undefined)c.archived=false;
  if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3";
 });
 function save(){
@@ -107,7 +109,8 @@ const money=v=>new Intl.NumberFormat("pl-PL",{style:"currency",currency:db.setti
 const km=v=>new Intl.NumberFormat("ru-RU").format(Math.round(v||0))+" км",date=d=>d?new Date(d+"T12:00:00").toLocaleDateString("ru-RU"):"—";
 const days=d=>d?Math.ceil((new Date(d+"T12:00:00")-new Date(today()+"T12:00:00"))/86400000):9999,oil=c=>c.lastOil+c.oilInterval-c.mileage;
 function toast(t){const x=$("#toast");x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1600)}
-function fleetCars(){return db.cars.filter(c=>c.inFleet!==false)}
+function fleetCars(){return db.cars.filter(c=>c.inFleet!==false&&!c.archived)}
+function archivedCars(){return db.cars.filter(c=>c.inFleet!==false&&c.archived)}
 function opts(selected=""){return fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
 function statusText(s){return {active:"На линии",repair:"В ремонте",free:"Свободен"}[s]||s}
 function paymentStatus(p){const rest=Math.max(0,p.expected-p.received);return rest===0?"paid":p.received>0?"partial":"unpaid"}
@@ -125,6 +128,96 @@ function documentTypeText(value){
  return{insurance:"Страховка",inspection:"Техосмотр",registration:"Регистрация",leasing:"Лизинг",other:"Другое"}[value]||value
 }
 function paymentStatusText(s){return {paid:"Оплачено",partial:"Частично",unpaid:"Не оплачено"}[s]}
+
+const UX_KEY="fleetpilot.ux.v1";
+const DASHBOARD_BLOCKS=[
+ {id:"hero",label:"Приветствие и уведомления"},
+ {id:"finance",label:"Финансовый дашборд"},
+ {id:"intelligence",label:"Score и автоматическая сводка"},
+ {id:"week",label:"План недели"},
+ {id:"health",label:"Состояние и предупреждения"},
+ {id:"filters",label:"Поиск и фильтры"},
+ {id:"cars",label:"Автомобили"}
+];
+const DEFAULT_UX={mode:"advanced",order:DASHBOARD_BLOCKS.map(x=>x.id),visible:DASHBOARD_BLOCKS.map(x=>x.id)};
+function uxSettings(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(UX_KEY)||"null");
+  return{...DEFAULT_UX,...saved,order:Array.isArray(saved?.order)?saved.order:DEFAULT_UX.order,visible:Array.isArray(saved?.visible)?saved.visible:DEFAULT_UX.visible}
+ }catch{return structuredClone(DEFAULT_UX)}
+}
+function saveUxSettings(value){
+ localStorage.setItem(UX_KEY,JSON.stringify(value));
+ applyUxSettings()
+}
+function effectiveVisible(settings=uxSettings()){
+ if(settings.mode==="simple")return["hero","finance","week","filters","cars"];
+ return settings.visible
+}
+function applyUxSettings(){
+ const settings=uxSettings(),root=$("#fleetPage");
+ if(!root)return;
+ const visible=new Set(effectiveVisible(settings));
+ const order=[...settings.order,...DASHBOARD_BLOCKS.map(x=>x.id).filter(id=>!settings.order.includes(id))];
+ order.forEach(id=>{
+  const el=root.querySelector(`[data-dashboard-block="${id}"]`);
+  if(el)root.appendChild(el)
+ });
+ root.querySelectorAll("[data-dashboard-block]").forEach(el=>{
+  el.hidden=!visible.has(el.dataset.dashboardBlock)
+ });
+ document.documentElement.dataset.uiMode=settings.mode;
+ $$(".mode-switcher button").forEach(b=>b.classList.toggle("active",b.dataset.uiMode===settings.mode))
+}
+function renderDashboardSettings(){
+ const settings=uxSettings(),visible=new Set(settings.visible);
+ const ordered=[...settings.order,...DASHBOARD_BLOCKS.map(x=>x.id).filter(id=>!settings.order.includes(id))];
+ $("#dashboardBlockList").innerHTML=ordered.map(item=>{
+  const meta=DASHBOARD_BLOCKS.find(x=>x.id===item);
+  return `<div class="dashboard-block-row" draggable="true" data-block-id="${item}">
+   <span class="drag-handle">⋮⋮</span>
+   <label><input type="checkbox" ${visible.has(item)?"checked":""}> <strong>${meta?.label||item}</strong></label>
+  </div>`
+ }).join("");
+ let dragged=null;
+ $$(".dashboard-block-row").forEach(row=>{
+  row.ondragstart=()=>{dragged=row;row.classList.add("dragging")};
+  row.ondragend=()=>{row.classList.remove("dragging");dragged=null};
+  row.ondragover=e=>{e.preventDefault();if(!dragged||dragged===row)return;const box=row.getBoundingClientRect();row.parentElement.insertBefore(dragged,e.clientY<box.top+box.height/2?row:row.nextSibling)}
+ })
+}
+function setUiMode(mode){
+ const settings=uxSettings();settings.mode=mode;saveUxSettings(settings);renderMorePage?.()
+}
+function toggleFavorite(id){
+ const c=car(id);if(!c)return;c.favorite=!c.favorite;save();renderFleet();toast(c.favorite?"Добавлено в избранное":"Удалено из избранного")
+}
+function toggleArchive(id){
+ const c=car(id);if(!c)return;
+ c.archived=!c.archived;
+ if(c.archived)c.status="free";
+ save();
+ showPage("fleetPage");
+ $("#fleetFilter").value=c.archived?"archive":"all";
+ renderFleet();
+ toast(c.archived?"Автомобиль перемещён в архив":"Автомобиль возвращён в автопарк")
+}
+function openCarQuickMenu(id,event){
+ event?.stopPropagation();
+ const menu=document.createElement("div");
+ menu.className="car-context-menu";
+ menu.innerHTML=`<button onclick="openCar('${id}');this.closest('.car-context-menu').remove()">Открыть профиль</button>
+ <button onclick="openPaymentDialog('${id}');this.closest('.car-context-menu').remove()">Добавить оплату</button>
+ <button onclick="openRepairDialog('${id}');this.closest('.car-context-menu').remove()">Добавить ремонт</button>
+ <button onclick="openMileage('${id}');this.closest('.car-context-menu').remove()">Обновить пробег</button>
+ <button onclick="toggleFavorite('${id}');this.closest('.car-context-menu').remove()">Избранное</button>`;
+ document.querySelectorAll(".car-context-menu").forEach(x=>x.remove());
+ document.body.appendChild(menu);
+ const x=Math.min(window.innerWidth-230,event?.clientX||window.innerWidth/2),y=Math.min(window.innerHeight-260,event?.clientY||120);
+ menu.style.left=x+"px";menu.style.top=y+"px";
+ setTimeout(()=>document.addEventListener("click",()=>menu.remove(),{once:true}),0)
+}
+
 const THEME_KEY="fleetpilot.theme.v1";
 function preferredTheme(mode){if(mode==="system")return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";return mode||"light"}
 function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){document.documentElement.dataset.theme=preferredTheme(mode);document.documentElement.dataset.themeMode=mode;$$('.theme-switcher button').forEach(b=>b.classList.toggle('active',b.dataset.themeMode===mode))}
@@ -137,6 +230,19 @@ $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#
 $("#closeGlobalSearch").onclick=()=>showPage("fleetPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
 $("#closeFileViewer").onclick=()=>$("#fileViewerDialog").close();$("#fileViewerDialog").addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
+
+$("#customizeDashboard").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+$("#openDashboardSettings").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+$$(".mode-switcher button").forEach(b=>b.onclick=()=>setUiMode(b.dataset.uiMode));
+$("#dashboardSettingsForm").onsubmit=e=>{
+ e.preventDefault();
+ const settings=uxSettings(),rows=[...$("#dashboardBlockList").children];
+ settings.order=rows.map(x=>x.dataset.blockId);
+ settings.visible=rows.filter(x=>x.querySelector("input").checked).map(x=>x.dataset.blockId);
+ saveUxSettings(settings);$("#dashboardSettingsDialog").close();renderFleet();toast("Главная настроена")
+};
+$("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
+
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
 
@@ -252,7 +358,7 @@ async function importBackupFile(file){
  });
  save();
  await writeAutoBackup();
- applyTheme();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
+ applyTheme();applyUxSettings();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
  toast("Данные восстановлены")
 }
 async function restoreLatestAutoBackup(){
@@ -482,7 +588,7 @@ function assistantMessages(){
  messages.push(`Общее здоровье автопарка — ${health.overall}%.`);
  if(!attention.length)messages.unshift("Критических предупреждений нет.");return messages
 }
-function renderMorePage(){
+function renderMorePage(){applyUxSettings();
  const msgs=assistantMessages();$("#dailyAssistant").innerHTML=msgs.map(x=>`<div class="assistant-message">${x}</div>`).join("");
  const rows=(db.activity||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);$("#activityLog").innerHTML=rows.length?rows.map(x=>`<div class="activity-row"><div><strong>${x.action}</strong><small>${new Date(x.date).toLocaleString("ru-RU")} · ${x.entity||"FleetPilot"}</small></div><span>${x.details||""}</span></div>`).join(""):"Действий пока нет"
 }
@@ -824,12 +930,16 @@ function cityLabel(){
 
 function renderFleet(){
  refreshCityControls();
+ applyUxSettings();
  renderOwnerDashboard();
  renderFleetIntelligence();
  renderWeekPlan();
  const period="month",monthText="текущий месяц";
  const q=$("#fleetSearch").value.toLowerCase(),f=$("#fleetFilter").value;
- const list=cityFilteredCars().filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();return hay.includes(q)&&(f==="all"||(f==="attention"?attention(c):c.status===f))});
+ const source=f==="archive"
+  ?archivedCars().filter(c=>selectedFleetCity==="all"||normalizedCity(c.city)===selectedFleetCity)
+  :cityFilteredCars();
+ const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):c.status===f)))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
  const debt=db.payments.reduce((s,p)=>s+Math.max(0,p.expected-p.received),0);
  const healthRows=cityFilteredCars().map(c=>({c,h:healthDetails(c)}));
  $("#attentionCount").textContent=healthRows.reduce((s,x)=>s+x.h.items.length,0);
@@ -849,7 +959,11 @@ function renderFleet(){
  <div class="custom-photo-shade"></div>
  <div class="hero-top">
   <div class="hero-status-row"><span class="status ${att?"attention":c.status}">${att?"Требует внимания":statusText(c.status)}</span><span class="condition-pill ${health.level}">${health.level==="danger"?"Критично":health.level==="warning"?"Нужен контроль":"Отличное состояние"}</span></div>
-  <span class="model-year">${c.year}</span>
+  <div class="hero-card-controls">
+   <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
+   <button class="card-menu-button" onclick="openCarQuickMenu('${c.id}',event)" aria-label="Быстрые действия">⋮</button>
+   <span class="model-year">${c.year}</span>
+  </div>
  </div>
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
  <div class="hero-title">
@@ -1055,7 +1169,7 @@ function renderCarProfile(id,activeTab="info"){
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
- $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button></div>`
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button><button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button></div>`
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){return Object.entries(MODELS).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.brand} ${m.model} (${m.years})</option>`).join("")}
@@ -1108,10 +1222,10 @@ function openExpenseDialog(carId="",id=""){if(!requireFleetCar())return;const x=
 function openDocumentDialog(carId="",id=""){if(!requireFleetCar())return;const d=id?db.documents.find(v=>v.id===id):null;$("#documentId").value=d?.id||"";$("#documentCarId").innerHTML=opts(d?.carId||carId);$("#documentType").value=d?.type||"insurance";$("#documentTitle").value=d?.title||"";$("#documentNumber").value=d?.number||"";$("#documentExpiry").value=d?.expiry||"";$("#documentCost").value=d?.cost||"";$("#documentPaymentMode").value=d?.paymentMode||"full";$("#documentInstallmentCount").value=d?.installmentCount||4;$("#documentFirstInstallment").value=d?.firstInstallment||today();$("#documentInstallmentFrequency").value=d?.installmentFrequency||"monthly";syncInsuranceFields();$("#documentFile").value=d?.file||"";$("#documentAttachment").value="";$("#documentAttachmentPreview").innerHTML=d?.fileId?`<div class="attached-file"><span>Файл прикреплён</span><button type="button" class="btn" onclick="openDocumentAttachment('${d.fileId}','${(d.title||"Документ").replaceAll("'","\'")}')">Открыть</button></div>`:"";$("#documentNote").value=d?.note||"";$("#documentDialog").showModal()}
 function openDepositDialog(carId="",id=""){if(!requireFleetCar())return;const row=id?(db.deposits||[]).find(x=>x.id===id):null,c=car(row?.carId||carId||fleetCars()[0]?.id);$("#depositId").value=row?.id||"";$("#depositCarId").innerHTML=opts(row?.carId||carId||c?.id);$("#depositTenant").value=row?.tenant||c?.tenant||"";$("#depositAmount").value=row?.amount||"";$("#depositDate").value=row?.date||today();$("#depositNote").value=row?.note||"";$("#depositDialog").showModal()}
 function deleteDeposit(id){if(!confirm("Удалить этот платёж кауции?"))return;const row=db.deposits.find(x=>x.id===id);db.deposits=db.deposits.filter(x=>x.id!==id);logActivity("Удалён платёж кауции","Кауция",row?money(row.amount):"",row?.carId);save();if(selectedCarId)openCar(selectedCarId,"finance")}
-window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openDocumentAttachment=openDocumentAttachment;window.downloadDocumentAttachment=downloadDocumentAttachment;window.restoreBackupById=restoreBackupById;window.openCar=openCar;window.openDepositDialog=openDepositDialog;window.deleteDeposit=deleteDeposit;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
+window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openDocumentAttachment=openDocumentAttachment;window.downloadDocumentAttachment=downloadDocumentAttachment;window.restoreBackupById=restoreBackupById;window.toggleFavorite=toggleFavorite;window.toggleArchive=toggleArchive;window.openCarQuickMenu=openCarQuickMenu;window.openCar=openCar;window.openDepositDialog=openDepositDialog;window.deleteDeposit=deleteDeposit;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
 window.editRepair=id=>openRepairDialog("",id);window.editPayment=id=>openPaymentDialog("",id);window.editExpense=id=>openExpenseDialog("",id);window.editDocument=id=>openDocumentDialog("",id);
 window.deleteRepair=id=>{if(confirm("Удалить ремонт?")){db.repairs=db.repairs.filter(x=>x.id!==id);save();renderRepairs()}};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=async id=>{if(confirm("Удалить документ?")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
-$("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),city:normalizedCity($("#carCity").value),weeklyRent:Number($("#carWeeklyRent").value),paymentTiming:$("#carPaymentTiming").value,depositTarget:Number($("#carDepositTarget").value||0),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
+$("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,favorite:old?.favorite||false,archived:old?.archived||false,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),city:normalizedCity($("#carCity").value),weeklyRent:Number($("#carWeeklyRent").value),paymentTiming:$("#carPaymentTiming").value,depositTarget:Number($("#carDepositTarget").value||0),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
 $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
 $("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),obj={id,carId:$("#repairCarId").value,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage:Number($("#repairMileage").value||0),planned:Number($("#repairPlanned").value||0),actual:Number($("#repairActual").value||0),status:$("#repairStatus").value,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim()};old?Object.assign(old,obj):(db.repairs.push(obj),addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status)));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();toast("Ремонт сохранён")};
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};

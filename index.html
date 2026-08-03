@@ -4,24 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V5.6</title>
-  <link rel="manifest" href="manifest.webmanifest?v=560">
-  <link rel="stylesheet" href="styles.css?v=560">
+  <title>FleetPilot V6.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=600">
+  <link rel="stylesheet" href="styles.css?v=600">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V5.6</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V6.0</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
   <main>
     <section id="fleetPage" class="page active">
-      <div class="today-hero">
+      <div class="today-hero" data-dashboard-block="hero">
         <div><span class="eyebrow">Сегодня</span><h2>Состояние автопарка</h2><p>Все важные события в одном месте</p></div>
-        <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
+        <div class="hero-actions">
+      <button id="customizeDashboard" class="hero-tool-button" type="button">⚙ <span>Настроить</span></button>
+      <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
+    </div>
       </div>
-      <section class="owner-dashboard" aria-label="Финансовая сводка владельца">
+      <section class="owner-dashboard" data-dashboard-block="finance" aria-label="Финансовая сводка владельца">
         <div class="owner-dashboard-head">
           <div>
             <span class="eyebrow">Центр управления</span>
@@ -34,7 +37,7 @@
         </div>
         <div id="ownerDashboardGrid" class="owner-dashboard-grid"></div>
       </section>
-      <section class="intelligence-grid">
+      <section class="intelligence-grid" data-dashboard-block="intelligence">
         <article class="fleet-score-card card">
           <div class="fleet-score-ring" id="fleetScoreRing"><div><strong id="fleetScoreValue">0</strong><span>/100</span></div></div>
           <div class="fleet-score-copy"><span class="eyebrow">FleetPilot Score</span><h3 id="fleetScoreLabel">Оценка автопарка</h3><p id="fleetScoreReason">Анализируем состояние автомобилей…</p></div>
@@ -44,7 +47,7 @@
           <div id="assistantInsights" class="assistant-insights"></div>
         </article>
       </section>
-      <div class="week-plan card">
+      <div class="week-plan card" data-dashboard-block="week">
         <div class="week-plan-head">
           <div>
             <span class="eyebrow">План недели</span>
@@ -54,9 +57,9 @@
         </div>
         <div id="weekPlanSummary" class="week-plan-summary"></div>
       </div>
-      <div id="healthSummary" class="health-summary"></div>
+      <div id="healthSummary" class="health-summary" data-dashboard-block="health"></div>
       <div id="fleetSummary" class="summary-grid operational-summary"></div>
-      <div class="toolbar card">
+      <div class="toolbar card" data-dashboard-block="filters">
         <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору"><select id="fleetCityFilter" aria-label="Фильтр по городу">
   <option value="all">Все города</option>
 </select>
@@ -65,10 +68,10 @@
           <option value="active">На линии</option>
           <option value="repair">В ремонте</option>
           <option value="free">Свободен</option>
-          <option value="attention">Требует внимания</option>
+          <option value="attention">Требует внимания</option><option value="favorites">Избранные</option><option value="archive">Архив</option>
         </select>
       </div>
-      <div id="fleetGrid" class="fleet-grid"></div>
+      <div id="fleetGrid" class="fleet-grid" data-dashboard-block="cars"></div>
     </section>
 
     <section id="repairsPage" class="page">
@@ -270,6 +273,18 @@
       <div class="section-head">
         <div><span class="eyebrow">Дополнительные разделы</span><h2>Ещё</h2></div>
       </div>
+      <div class="ux-settings-panel card">
+        <div>
+          <span class="eyebrow">Удобство работы</span>
+          <h3>Режим интерфейса</h3>
+          <p>Простой режим оставляет только основные рабочие блоки. Расширенный показывает всю аналитику.</p>
+        </div>
+        <div class="mode-switcher">
+          <button type="button" data-ui-mode="simple">Простой</button>
+          <button type="button" data-ui-mode="advanced">Расширенный</button>
+        </div>
+        <button id="openDashboardSettings" class="btn">Настроить главную</button>
+      </div>
       <div class="appearance-panel card"><div><span class="eyebrow">Внешний вид</span><h3>Тема приложения</h3></div><div class="theme-switcher"><button type="button" data-theme-mode="light">Светлая</button><button type="button" data-theme-mode="dark">Тёмная</button><button type="button" data-theme-mode="system">Авто</button></div></div><div class="card assistant-card"><span class="eyebrow">FleetPilot Intelligence</span><h3>Утренний помощник</h3><div id="dailyAssistant"></div></div>
       <div class="card activity-card"><div class="section-head"><div><span class="eyebrow">Контроль изменений</span><h3>Журнал действий</h3></div><button id="exportActivityLog" class="btn">Скачать CSV</button></div><div id="activityLog"></div></div>
       <div class="more-grid">
@@ -309,6 +324,19 @@
     <button data-page="morePage">•••<span>Ещё</span></button>
   </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit"><span>🔐</span>Кауция</button></div>
 </div>
+
+<dialog id="dashboardSettingsDialog"><form id="dashboardSettingsForm" class="modal dashboard-settings-modal">
+  <div class="modal-head">
+    <div><span class="eyebrow">Главная страница</span><h2>Настроить блоки</h2></div>
+    <button type="button" data-close="dashboardSettingsDialog">✕</button>
+  </div>
+  <p class="settings-help">Включайте нужные блоки и перетаскивайте их за ручку, чтобы изменить порядок.</p>
+  <div id="dashboardBlockList" class="dashboard-block-list"></div>
+  <div class="settings-actions">
+    <button id="resetDashboardSettings" type="button" class="btn">Сбросить</button>
+    <button class="btn primary">Сохранить</button>
+  </div>
+</form></dialog>
 
 <dialog id="carDialog"><form id="carForm" class="modal">
   <div class="modal-head"><div><span class="eyebrow">Автомобиль</span><h2 id="carDialogTitle">Добавить</h2></div><button type="button" data-close="carDialog">✕</button></div>
@@ -463,5 +491,5 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=560"></script>
+<script src="app.js?v=600"></script>
 </body></html>
