@@ -2463,3 +2463,224 @@ $("#eraseAllData").onclick=()=>{
  toast("Все данные удалены")
 };
 showPage("fleetPage");
+/* =========================================================
+   FleetPilot — FIX
+   Автомобили сразу отображаются при первом открытии
+   ========================================================= */
+
+(() => {
+  let bootAttempts = 0;
+  let bootFinished = false;
+  let bootTimer = null;
+
+  function getCarsBlock() {
+    const fleetGrid = document.querySelector("#fleetGrid");
+
+    return (
+      fleetGrid?.closest("[data-dashboard-block='cars']") ||
+      fleetGrid?.parentElement ||
+      null
+    );
+  }
+
+  function databaseIsReady() {
+    return (
+      typeof db !== "undefined" &&
+      db !== null &&
+      Array.isArray(db.cars)
+    );
+  }
+
+  function fleetElementsAreReady() {
+    return Boolean(
+      document.querySelector("#fleetPage") &&
+      document.querySelector("#fleetGrid")
+    );
+  }
+
+  function showFleetListImmediately() {
+    const fleetPage = document.querySelector("#fleetPage");
+    const fleetGrid = document.querySelector("#fleetGrid");
+    const carsBlock = getCarsBlock();
+
+    if (!fleetPage || !fleetGrid) {
+      return false;
+    }
+
+    /* Показываем главную страницу */
+    document.querySelectorAll(".page").forEach((page) => {
+      page.classList.toggle("active", page.id === "fleetPage");
+    });
+
+    fleetPage.classList.add("active");
+    fleetPage.hidden = false;
+    fleetPage.style.removeProperty("display");
+    fleetPage.style.removeProperty("visibility");
+    fleetPage.style.removeProperty("opacity");
+
+    /* Включаем компьютерный вид «Список» */
+    document.documentElement.dataset.desktopFleetView = "list";
+
+    try {
+      if (typeof DESKTOP_VIEW_KEY !== "undefined") {
+        localStorage.setItem(DESKTOP_VIEW_KEY, "list");
+      }
+    } catch (error) {
+      console.warn("Не удалось сохранить desktop view:", error);
+    }
+
+    document.querySelectorAll("[data-fleet-view]").forEach((button) => {
+      button.classList.toggle(
+        "active",
+        button.dataset.fleetView === "list"
+      );
+    });
+
+    /* Скрываем доску, таблицу и карту */
+    document.querySelectorAll("[data-command-view]").forEach((view) => {
+      view.hidden = true;
+    });
+
+    /* Гарантированно показываем блок автомобилей */
+    if (carsBlock) {
+      carsBlock.hidden = false;
+      carsBlock.classList.remove("desktop-command-hidden");
+      carsBlock.style.removeProperty("display");
+      carsBlock.style.removeProperty("visibility");
+      carsBlock.style.removeProperty("opacity");
+    }
+
+    fleetGrid.hidden = false;
+    fleetGrid.classList.remove("desktop-command-hidden");
+    fleetGrid.style.removeProperty("display");
+    fleetGrid.style.removeProperty("visibility");
+    fleetGrid.style.removeProperty("opacity");
+
+    return true;
+  }
+
+  function safeRender(name, callback) {
+    try {
+      if (typeof callback === "function") {
+        callback();
+      }
+    } catch (error) {
+      console.error(`FleetPilot: ошибка ${name}`, error);
+    }
+  }
+
+  function performFleetBoot() {
+    if (window.innerWidth < 1100 || bootFinished) {
+      return;
+    }
+
+    bootAttempts += 1;
+
+    if (!fleetElementsAreReady() || !databaseIsReady()) {
+      if (bootAttempts < 40) {
+        clearTimeout(bootTimer);
+        bootTimer = setTimeout(performFleetBoot, 100);
+      } else {
+        console.error(
+          "FleetPilot: база или элементы главной не загрузились"
+        );
+      }
+
+      return;
+    }
+
+    showFleetListImmediately();
+
+    safeRender(
+      "renderFleet",
+      typeof renderFleet === "function" ? renderFleet : null
+    );
+
+    safeRender(
+      "renderDesktopCommandKpis",
+      typeof renderDesktopCommandKpis === "function"
+        ? renderDesktopCommandKpis
+        : null
+    );
+
+    safeRender(
+      "renderDesktopEvents",
+      typeof renderDesktopEvents === "function"
+        ? renderDesktopEvents
+        : null
+    );
+
+    safeRender(
+      "renderDesktopInsights",
+      typeof renderDesktopInsights === "function"
+        ? renderDesktopInsights
+        : null
+    );
+
+    safeRender(
+      "renderControlCenterExtras",
+      typeof renderControlCenterExtras === "function"
+        ? renderControlCenterExtras
+        : null
+    );
+
+    safeRender(
+      "applyControlWindowSettings",
+      typeof applyControlWindowSettings === "function"
+        ? applyControlWindowSettings
+        : null
+    );
+
+    /*
+     * Повторные проходы нужны из-за того, что IndexedDB,
+     * изображения, шрифты и desktop-layout могут завершить
+     * загрузку немного позже первого renderFleet().
+     */
+    requestAnimationFrame(() => {
+      showFleetListImmediately();
+
+      safeRender(
+        "renderFleet — второй проход",
+        typeof renderFleet === "function" ? renderFleet : null
+      );
+
+      requestAnimationFrame(() => {
+        showFleetListImmediately();
+
+        safeRender(
+          "renderFleet — финальный проход",
+          typeof renderFleet === "function" ? renderFleet : null
+        );
+
+        bootFinished = true;
+      });
+    });
+  }
+
+  function startFleetBoot() {
+    if (window.innerWidth < 1100) {
+      return;
+    }
+
+    bootFinished = false;
+    bootAttempts = 0;
+
+    performFleetBoot();
+
+    setTimeout(performFleetBoot, 150);
+    setTimeout(performFleetBoot, 400);
+    setTimeout(performFleetBoot, 800);
+  }
+
+  document.addEventListener("DOMContentLoaded", startFleetBoot);
+  window.addEventListener("load", startFleetBoot);
+
+  /*
+   * Возврат на страницу из кеша браузера или установленной PWA.
+   */
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted || window.innerWidth >= 1100) {
+      startFleetBoot();
+    }
+  });
+})();
