@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.0.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -316,6 +316,13 @@ $("#desktopAddCar").onclick=()=>openCarDialog();
 $("#desktopSearchButton").onclick=()=>$("#fleetSearch")?.focus();
 $("#desktopThemeToggle").onclick=()=>toggleTheme();
 $("#desktopSettingsButton").onclick=()=>showPage("morePage");
+
+
+$("#toggleOfficeBoard").onclick=()=>document.querySelector(".office-board-panel").classList.toggle("collapsed");
+$("#openOfficeCalendar").onclick=()=>showPage("calendarPage");
+$("#applyBulkStatus").onclick=applyBulkStatus;$("#applyBulkCity").onclick=applyBulkCity;$("#clearBulkSelection").onclick=clearOfficeSelection;
+document.addEventListener("keydown",event=>{if(event.target&&["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="n"){event.preventDefault();openCarDialog()}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="f"){event.preventDefault();showPage("fleetPage");setTimeout(()=>$("#fleetSearch")?.focus(),30)}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="p"){event.preventDefault();if(requireFleetCar())openPaymentDialog()}if(event.key==="Escape"&&officeSelection.size)clearOfficeSelection()});
+window.addEventListener("resize",()=>{if(window.innerWidth>=1100)renderOfficeMode()});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1002,6 +1009,35 @@ function cityLabel(){
  return selectedFleetCity==="all"?"весь автопарк":selectedFleetCity
 }
 
+
+const officeSelection=new Set();
+function officeStatusLabel(status){return{active:"На линии",repair:"В ремонте",free:"Доступны"}[status]||status}
+function officeKpiData(){
+ const cars=fleetCars(),active=cars.filter(c=>c.status==="active").length,repair=cars.filter(c=>c.status==="repair").length,free=cars.filter(c=>c.status==="free").length,attentionCount=cars.filter(attention).length;
+ const month=financialData(currentMonth(),null),week=weekPlanData();
+ return[
+  {label:"Прибыль месяца",value:money(month.finalProfit||0),hint:"Фактический результат",type:(month.finalProfit||0)<0?"danger":"good"},
+  {label:"План недели",value:money(week.plannedRevenue||0),hint:`Ожидаемо ${money(week.expectedProfit||0)}`,type:"primary"},
+  {label:"На линии",value:`${active} / ${cars.length}`,hint:`Доступны ${free}`,type:"good"},
+  {label:"В сервисе",value:String(repair),hint:`Требуют внимания ${attentionCount}`,type:repair||attentionCount?"warning":"good"}
+ ]
+}
+function renderOfficeKpis(){const root=$("#officeKpiStrip");if(root)root.innerHTML=officeKpiData().map(item=>`<article class="office-kpi-card ${item.type}"><small>${item.label}</small><strong>${item.value}</strong><span>${item.hint}</span></article>`).join("")}
+function renderOfficeBoard(){
+ const root=$("#officeFleetBoard");if(!root)return;
+ root.innerHTML=["active","repair","free"].map(status=>{const cars=fleetCars().filter(c=>c.status===status);return`<div class="office-board-column"><div class="office-board-title"><strong>${officeStatusLabel(status)}</strong><span>${cars.length}</span></div><div class="office-board-list" data-drop-status="${status}">${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="office-board-car health-${h.level}" draggable="true" data-drag-car="${c.id}"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}${c.city?` · ${c.city}`:""}</small></div><span>${h.items.length?h.items[0].value:"OK"}</span></article>`}).join("")||`<div class="office-board-empty">Нет автомобилей</div>`}</div></div>`}).join("");
+ root.querySelectorAll("[data-drag-car]").forEach(card=>card.ondragstart=e=>e.dataTransfer.setData("text/plain",card.dataset.dragCar));
+ root.querySelectorAll("[data-drop-status]").forEach(list=>{list.ondragover=e=>{e.preventDefault();list.classList.add("drag-over")};list.ondragleave=()=>list.classList.remove("drag-over");list.ondrop=e=>{e.preventDefault();list.classList.remove("drag-over");const c=car(e.dataTransfer.getData("text/plain"));if(!c)return;c.status=list.dataset.dropStatus;save();renderFleet();toast(`Статус: ${statusText(c.status)}`)}})
+}
+function renderOfficeEvents(){const root=$("#officeEventsFeed");if(!root)return;const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);root.innerHTML=events.length?events.map(e=>`<button type="button" class="office-event-item ${e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openCar('${e.carId}')"><span class="office-event-icon">${eventIcon(e.type)}</span><div><strong>${e.title}</strong><small>${e.car}</small></div><time>${e.days===0?"Сегодня":e.days===1?"Завтра":`${e.days} дн.`}</time></button>`).join(""):`<div class="office-empty-state">Ближайших событий нет</div>`}
+function renderOfficeMode(){if(window.innerWidth<1100)return;renderOfficeKpis();renderOfficeBoard();renderOfficeEvents();syncOfficeSelection()}
+function toggleOfficeSelection(id,checked){checked?officeSelection.add(id):officeSelection.delete(id);syncOfficeSelection()}
+function syncOfficeSelection(){$$(".office-car-checkbox").forEach(input=>input.checked=officeSelection.has(input.value));const bar=$("#bulkActionBar");if(!bar)return;bar.hidden=!officeSelection.size;$("#bulkSelectedCount").textContent=officeSelection.size}
+function clearOfficeSelection(){officeSelection.clear();syncOfficeSelection()}
+function applyBulkStatus(){const status=$("#bulkStatusSelect").value;if(!status||!officeSelection.size)return toast("Выберите статус");officeSelection.forEach(id=>{const c=car(id);if(c)c.status=status});save();clearOfficeSelection();renderFleet();toast("Статус обновлён")}
+function applyBulkCity(){const city=normalizedCity($("#bulkCityInput").value);if(!city||!officeSelection.size)return toast("Укажите город");officeSelection.forEach(id=>{const c=car(id);if(c)c.city=city});save();clearOfficeSelection();renderFleet();toast("Город обновлён")}
+window.toggleOfficeSelection=toggleOfficeSelection;
+
 function renderFleet(){
  refreshCityControls();
  applyUxSettings();
@@ -1087,7 +1123,8 @@ function renderFleet(){
  <strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет запланированных событий"}</strong>
 </div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
-<div class="desktop-fleet-row health-${health.level}">
+<div class="desktop-fleet-row health-${health.level}" data-office-car-id="${c.id}">
+<label class="desktop-row-select" onclick="event.stopPropagation()"><input type="checkbox" class="office-car-checkbox" value="${c.id}" onchange="toggleOfficeSelection('${c.id}',this.checked)"><span></span></label>
   <span class="desktop-row-accent"></span>
   <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
     ${c.customPhoto?`<img class="desktop-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:`<div class="desktop-car-photo-placeholder">🚘</div>`}
@@ -1127,6 +1164,7 @@ function renderFleet(){
     <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button>
   </div>
 </div></div>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
+ renderOfficeMode();
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
