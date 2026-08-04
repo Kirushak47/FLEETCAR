@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.9</title>
-  <link rel="manifest" href="manifest.webmanifest?v=790">
-  <link rel="stylesheet" href="styles.css?v=790">
+  <title>FleetPilot V7.9.1</title>
+  <link rel="manifest" href="manifest.webmanifest?v=791">
+  <link rel="stylesheet" href="styles.css?v=791">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -31,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.9</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V7.9.1</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -770,7 +770,13 @@
 <div class="gps-format-help"><strong>Ожидаемые данные</strong><small>id, name, latitude, longitude, speed, updatedAt.</small></div>
 <div id="gpsTestResult" class="gps-test-result" hidden></div>
 </div>
-<div class="gps-setup-actions"><button type="button" id="testGpsConnection" class="btn">Проверить</button><button type="submit" class="btn primary">Сохранить</button></div>
+<div class="gps-setup-actions gps-setup-actions-demo">
+  <button type="button" id="startGpsDemo" class="btn gps-demo-btn">Попробовать демо</button>
+  <div>
+    <button type="button" id="testGpsConnection" class="btn">Проверить</button>
+    <button type="submit" class="btn primary">Сохранить</button>
+  </div>
+</div>
 </form></dialog>
 <dialog id="gpsMappingDialog" class="gps-mapping-dialog"><div class="gps-mapping-shell">
 <div class="gps-setup-head"><div><span class="eyebrow">Сопоставление</span><h2>Связать GPS с автомобилями</h2><p>Выберите автомобиль FleetPilot для каждого устройства.</p></div><button type="button" id="closeGpsMapping" class="dialog-close">×</button></div>
@@ -778,5 +784,5 @@
 <div class="gps-setup-actions"><button type="button" id="saveGpsMapping" class="btn primary">Сохранить сопоставление</button></div>
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="app.js?v=790"></script>
+<script src="app.js?v=791"></script>
 </body></html>

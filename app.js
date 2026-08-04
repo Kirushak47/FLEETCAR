@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.9","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.9.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -391,6 +391,7 @@ $$("[data-theme-mode]").forEach(button=>{
 
 $("#openGpsSetup").onclick=openGpsSetup;
 $("#closeGpsSetup").onclick=()=>$("#gpsSetupDialog").close();
+$("#startGpsDemo").onclick=startGpsDemo;
 $("#testGpsConnection").onclick=testGpsConnection;
 $("#gpsSetupForm").onsubmit=saveGpsConnection;
 $("#closeGpsMapping").onclick=()=>$("#gpsMappingDialog").close();
@@ -420,6 +421,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  }
 });
 window.addEventListener("pageshow",()=>applyTheme());
+window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement()});
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
  const view=button.dataset.fleetView;
@@ -1774,12 +1776,128 @@ let fleetMapV2RowsCache=[];
 const GPS_CONFIG_KEY="fleetpilot.gps.config.v1";
 const GPS_DEVICES_KEY="fleetpilot.gps.devices.v1";
 const GPS_MAPPING_KEY="fleetpilot.gps.mapping.v1";
+const GPS_DEMO_KEY="fleetpilot.gps.demo.v1";
+let gpsDemoTimer=null;
+
 
 function gpsRead(key,fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}}
 function gpsWrite(key,value){localStorage.setItem(key,JSON.stringify(value))}
 function readGpsConfig(){return gpsRead(GPS_CONFIG_KEY,null)}
 function readGpsDevices(){return gpsRead(GPS_DEVICES_KEY,[])}
 function readGpsMapping(){return gpsRead(GPS_MAPPING_KEY,{})}
+
+
+function gpsDemoEnabled(){
+ return localStorage.getItem(GPS_DEMO_KEY)==="1"
+}
+
+function gpsDemoBasePoints(){
+ return[
+  {lat:52.2297,lng:21.0122,name:"Toyota Prius III Demo",plate:"WAW 001"},
+  {lat:52.2364,lng:21.0219,name:"Toyota Auris Demo",plate:"WAW 002"},
+  {lat:52.2188,lng:20.9852,name:"Toyota Corolla Demo",plate:"WAW 003"},
+  {lat:52.2471,lng:21.0410,name:"Skoda Fabia Demo",plate:"WAW 004"},
+  {lat:52.2085,lng:21.0315,name:"Toyota Camry Demo",plate:"WAW 005"},
+  {lat:52.2580,lng:20.9960,name:"Ford Mondeo Demo",plate:"WAW 006"}
+ ]
+}
+
+function buildGpsDemoDevices(){
+ const now=new Date().toISOString();
+ return gpsDemoBasePoints().map((point,index)=>({
+  id:`demo-${index+1}`,
+  name:point.name,
+  plate:point.plate,
+  latitude:point.lat,
+  longitude:point.lng,
+  speed:[34,18,52,0,41,27][index],
+  updatedAt:now,
+  online:index!==3
+ }))
+}
+
+function updateGpsDemoDevices(){
+ if(!gpsDemoEnabled())return;
+
+ const devices=readGpsDevices().map((device,index)=>{
+  if(!String(device.id).startsWith("demo-"))return device;
+
+  const moving=device.online!==false;
+  const angle=(Date.now()/9000)+(index*1.37);
+  const distance=moving?0.00055:0;
+
+  return{
+   ...device,
+   latitude:Number(device.latitude||52.2297)+Math.sin(angle)*distance,
+   longitude:Number(device.longitude||21.0122)+Math.cos(angle)*distance,
+   speed:moving?Math.max(8,Math.round(22+18*Math.abs(Math.sin(angle*1.8)))):0,
+   updatedAt:new Date().toISOString()
+  }
+ });
+
+ gpsWrite(GPS_DEVICES_KEY,devices);
+
+ if(typeof renderFleetMapV2==="function"){
+  renderFleetMapV2({fit:false})
+ }
+
+ document.querySelectorAll(".desktop-gps-badge").forEach(()=>{});
+}
+
+function startGpsDemoMovement(){
+ clearInterval(gpsDemoTimer);
+ if(!gpsDemoEnabled())return;
+ gpsDemoTimer=setInterval(updateGpsDemoDevices,5000)
+}
+
+function stopGpsDemoMovement(){
+ clearInterval(gpsDemoTimer);
+ gpsDemoTimer=null
+}
+
+function autoMapDemoDevices(devices){
+ const cars=(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt);
+ const mapping={};
+
+ devices.forEach((device,index)=>{
+  if(cars[index])mapping[device.id]=cars[index].id
+ });
+
+ gpsWrite(GPS_MAPPING_KEY,mapping);
+ return mapping
+}
+
+function startGpsDemo(){
+ const devices=buildGpsDemoDevices();
+ const config={
+  provider:"demo",
+  providerLabel:"GPS Demo",
+  apiUrl:"",
+  token:"",
+  authMode:"none",
+  updatedAt:new Date().toISOString(),
+  demo:true
+ };
+
+ gpsWrite(GPS_CONFIG_KEY,config);
+ gpsWrite(GPS_DEVICES_KEY,devices);
+ localStorage.setItem(GPS_DEMO_KEY,"1");
+
+ autoMapDemoDevices(devices);
+ startGpsDemoMovement();
+
+ $("#gpsSetupDialog").close();
+ renderGpsConnectionSummary();
+ renderFleet();
+
+ if(typeof renderFleetMapV2==="function"){
+  renderFleetMapV2({fit:true})
+ }
+
+ openGpsMapping(devices);
+ toast("GPS Demo включён")
+}
+window.startGpsDemo=startGpsDemo;
 
 function normalizeGpsDevice(raw,index=0){
  const lat=Number(raw.latitude??raw.lat??raw.position?.latitude??raw.position?.lat);
@@ -1801,6 +1919,11 @@ function gpsArray(payload){
  return[]
 }
 async function fetchGpsDevices(config=readGpsConfig()){
+ if(config?.demo||config?.provider==="demo"){
+  const devices=readGpsDevices().length?readGpsDevices():buildGpsDemoDevices();
+  gpsWrite(GPS_DEVICES_KEY,devices);
+  return devices
+ }
  if(!config?.apiUrl)throw new Error("Укажите адрес API");
  let url=config.apiUrl.trim();
  const headers={Accept:"application/json"};
@@ -1841,7 +1964,18 @@ function renderGpsConnectionSummary(){
  const root=$("#gpsConnectionSummary");if(!root)return;
  const config=readGpsConfig(),devices=readGpsDevices(),mapping=readGpsMapping();
  if(!config){root.innerHTML=`<div class="gps-summary-empty"><span>⌖</span><div><strong>GPS не подключён</strong><small>Нажмите «Подключить GPS» и введите данные системы.</small></div></div>`;return}
- root.innerHTML=`<div class="gps-summary-connected"><span class="gps-summary-status"></span><div><strong>${config.providerLabel}</strong><small>${devices.length} устройств · ${Object.values(mapping).filter(Boolean).length} сопоставлено</small></div><div class="gps-summary-buttons"><button onclick="syncGpsNow()">Синхронизировать</button><button onclick="openGpsMapping()">Сопоставить</button><button onclick="disconnectGps()">Отключить</button></div></div>`
+ root.innerHTML=`<div class="gps-summary-connected ${config.demo?"demo":""}">
+  <span class="gps-summary-status"></span>
+  <div>
+    <strong>${config.providerLabel}${config.demo?" · тестовый режим":""}</strong>
+    <small>${devices.length} устройств · ${Object.values(mapping).filter(Boolean).length} сопоставлено${config.demo?" · обновление каждые 5 сек.":""}</small>
+  </div>
+  <div class="gps-summary-buttons">
+    <button onclick="syncGpsNow()">Синхронизировать</button>
+    <button onclick="openGpsMapping()">Сопоставить</button>
+    <button onclick="disconnectGps()">Отключить</button>
+  </div>
+</div>`
 }
 function openGpsSetup(){
  const c=readGpsConfig()||{};
@@ -1866,12 +2000,20 @@ function saveGpsMapping(){
  const mapping={};$$("[data-gps-device]").forEach(s=>{if(s.value)mapping[s.dataset.gpsDevice]=s.value});gpsWrite(GPS_MAPPING_KEY,mapping);$("#gpsMappingDialog").close();renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("Сопоставление сохранено")
 }
 async function syncGpsNow(){
- try{const d=await fetchGpsDevices();renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});toast(`GPS обновлён: ${d.length}`)}
- catch(e){toast(`Ошибка GPS: ${e.message}`)}
+ try{
+  if(gpsDemoEnabled())updateGpsDemoDevices();
+  const d=await fetchGpsDevices();
+  renderGpsConnectionSummary();
+  renderFleet();
+  if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});
+  toast(`GPS обновлён: ${d.length}`)
+ }catch(e){
+  toast(`Ошибка GPS: ${e.message}`)
+ }
 }
 function disconnectGps(){
  if(!confirm("Отключить GPS?"))return;
- [GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
+ stopGpsDemoMovement();[GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY,GPS_DEMO_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
 }
 window.openGpsSetup=openGpsSetup;window.openGpsMapping=openGpsMapping;window.syncGpsNow=syncGpsNow;window.disconnectGps=disconnectGps;
 
