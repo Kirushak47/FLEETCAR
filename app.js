@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.8.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -270,9 +270,71 @@ function openCarQuickMenu(id,event){
 }
 
 const THEME_KEY="fleetpilot.theme.v1";
-function preferredTheme(mode){if(mode==="system")return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";return mode||"light"}
-function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){document.documentElement.dataset.theme=preferredTheme(mode);document.documentElement.dataset.themeMode=mode;$$('.theme-switcher button').forEach(b=>b.classList.toggle('active',b.dataset.themeMode===mode))}
-function setTheme(mode){localStorage.setItem(THEME_KEY,mode);applyTheme(mode)}
+
+function preferredTheme(mode){
+ if(mode==="system"){
+  return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"
+ }
+ return mode==="dark"?"dark":"light"
+}
+
+function themeLabel(mode){
+ return{light:"Светлая",dark:"Тёмная",system:"Авто"}[mode]||"Авто"
+}
+
+function updateDesktopThemeButton(mode){
+ const button=$("#desktopThemeToggle");
+ if(!button)return;
+
+ const icon=button.querySelector("span");
+ if(icon)icon.textContent=mode==="dark"?"☾":mode==="light"?"☀":"◐";
+
+ const textNode=[...button.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);
+ if(textNode)textNode.textContent=` ${themeLabel(mode)}`;
+ else button.append(` ${themeLabel(mode)}`);
+
+ button.title=`Тема: ${themeLabel(mode)}`;
+ button.setAttribute("aria-label",`Тема приложения: ${themeLabel(mode)}`)
+}
+
+function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){
+ const normalized=["light","dark","system"].includes(mode)?mode:"system";
+ const resolved=preferredTheme(normalized);
+
+ document.documentElement.dataset.theme=resolved;
+ document.documentElement.dataset.themeMode=normalized;
+ document.documentElement.style.colorScheme=resolved;
+
+ $$(".theme-switcher button").forEach(button=>{
+  button.classList.toggle("active",button.dataset.themeMode===normalized)
+ });
+
+ updateDesktopThemeButton(normalized)
+}
+
+function setTheme(mode){
+ const normalized=["light","dark","system"].includes(mode)?mode:"system";
+ localStorage.setItem(THEME_KEY,normalized);
+ applyTheme(normalized);
+ toast(`Тема: ${themeLabel(normalized)}`)
+}
+
+function toggleTheme(){
+ const current=localStorage.getItem(THEME_KEY)||document.documentElement.dataset.themeMode||"system";
+ const next=current==="light"?"dark":current==="dark"?"system":"light";
+ setTheme(next)
+}
+
+window.toggleTheme=toggleTheme;
+if(window.matchMedia){
+ const systemThemeQuery=window.matchMedia("(prefers-color-scheme: dark)");
+ const syncSystemTheme=()=>{
+  if((localStorage.getItem(THEME_KEY)||"system")==="system")applyTheme("system")
+ };
+ if(systemThemeQuery.addEventListener)systemThemeQuery.addEventListener("change",syncSystemTheme);
+ else if(systemThemeQuery.addListener)systemThemeQuery.addListener(syncSystemTheme)
+}
+
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 function showPage(id){
  if(isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
@@ -323,6 +385,10 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
 
+$$("[data-theme-mode]").forEach(button=>{
+ button.onclick=()=>setTheme(button.dataset.themeMode)
+});
+
 $("#customizeControlWindows").onclick=openControlWindowsDialog;
 $("#showAllControlWindows").onclick=()=>{
  const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));
@@ -342,10 +408,12 @@ $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALER
 
 
 document.addEventListener("DOMContentLoaded",()=>{
+ applyTheme();
  if(window.innerWidth>=1100){
   setTimeout(scheduleInitialFleetBoot,0)
  }
 });
+window.addEventListener("pageshow",()=>applyTheme());
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
 $("#desktopMapFilter").onchange=()=>{

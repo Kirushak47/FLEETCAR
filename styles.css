@@ -4698,3 +4698,34 @@ html[data-theme="dark"] .fleet-car-marker{border-color:#151d31}
   grid-column:1/-1;
  }
 }
+
+/* FleetPilot V7.8.1 — theme control and settings cleanup */
+@media(min-width:1100px){
+ .desktop-hide-morning-assistant{
+  display:none!important;
+ }
+
+ #desktopThemeToggle{
+  transition:background .16s ease,color .16s ease,border-color .16s ease,transform .16s ease;
+ }
+
+ #desktopThemeToggle:hover{
+  transform:translateY(-1px);
+ }
+
+ #desktopThemeToggle span{
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border-radius:7px;
+  background:rgba(99,102,241,.09);
+  color:#4f46e5;
+  font-size:12px;
+ }
+
+ html[data-theme="dark"] #desktopThemeToggle span{
+  background:rgba(251,191,36,.10);
+  color:#fbbf24;
+ }
+}
