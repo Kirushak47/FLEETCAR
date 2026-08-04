@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V6.1.0</title>
-  <link rel="manifest" href="manifest.webmanifest?v=610">
-  <link rel="stylesheet" href="styles.css?v=610">
+  <title>FleetPilot V6.1.1</title>
+  <link rel="manifest" href="manifest.webmanifest?v=611">
+  <link rel="stylesheet" href="styles.css?v=611">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V6.1.0</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V6.1.1</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -377,6 +377,39 @@
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
+<dialog id="quickServiceDialog"><form id="quickServiceForm" class="modal quick-service-modal">
+  <div class="modal-head">
+    <div><span class="eyebrow">Быстрое обслуживание</span><h2 id="quickServiceTitle">Обновить данные</h2></div>
+    <button type="button" data-close="quickServiceDialog">✕</button>
+  </div>
+  <input id="quickServiceCarId" type="hidden">
+  <input id="quickServiceType" type="hidden">
+  <div id="quickServiceCarInfo" class="quick-service-car-info"></div>
+
+  <div id="quickServiceDateSection" class="quick-service-section">
+    <label>Новая дата окончания<input id="quickServiceExpiry" type="date"></label>
+  </div>
+
+  <div id="quickServiceOilSection" class="quick-service-section" hidden>
+    <div class="grid2">
+      <label>Пробег при замене<input id="quickServiceMileage" type="number"></label>
+      <label>Интервал замены<input id="quickServiceOilInterval" type="number" step="100"></label>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <label>Стоимость<input id="quickServiceCost" type="number" step="0.01" min="0" placeholder="0"></label>
+    <label>Дата выполнения<input id="quickServiceDate" type="date" required></label>
+  </div>
+
+  <label id="quickServiceProviderLabel">Компания / сервис<input id="quickServiceProvider"></label>
+  <label>Комментарий<input id="quickServiceNote"></label>
+  <label class="check-row"><input id="quickServiceAddExpense" type="checkbox" checked> Добавить оплаченный расход</label>
+
+  <div id="quickServicePreview" class="quick-service-preview"></div>
+  <button class="btn primary full">Сохранить</button>
+</form></dialog>
+
 <dialog id="mileageDialog"><form id="mileageForm" class="modal">
   <div class="modal-head"><h2>Обновить пробег</h2><button type="button" data-close="mileageDialog">✕</button></div>
   <input id="mileageCarId" type="hidden">
@@ -491,5 +524,5 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=610"></script>
+<script src="app.js?v=611"></script>
 </body></html>

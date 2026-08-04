@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.1.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.1.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -274,6 +274,11 @@ $("#dashboardSettingsForm").onsubmit=e=>{
  saveUxSettings(settings);$("#dashboardSettingsDialog").close();renderFleet();toast("Главная настроена")
 };
 $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
+
+
+["quickServiceExpiry","quickServiceMileage","quickServiceOilInterval","quickServiceCost"].forEach(id=>{
+ const el=$("#"+id);if(el)el.oninput=updateQuickServicePreview
+});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1012,7 +1017,7 @@ function renderFleet(){
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
 </div>
-<div class="car-body"><div class="vehicle-vitals"><div class="vehicle-vital ${health.oilLeft<=0?"danger urgent":health.oilLeft<=500?"danger soon":health.oilLeft<=1500?"warning soon":"good"}"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"ПРОСРОЧЕНО":km(health.oilLeft)}</strong><em>${health.oilLeft>0&&health.oilLeft<=1500?`Осталось ${km(health.oilLeft)}`:""}</em></div></div><div class="vehicle-vital insurance-vital ${health.insuranceDays<0?"danger urgent":health.insuranceDays<=7?"danger soon":health.insuranceDays<=30?"warning soon":"good"}"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"ПРОСРОЧЕНА":health.insuranceDays<=7?`Осталось ${health.insuranceDays} дн.`:health.insuranceDays+" дн."}</em></div></div><div class="vehicle-vital inspection-vital ${health.inspectionDays<0?"danger urgent":health.inspectionDays<=7?"danger soon":health.inspectionDays<=30?"warning soon":"good"}"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"ПРОСРОЧЕН":health.inspectionDays<=7?`Осталось ${health.inspectionDays} дн.`:health.inspectionDays+" дн."}</em></div></div></div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);return alerts.length?`<div class="vehicle-alert-banner ${alerts.some(x=>x.includes("просроч"))?"danger":"warning"}"><span>!</span><strong>${alerts.join(" · ")}</strong></div>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
+<div class="car-body"><div class="vehicle-vitals"><button type="button" class="vehicle-vital service-action-vital ${health.oilLeft<=0?"danger urgent":health.oilLeft<=500?"danger soon":health.oilLeft<=1500?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"ПРОСРОЧЕНО":km(health.oilLeft)}</strong><em>${health.oilLeft>0&&health.oilLeft<=1500?`Осталось ${km(health.oilLeft)}`:"Нажмите для замены"}</em></div><span class="vital-action">Заменить →</span></button><button type="button" class="vehicle-vital service-action-vital insurance-vital ${health.insuranceDays<0?"danger urgent":health.insuranceDays<=7?"danger soon":health.insuranceDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','insurance')"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"ПРОСРОЧЕНА":health.insuranceDays<=7?`Осталось ${health.insuranceDays} дн.`:health.insuranceDays+" дн."}</em></div><span class="vital-action">Продлить →</span></button><button type="button" class="vehicle-vital service-action-vital inspection-vital ${health.inspectionDays<0?"danger urgent":health.inspectionDays<=7?"danger soon":health.inspectionDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','inspection')"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"ПРОСРОЧЕН":health.inspectionDays<=7?`Осталось ${health.inspectionDays} дн.`:health.inspectionDays+" дн."}</em></div><span class="vital-action">Продлить →</span></button></div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);const primary=health.insuranceDays<=health.inspectionDays?"insurance":"inspection";return alerts.length?`<button type="button" class="vehicle-alert-banner actionable-alert ${alerts.some(x=>x.includes("просроч"))?"danger":"warning"}" onclick="event.stopPropagation();openQuickService('${c.id}','${primary}')"><span>!</span><strong>${alerts.join(" · ")}</strong><b>Обновить →</b></button>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
 <div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
 <div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>
@@ -1248,6 +1253,75 @@ function renderCarPhotoPreview(){
 }
 
 function openCarDialog(id=""){const c=id?car(id):null;$("#carId").value=c?.id||"";$("#carModelKey").innerHTML=modelOptions(c?.modelKey||"toyota-prius-3");$("#carYear").value=c?.year||new Date().getFullYear();$("#carPlate").value=c?.plate||"";$("#carVin").value=c?.vin||"";$("#carTenant").value=c?.tenant||"";$("#carStatus").value=c?.status||"active";$("#carMileage").value=c?.mileage||0;$("#carOilInterval").value=c?.oilInterval||10000;$("#carLastOil").value=c?.lastOil||0;$("#carCity").value=c?.city||"";refreshCityControls();$("#carWeeklyRent").value=c?.weeklyRent||700;$("#carPaymentTiming").value=c?.paymentTiming||"advance";$("#carDepositTarget").value=c?.depositTarget||0;$("#carPurchasePrice").value=c?.purchasePrice||"";$("#carPurchaseDate").value=c?.purchaseDate||"";$("#carInsurance").value=c?.insurance||addDays(today(),365);$("#carInspection").value=c?.inspection||addDays(today(),365);pendingCarPhoto=c?.customPhoto||"";$("#carPhotoFile").value="";renderCarPhotoPreview();$("#carDialog").showModal()}
+
+function quickServiceDefaults(type){
+ return{
+  oil:{title:"Замена масла",expenseTitle:"Замена масла",category:"repair",provider:"Сервис",nextDays:0},
+  insurance:{title:"Продлить страховку",expenseTitle:"Страховка",category:"insurance",provider:"Страховая компания",nextDays:365},
+  inspection:{title:"Продлить техосмотр",expenseTitle:"Техосмотр",category:"inspection",provider:"Станция техосмотра",nextDays:365}
+ }[type]
+}
+
+function openQuickService(carId,type){
+ const c=car(carId),cfg=quickServiceDefaults(type);
+ if(!c||!cfg)return;
+ $("#quickServiceCarId").value=carId;
+ $("#quickServiceType").value=type;
+ $("#quickServiceTitle").textContent=cfg.title;
+ $("#quickServiceCarInfo").innerHTML=`<strong>${model(c).brand} ${model(c).model}</strong><span>${c.plate} · ${km(c.mileage)}</span>`;
+ $("#quickServiceDate").value=today();
+ $("#quickServiceCost").value="";
+ $("#quickServiceProvider").value="";
+ $("#quickServiceNote").value="";
+ $("#quickServiceAddExpense").checked=true;
+ $("#quickServiceDateSection").hidden=type==="oil";
+ $("#quickServiceOilSection").hidden=type!=="oil";
+ $("#quickServiceProviderLabel").firstChild.textContent=cfg.provider;
+ if(type==="oil"){
+  $("#quickServiceMileage").value=c.mileage;
+  $("#quickServiceOilInterval").value=c.oilInterval||10000;
+  $("#quickServiceExpiry").value="";
+ }else{
+  const current=type==="insurance"?c.insurance:c.inspection;
+  const base=current&&days(current)>0?current:today();
+  $("#quickServiceExpiry").value=addDays(base,365);
+ }
+ updateQuickServicePreview();
+ $("#quickServiceDialog").showModal()
+}
+
+function updateQuickServicePreview(){
+ const type=$("#quickServiceType").value,c=car($("#quickServiceCarId").value),cost=Number($("#quickServiceCost").value||0);
+ if(!c)return;
+ if(type==="oil"){
+  const mileage=Number($("#quickServiceMileage").value||c.mileage),interval=Number($("#quickServiceOilInterval").value||c.oilInterval||10000);
+  $("#quickServicePreview").innerHTML=`После сохранения следующая замена будет через <strong>${km(interval)}</strong>, ориентировочно на пробеге <strong>${km(mileage+interval)}</strong>${cost?` · расход ${money(cost)}`:""}.`
+ }else{
+  const label=type==="insurance"?"Страховка":"Техосмотр",expiry=$("#quickServiceExpiry").value;
+  $("#quickServicePreview").innerHTML=`${label} будет действовать до <strong>${date(expiry)}</strong>${cost?` · расход ${money(cost)}`:""}.`
+ }
+}
+
+function addQuickServiceExpense(carId,title,category,dateValue,cost,note){
+ if(!cost)return;
+ const obj={id:uid(),carId,title,category,date:dateValue,amount:Number(cost),status:"paid",note};
+ db.expenses.push(obj);
+ addTimeline(carId,"expense",title,-Number(cost),dateValue,"Оплачен");
+ logActivity("Добавлен расход","Расходы",`${title} · ${money(cost)}`,carId)
+}
+
+function serviceSuccessAnimation(carId,type,message){
+ toast(message);
+ requestAnimationFrame(()=>{
+  const selector=`[onclick*="openQuickService('${carId}','${type}')"]`;
+  const card=$(selector);
+  if(card){
+   card.classList.add("service-updated");
+   setTimeout(()=>card.classList.remove("service-updated"),900)
+  }
+ })
+}
+
 function openMileage(id){const c=car(id);$("#mileageCarId").value=id;$("#newMileage").value=c.mileage;$("#mileageDate").value=today();$("#mileageInfo").textContent=`${model(c).brand} ${model(c).model} · ${c.plate} · до масла ${km(Math.max(0,oil(c)))}`;$("#mileageDialog").showModal()}
 function openRepairDialog(carId="",id=""){if(!requireFleetCar())return;const r=id?db.repairs.find(x=>x.id===id):null;$("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(r?.carId||carId);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=r?.mileage||"";$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairNote").value=r?.note||"";$("#repairDialog").showModal()}
 function openPaymentDialog(carId="",id=""){
@@ -1258,10 +1332,50 @@ function openExpenseDialog(carId="",id=""){if(!requireFleetCar())return;const x=
 function openDocumentDialog(carId="",id=""){if(!requireFleetCar())return;const d=id?db.documents.find(v=>v.id===id):null;$("#documentId").value=d?.id||"";$("#documentCarId").innerHTML=opts(d?.carId||carId);$("#documentType").value=d?.type||"insurance";$("#documentTitle").value=d?.title||"";$("#documentNumber").value=d?.number||"";$("#documentExpiry").value=d?.expiry||"";$("#documentCost").value=d?.cost||"";$("#documentPaymentMode").value=d?.paymentMode||"full";$("#documentInstallmentCount").value=d?.installmentCount||4;$("#documentFirstInstallment").value=d?.firstInstallment||today();$("#documentInstallmentFrequency").value=d?.installmentFrequency||"monthly";syncInsuranceFields();$("#documentFile").value=d?.file||"";$("#documentAttachment").value="";$("#documentAttachmentPreview").innerHTML=d?.fileId?`<div class="attached-file"><span>Файл прикреплён</span><button type="button" class="btn" onclick="openDocumentAttachment('${d.fileId}','${(d.title||"Документ").replaceAll("'","\'")}')">Открыть</button></div>`:"";$("#documentNote").value=d?.note||"";$("#documentDialog").showModal()}
 function openDepositDialog(carId="",id=""){if(!requireFleetCar())return;const row=id?(db.deposits||[]).find(x=>x.id===id):null,c=car(row?.carId||carId||fleetCars()[0]?.id);$("#depositId").value=row?.id||"";$("#depositCarId").innerHTML=opts(row?.carId||carId||c?.id);$("#depositTenant").value=row?.tenant||c?.tenant||"";$("#depositAmount").value=row?.amount||"";$("#depositDate").value=row?.date||today();$("#depositNote").value=row?.note||"";$("#depositDialog").showModal()}
 function deleteDeposit(id){if(!confirm("Удалить этот платёж кауции?"))return;const row=db.deposits.find(x=>x.id===id);db.deposits=db.deposits.filter(x=>x.id!==id);logActivity("Удалён платёж кауции","Кауция",row?money(row.amount):"",row?.carId);save();if(selectedCarId)openCar(selectedCarId,"finance")}
-window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openDocumentAttachment=openDocumentAttachment;window.downloadDocumentAttachment=downloadDocumentAttachment;window.restoreBackupById=restoreBackupById;window.toggleFavorite=toggleFavorite;window.toggleArchive=toggleArchive;window.openCarQuickMenu=openCarQuickMenu;window.openCar=openCar;window.openDepositDialog=openDepositDialog;window.deleteDeposit=deleteDeposit;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
+window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openDocumentAttachment=openDocumentAttachment;window.downloadDocumentAttachment=downloadDocumentAttachment;window.restoreBackupById=restoreBackupById;window.openQuickService=openQuickService;window.toggleFavorite=toggleFavorite;window.toggleArchive=toggleArchive;window.openCarQuickMenu=openCarQuickMenu;window.openCar=openCar;window.openDepositDialog=openDepositDialog;window.deleteDeposit=deleteDeposit;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
 window.editRepair=id=>openRepairDialog("",id);window.editPayment=id=>openPaymentDialog("",id);window.editExpense=id=>openExpenseDialog("",id);window.editDocument=id=>openDocumentDialog("",id);
 window.deleteRepair=id=>{if(confirm("Удалить ремонт?")){db.repairs=db.repairs.filter(x=>x.id!==id);save();renderRepairs()}};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=async id=>{if(confirm("Удалить документ?")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
 $("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,favorite:old?.favorite||false,archived:old?.archived||false,modelKey:$("#carModelKey").value,year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),city:normalizedCity($("#carCity").value),weeklyRent:Number($("#carWeeklyRent").value),paymentTiming:$("#carPaymentTiming").value,depositTarget:Number($("#carDepositTarget").value||0),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
+
+$("#quickServiceForm").onsubmit=e=>{
+ e.preventDefault();
+ const carId=$("#quickServiceCarId").value,type=$("#quickServiceType").value,c=car(carId),cfg=quickServiceDefaults(type);
+ if(!c||!cfg)return;
+ const performed=$("#quickServiceDate").value||today(),cost=Number($("#quickServiceCost").value||0),provider=$("#quickServiceProvider").value.trim(),note=$("#quickServiceNote").value.trim();
+ const details=[provider,note].filter(Boolean).join(" · ");
+ if(type==="oil"){
+  const mileage=Number($("#quickServiceMileage").value||c.mileage),interval=Number($("#quickServiceOilInterval").value||c.oilInterval||10000);
+  if(mileage<c.mileage)return toast("Пробег при замене не может быть меньше текущего");
+  if(interval<1000)return toast("Укажите корректный интервал замены");
+  if(mileage>c.mileage){
+   c.mileage=mileage;
+   c.history=c.history||[];
+   c.history.push({date:performed,value:mileage})
+  }
+  c.lastOil=mileage;
+  c.oilInterval=interval;
+  db.repairs.push({id:uid(),carId,title:"Замена масла",date:performed,mileage,planned:cost,actual:cost,status:"done",service:provider,note});
+  addTimeline(carId,"repair","Замена масла",-cost,performed,details||`Следующая через ${km(interval)}`);
+  logActivity("Выполнена замена масла","Сервис",`${km(mileage)} · ${money(cost)}`,carId);
+  if($("#quickServiceAddExpense").checked)addQuickServiceExpense(carId,"Замена масла","repair",performed,cost,details);
+ }else{
+  const expiry=$("#quickServiceExpiry").value;
+  if(!expiry)return toast("Укажите новую дату окончания");
+  if(type==="insurance")c.insurance=expiry;
+  else c.inspection=expiry;
+  const title=type==="insurance"?"Страховка продлена":"Техосмотр обновлён";
+  addTimeline(carId,"document",title,-cost,performed,`${date(expiry)}${details?` · ${details}`:""}`);
+  logActivity(title,type==="insurance"?"Страховка":"Техосмотр",date(expiry),carId);
+  if($("#quickServiceAddExpense").checked)addQuickServiceExpense(carId,cfg.expenseTitle,cfg.category,performed,cost,details);
+ }
+ save();
+ $("#quickServiceDialog").close();
+ if(selectedCarId===carId&&$("#carPage").classList.contains("active"))openCar(carId);
+ else renderFleet();
+ renderExpenses();
+ serviceSuccessAnimation(carId,type,type==="oil"?"Масло заменено":type==="insurance"?"Страховка обновлена":"Техосмотр обновлён")
+};
+
 $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
 $("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),obj={id,carId:$("#repairCarId").value,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage:Number($("#repairMileage").value||0),planned:Number($("#repairPlanned").value||0),actual:Number($("#repairActual").value||0),status:$("#repairStatus").value,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim()};old?Object.assign(old,obj):(db.repairs.push(obj),addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status)));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();toast("Ремонт сохранён")};
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};
