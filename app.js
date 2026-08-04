@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.8.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -1704,6 +1704,14 @@ function renderDesktopBoard(){
 function safeDesktopCarProfit(carId,period=currentMonth()){
  try{return Number(financialData(period,carId)?.finalProfit||0)}catch(error){console.warn("FleetPilot table profit fallback",carId,error);return 0}
 }
+
+function desktopDocumentDate(value){
+ if(!value)return"Дата не указана";
+ const parsed=new Date(`${value}T12:00:00`);
+ if(Number.isNaN(parsed.getTime()))return String(value);
+ return parsed.toLocaleDateString("ru-RU")
+}
+
 function safeDesktopHealth(c){
  try{
   const h=healthDetails(c)||{};
@@ -2356,11 +2364,19 @@ function renderFleet(){
       </button>
       <button type="button" class="desktop-service-mini ${health.insuranceDays<0?"danger":health.insuranceDays<=30?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','insurance')">
         <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M12 2 4.5 5.2V11c0 5 3.2 9.5 7.5 11 4.3-1.5 7.5-6 7.5-11V5.2L12 2Zm0 3 4.5 1.9V11c0 3.5-1.9 6.8-4.5 8.2C9.4 17.8 7.5 14.5 7.5 11V6.9L12 5Zm-1 3v3H8v2h3v3h2v-3h3v-2h-3V8h-2Z"/></svg></span>
-        <span class="desktop-service-copy"><small>Страховка</small><strong>${health.insuranceDays<0?"Просрочена":Math.max(0,health.insuranceDays)}</strong><em>${health.insuranceDays<0?`${Math.abs(health.insuranceDays)} дн. просрочки`:"дней осталось"}</em></span>
+        <span class="desktop-service-copy desktop-document-copy">
+          <small>Страховка</small>
+          <strong>${health.insuranceDays<0?"Просрочена":`${Math.max(0,health.insuranceDays)} дн.`}</strong>
+          <em>${desktopDocumentDate(c.insurance)}${health.insuranceDays<0?` · ${Math.abs(health.insuranceDays)} дн. просрочки`:""}</em>
+        </span>
       </button>
       <button type="button" class="desktop-service-mini ${health.inspectionDays<0?"danger":health.inspectionDays<=30?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','inspection')">
         <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2h3l1-2Zm1.2 2-.5 1H5v12h14V7h-4.7l-.5-1h-3.6Zm.3 8.2 5.1-5.1 1.4 1.4-6.5 6.5-3.4-3.4 1.4-1.4 2 2Z"/></svg></span>
-        <span class="desktop-service-copy"><small>Техосмотр</small><strong>${health.inspectionDays<0?"Просрочен":Math.max(0,health.inspectionDays)}</strong><em>${health.inspectionDays<0?`${Math.abs(health.inspectionDays)} дн. просрочки`:"дней осталось"}</em></span>
+        <span class="desktop-service-copy desktop-document-copy">
+          <small>Техосмотр</small>
+          <strong>${health.inspectionDays<0?"Просрочен":`${Math.max(0,health.inspectionDays)} дн.`}</strong>
+          <em>${desktopDocumentDate(c.inspection)}${health.inspectionDays<0?` · ${Math.abs(health.inspectionDays)} дн. просрочки`:""}</em>
+        </span>
       </button>
     </div>
   </div>

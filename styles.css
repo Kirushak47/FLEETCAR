@@ -4885,3 +4885,53 @@ html[data-theme="dark"] .fleet-map-v2-car{
 .leaflet-map-status{
  z-index:1200!important;
 }
+
+/* FleetPilot V7.8.4 — document dates in desktop vehicle cards */
+@media(min-width:1100px){
+ .desktop-document-copy strong{
+  font-size:14px!important;
+ }
+
+ .desktop-document-copy em{
+  display:block!important;
+  max-width:100%;
+  margin-top:5px!important;
+  overflow:hidden;
+  color:#69768a!important;
+  font-size:7px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+ }
+
+ .desktop-service-mini.warning .desktop-document-copy em{
+  color:#a7650b!important;
+ }
+
+ .desktop-service-mini.danger .desktop-document-copy em{
+  color:#b73535!important;
+ }
+
+ html[data-theme="dark"] .desktop-document-copy em{
+  color:#9aa7ba!important;
+ }
+
+ html[data-theme="dark"] .desktop-service-mini.warning .desktop-document-copy em{
+  color:#f2b84b!important;
+ }
+
+ html[data-theme="dark"] .desktop-service-mini.danger .desktop-document-copy em{
+  color:#f29a9a!important;
+ }
+}
+
+@media(min-width:1100px) and (max-width:1380px){
+ .desktop-document-copy strong{
+  font-size:12px!important;
+ }
+
+ .desktop-document-copy em{
+  font-size:6.5px!important;
+ }
+}
