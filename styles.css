@@ -4561,3 +4561,32 @@ html[data-theme="dark"] .control-window-option:hover{
     color: #fbbf24 !important;
   }
 }
+/* =========================================================
+   FleetPilot — начальная видимость списка автомобилей
+   ========================================================= */
+
+@media (min-width: 1100px) {
+  html[data-desktop-fleet-view="list"] #fleetPage {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  html[data-desktop-fleet-view="list"] #fleetGrid {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  html[data-desktop-fleet-view="list"]
+    [data-dashboard-block="cars"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  html[data-desktop-fleet-view="list"]
+    [data-dashboard-block="cars"].desktop-command-hidden {
+    display: block !important;
+  }
+}
