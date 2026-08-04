@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.9.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.10","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -425,7 +425,7 @@ window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
  const view=button.dataset.fleetView;
  setDesktopView(view);
- if(view==="map")openFleetMapV2()
+ if(view==="map")openFleetMapV2();if(view==="table")requestAnimationFrame(renderStableFleetTable)
 });
 $("#desktopMapFilter").onchange=()=>{
  fleetMapV2SelectedCity="";
@@ -1802,34 +1802,66 @@ function gpsDemoBasePoints(){
 }
 
 function buildGpsDemoDevices(){
- const now=new Date().toISOString();
- return gpsDemoBasePoints().map((point,index)=>({
-  id:`demo-${index+1}`,
-  name:point.name,
-  plate:point.plate,
-  latitude:point.lat,
-  longitude:point.lng,
-  speed:[34,18,52,0,41,27][index],
-  updatedAt:now,
-  online:index!==3
- }))
+ const cars=(Array.isArray(db?.cars)?db.cars:[])
+  .filter(c=>!c.archived&&!c.deletedAt);
+
+ const fallbackPoints=[
+  [52.2297,21.0122],
+  [52.2364,21.0219],
+  [52.2188,20.9852],
+  [52.2471,21.0410],
+  [52.2085,21.0315],
+  [52.2580,20.9960]
+ ];
+
+ const sourceCars=cars.length?cars:[{
+  id:"demo-car-1",plate:"WAW 001",city:"Warszawa"
+ },{
+  id:"demo-car-2",plate:"WAW 002",city:"Warszawa"
+ },{
+  id:"demo-car-3",plate:"WAW 003",city:"Warszawa"
+ }];
+
+ return sourceCars.map((c,index)=>{
+  const m=typeof model==="function"?model(c):{brand:"Автомобиль",model:""};
+  const base=fallbackPoints[index%fallbackPoints.length];
+  const ring=Math.floor(index/fallbackPoints.length);
+  const offset=ring*0.003;
+
+  return{
+   id:`demo-${c.id||index+1}`,
+   name:`${m.brand||"Автомобиль"} ${m.model||""}`.trim(),
+   plate:c.plate||`DEMO ${index+1}`,
+   latitude:base[0]+offset,
+   longitude:base[1]+offset,
+   speed:index%4===3?0:18+(index*9)%48,
+   updatedAt:new Date().toISOString(),
+   online:index%5!==4,
+   linkedCarId:c.id||""
+  }
+ })
 }
 
 function updateGpsDemoDevices(){
  if(!gpsDemoEnabled())return;
 
+ const tick=Date.now()/7000;
  const devices=readGpsDevices().map((device,index)=>{
   if(!String(device.id).startsWith("demo-"))return device;
 
   const moving=device.online!==false;
-  const angle=(Date.now()/9000)+(index*1.37);
-  const distance=moving?0.00055:0;
+  const angle=tick+index*1.41;
+  const baseLat=Number(device.demoBaseLat??device.latitude??52.2297);
+  const baseLng=Number(device.demoBaseLng??device.longitude??21.0122);
+  const radius=moving?0.0012+(index%3)*0.00035:0;
 
   return{
    ...device,
-   latitude:Number(device.latitude||52.2297)+Math.sin(angle)*distance,
-   longitude:Number(device.longitude||21.0122)+Math.cos(angle)*distance,
-   speed:moving?Math.max(8,Math.round(22+18*Math.abs(Math.sin(angle*1.8)))):0,
+   demoBaseLat:baseLat,
+   demoBaseLng:baseLng,
+   latitude:baseLat+Math.sin(angle)*radius,
+   longitude:baseLng+Math.cos(angle)*radius,
+   speed:moving?Math.round(18+34*Math.abs(Math.sin(angle*1.3))):0,
    updatedAt:new Date().toISOString()
   }
  });
@@ -1840,7 +1872,11 @@ function updateGpsDemoDevices(){
   renderFleetMapV2({fit:false})
  }
 
- document.querySelectorAll(".desktop-gps-badge").forEach(()=>{});
+ if(typeof renderFleet==="function"){
+  renderFleet()
+ }
+
+ renderGpsConnectionSummary()
 }
 
 function startGpsDemoMovement(){
@@ -1855,11 +1891,16 @@ function stopGpsDemoMovement(){
 }
 
 function autoMapDemoDevices(devices){
- const cars=(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt);
+ const cars=(Array.isArray(db?.cars)?db.cars:[])
+  .filter(c=>!c.archived&&!c.deletedAt);
  const mapping={};
 
  devices.forEach((device,index)=>{
-  if(cars[index])mapping[device.id]=cars[index].id
+  if(device.linkedCarId&&cars.some(c=>c.id===device.linkedCarId)){
+   mapping[device.id]=device.linkedCarId
+  }else if(cars[index]){
+   mapping[device.id]=cars[index].id
+  }
  });
 
  gpsWrite(GPS_MAPPING_KEY,mapping);
@@ -1881,20 +1922,22 @@ function startGpsDemo(){
  gpsWrite(GPS_CONFIG_KEY,config);
  gpsWrite(GPS_DEVICES_KEY,devices);
  localStorage.setItem(GPS_DEMO_KEY,"1");
-
  autoMapDemoDevices(devices);
  startGpsDemoMovement();
 
- $("#gpsSetupDialog").close();
+ $("#gpsSetupDialog")?.close();
  renderGpsConnectionSummary();
  renderFleet();
 
- if(typeof renderFleetMapV2==="function"){
-  renderFleetMapV2({fit:true})
- }
+ setDesktopView("map");
 
- openGpsMapping(devices);
- toast("GPS Demo включён")
+ requestAnimationFrame(()=>{
+  if(typeof renderFleetMapV2==="function"){
+   renderFleetMapV2({fit:true})
+  }
+ });
+
+ toast(`GPS Demo запущен: ${devices.length} автомобилей`)
 }
 window.startGpsDemo=startGpsDemo;
 
@@ -2383,6 +2426,92 @@ function renderDesktopMap(selectedCity="",options={}){
  if(selectedCity)fleetMapV2SelectedCity=normalizeCityKey(selectedCity);
  renderFleetMapV2({fit:options.forceFit!==false})
 }
+
+
+/* =========================================================
+   Stable vehicle table — works from one automobile
+   ========================================================= */
+
+function stableFleetTableCars(){
+ return(Array.isArray(db?.cars)?db.cars:[])
+  .filter(c=>!c.archived&&!c.deletedAt)
+}
+
+function stableFleetTableRoot(){
+ return(
+  $("#desktopFleetTable")||
+  $("#fleetTableBody")||
+  $("#largeFleetTable")||
+  $("#fleetTable")
+ )
+}
+
+function renderStableFleetTable(){
+ const root=stableFleetTableRoot();
+ if(!root)return;
+
+ const cars=stableFleetTableCars();
+
+ if(!cars.length){
+  root.innerHTML=`<div class="stable-table-empty">
+   <span>🚘</span>
+   <strong>Автомобилей пока нет</strong>
+   <small>Добавьте первый автомобиль, и он появится в таблице.</small>
+  </div>`;
+  return
+ }
+
+ const rows=cars.map(c=>{
+  const m=typeof model==="function"?model(c):{brand:"Автомобиль",model:""};
+  const health=typeof safeDesktopHealth==="function"
+   ?safeDesktopHealth(c)
+   :{oilLeft:0,insuranceDays:0,inspectionDays:0};
+  const gps=typeof gpsStatusForCar==="function"?gpsStatusForCar(c):null;
+  const profit=typeof safeDesktopCarProfit==="function"
+   ?safeDesktopCarProfit(c.id)
+   :0;
+
+  return`<tr>
+   <td>
+    <button type="button" class="stable-table-car" onclick="openCar('${c.id}')">
+     <span class="stable-table-avatar">${c.customPhoto?`<img src="${c.customPhoto}" alt="">`:"🚘"}</span>
+     <span><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"}</small></span>
+    </button>
+   </td>
+   <td><span class="stable-table-status ${c.status}">${statusText(c.status)}</span></td>
+   <td>${c.tenant||"Без водителя"}</td>
+   <td>${Number(c.mileage||0).toLocaleString("ru-RU")} км</td>
+   <td>${health.oilLeft<=0?"Просрочено":`${Math.round(health.oilLeft).toLocaleString("ru-RU")} км`}</td>
+   <td>${c.insurance?desktopDocumentDate(c.insurance):"—"}</td>
+   <td>${c.inspection?desktopDocumentDate(c.inspection):"—"}</td>
+   <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
+   <td>${gps?`<button class="stable-table-gps ${gps.online?"online":"offline"}" onclick="findCarOnGps('${c.id}')">${gps.online?"GPS online":"GPS offline"}</button>`:"—"}</td>
+   <td><button type="button" class="stable-table-open" onclick="openCar('${c.id}')">Открыть →</button></td>
+  </tr>`
+ }).join("");
+
+ root.innerHTML=`<div class="stable-fleet-table-wrap">
+  <table class="stable-fleet-table">
+   <thead>
+    <tr>
+     <th>Автомобиль</th>
+     <th>Статус</th>
+     <th>Водитель</th>
+     <th>Пробег</th>
+     <th>Масло</th>
+     <th>Страховка</th>
+     <th>Техосмотр</th>
+     <th>Прибыль</th>
+     <th>GPS</th>
+     <th></th>
+    </tr>
+   </thead>
+   <tbody>${rows}</tbody>
+  </table>
+ </div>`
+}
+
+window.renderStableFleetTable=renderStableFleetTable;
 
 function renderDesktopEvents(){
  const root=$("#desktopEventFeed");if(!root)return;
@@ -3274,3 +3403,25 @@ showPage("fleetPage");
  else requestAnimationFrame(finalBoot);
  window.addEventListener("pageshow",()=>requestAnimationFrame(finalBoot));
 })();
+
+
+document.addEventListener("DOMContentLoaded",()=>{
+ if(gpsDemoEnabled()){
+  const existing=readGpsDevices();
+  if(!existing.length){
+   const devices=buildGpsDemoDevices();
+   gpsWrite(GPS_DEVICES_KEY,devices);
+   autoMapDemoDevices(devices)
+  }
+  startGpsDemoMovement()
+ }
+});
+
+const originalRenderFleetForStableTable=window.renderFleet;
+if(typeof originalRenderFleetForStableTable==="function"){
+ window.renderFleet=function(...args){
+  const result=originalRenderFleetForStableTable.apply(this,args);
+  requestAnimationFrame(renderStableFleetTable);
+  return result
+ }
+}

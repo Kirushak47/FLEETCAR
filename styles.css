@@ -5220,3 +5220,217 @@ html[data-theme="dark"] .map-back-to-cities{
 html[data-theme="dark"] .map-car-row-v2{
  border-color:rgba(255,255,255,.06);
 }
+
+/* FleetPilot V7.10 — stable GPS Demo and vehicle table */
+
+.stable-fleet-table-wrap{
+ width:100%;
+ overflow:auto;
+ border:1px solid #e5e9f0;
+ border-radius:15px;
+ background:#fff;
+}
+
+.stable-fleet-table{
+ width:100%;
+ min-width:1180px;
+ border-collapse:collapse;
+}
+
+.stable-fleet-table th{
+ padding:11px 10px;
+ border-bottom:1px solid #e8ecf1;
+ background:#f8fafc;
+ color:#7d8899;
+ font-size:7px;
+ font-weight:900;
+ text-align:left;
+ text-transform:uppercase;
+ letter-spacing:.05em;
+ white-space:nowrap;
+}
+
+.stable-fleet-table td{
+ padding:9px 10px;
+ border-bottom:1px solid #edf1f5;
+ color:#475569;
+ font-size:8px;
+ white-space:nowrap;
+}
+
+.stable-fleet-table tbody tr:last-child td{
+ border-bottom:0;
+}
+
+.stable-fleet-table tbody tr:hover{
+ background:#fafbfc;
+}
+
+.stable-table-car{
+ display:grid;
+ grid-template-columns:38px minmax(130px,1fr);
+ align-items:center;
+ gap:9px;
+ min-width:190px;
+ padding:0;
+ border:0;
+ background:transparent;
+ color:inherit;
+ text-align:left;
+ cursor:pointer;
+}
+
+.stable-table-avatar{
+ display:grid;
+ place-items:center;
+ width:38px;
+ height:38px;
+ overflow:hidden;
+ border-radius:11px;
+ background:#eef2f7;
+ font-size:16px;
+}
+
+.stable-table-avatar img{
+ width:100%;
+ height:100%;
+ object-fit:cover;
+}
+
+.stable-table-car strong,
+.stable-table-car small{
+ display:block;
+}
+
+.stable-table-car strong{
+ color:#1e293b;
+ font-size:8.5px;
+}
+
+.stable-table-car small{
+ margin-top:4px;
+ color:#94a3b8;
+ font-size:6.8px;
+}
+
+.stable-table-status{
+ display:inline-flex;
+ align-items:center;
+ min-height:23px;
+ padding:0 8px;
+ border-radius:999px;
+ background:#eef2f7;
+ color:#64748b;
+ font-size:6.5px;
+ font-weight:850;
+}
+
+.stable-table-status.active{
+ background:rgba(34,197,94,.10);
+ color:#15803d;
+}
+
+.stable-table-status.repair{
+ background:rgba(239,68,68,.10);
+ color:#b91c1c;
+}
+
+.stable-table-status.free{
+ background:rgba(59,130,246,.10);
+ color:#1d4ed8;
+}
+
+.stable-fleet-table td.positive{
+ color:#15803d;
+ font-weight:850;
+}
+
+.stable-fleet-table td.negative{
+ color:#b91c1c;
+ font-weight:850;
+}
+
+.stable-table-gps{
+ min-height:26px;
+ padding:0 8px;
+ border:1px solid transparent;
+ border-radius:8px;
+ font-size:6.5px;
+ font-weight:850;
+ cursor:pointer;
+}
+
+.stable-table-gps.online{
+ border-color:rgba(34,197,94,.18);
+ background:rgba(34,197,94,.09);
+ color:#15803d;
+}
+
+.stable-table-gps.offline{
+ border-color:rgba(239,68,68,.16);
+ background:rgba(239,68,68,.08);
+ color:#b91c1c;
+}
+
+.stable-table-open{
+ min-height:28px;
+ padding:0 9px;
+ border:1px solid #dfe5ed;
+ border-radius:8px;
+ background:#fff;
+ color:#4f46e5;
+ font-size:6.8px;
+ font-weight:850;
+ cursor:pointer;
+}
+
+.stable-table-empty{
+ display:grid;
+ justify-items:center;
+ gap:7px;
+ padding:48px 20px;
+ color:#94a3b8;
+ text-align:center;
+}
+
+.stable-table-empty span{
+ font-size:30px;
+}
+
+.stable-table-empty strong{
+ color:#475569;
+ font-size:11px;
+}
+
+.stable-table-empty small{
+ font-size:8px;
+}
+
+html[data-theme="dark"] .stable-fleet-table-wrap{
+ border-color:rgba(255,255,255,.08);
+ background:#151d31;
+}
+
+html[data-theme="dark"] .stable-fleet-table th{
+ border-color:rgba(255,255,255,.07);
+ background:#182136;
+}
+
+html[data-theme="dark"] .stable-fleet-table td{
+ border-color:rgba(255,255,255,.06);
+ color:#cbd5e1;
+}
+
+html[data-theme="dark"] .stable-fleet-table tbody tr:hover{
+ background:rgba(255,255,255,.025);
+}
+
+html[data-theme="dark"] .stable-table-car strong{
+ color:#f8fafc;
+}
+
+html[data-theme="dark"] .stable-table-open{
+ border-color:rgba(255,255,255,.09);
+ background:#1b2438;
+ color:#aeb4ff;
+}
