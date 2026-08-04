@@ -4729,3 +4729,136 @@ html[data-theme="dark"] .fleet-car-marker{border-color:#151d31}
   color:#fbbf24;
  }
 }
+
+/* FleetPilot V7.8.2 — Fleet Map V2 */
+@media(min-width:1100px){
+ .leaflet-map-card,
+ .leaflet-fleet-map{
+  width:100%!important;
+  min-height:510px!important;
+  height:510px!important;
+ }
+
+ .leaflet-fleet-map{
+  position:relative!important;
+  z-index:1;
+  background:#dfe7f1!important;
+ }
+
+ .fleet-map-layout{
+  grid-template-columns:minmax(0,1fr) 290px!important;
+ }
+
+ .map-city-cars{
+  max-height:448px!important;
+  overflow:auto;
+ }
+}
+
+.fleet-map-v2-city-wrap,
+.fleet-map-v2-car-wrap{
+ background:transparent!important;
+ border:0!important;
+}
+
+.fleet-map-v2-city{
+ display:grid;
+ place-items:center;
+ align-content:center;
+ gap:2px;
+ padding:0;
+ border:4px solid rgba(255,255,255,.96);
+ border-radius:50%;
+ background:#22c55e;
+ color:#fff;
+ box-shadow:0 10px 24px rgba(15,23,42,.26);
+ cursor:pointer;
+ transition:transform .16s ease,box-shadow .16s ease;
+}
+
+.fleet-map-v2-city:hover{
+ transform:scale(1.08);
+ box-shadow:0 14px 31px rgba(15,23,42,.32);
+}
+
+.fleet-map-v2-city.warning{background:#f59e0b}
+.fleet-map-v2-city.danger{background:#ef4444}
+.fleet-map-v2-city.free{background:#3b82f6}
+
+.fleet-map-v2-city strong{
+ font-size:14px;
+ line-height:1;
+}
+
+.fleet-map-v2-city small{
+ max-width:54px;
+ overflow:hidden;
+ font-size:6px;
+ font-weight:900;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+}
+
+.fleet-map-v2-car{
+ display:grid;
+ place-items:center;
+ width:34px;
+ height:34px;
+ border:3px solid #fff;
+ border-radius:12px;
+ background:#22c55e;
+ box-shadow:0 7px 17px rgba(15,23,42,.25);
+ cursor:pointer;
+ transition:transform .16s ease;
+}
+
+.fleet-map-v2-car:hover{
+ transform:translateY(-2px) scale(1.07);
+}
+
+.fleet-map-v2-car.warning{background:#f59e0b}
+.fleet-map-v2-car.danger{background:#ef4444}
+.fleet-map-v2-car.free{background:#3b82f6}
+
+.fleet-map-v2-car span{
+ font-size:15px;
+ filter:grayscale(1) brightness(3);
+}
+
+.map-city-summary-row,
+.map-car-row{
+ grid-template-columns:12px minmax(0,1fr) auto!important;
+ gap:9px!important;
+}
+
+.map-city-dot,
+.map-car-status{
+ width:9px;
+ height:9px;
+ border-radius:50%;
+ background:#22c55e;
+ box-shadow:0 0 0 4px rgba(34,197,94,.08);
+}
+
+.map-city-dot.warning,
+.map-car-status.warning{
+ background:#f59e0b;
+ box-shadow:0 0 0 4px rgba(245,158,11,.09);
+}
+
+.map-city-dot.danger,
+.map-car-status.danger{
+ background:#ef4444;
+ box-shadow:0 0 0 4px rgba(239,68,68,.09);
+}
+
+.map-city-dot.free,
+.map-car-status.free{
+ background:#3b82f6;
+ box-shadow:0 0 0 4px rgba(59,130,246,.09);
+}
+
+html[data-theme="dark"] .fleet-map-v2-city,
+html[data-theme="dark"] .fleet-map-v2-car{
+ border-color:#151d31;
+}

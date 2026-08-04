@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.8.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -312,17 +312,17 @@ function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){
  updateDesktopThemeButton(normalized)
 }
 
-function setTheme(mode){
+function setTheme(mode,showToast=false){
  const normalized=["light","dark","system"].includes(mode)?mode:"system";
  localStorage.setItem(THEME_KEY,normalized);
  applyTheme(normalized);
- toast(`Тема: ${themeLabel(normalized)}`)
+ if(showToast)toast(`Тема: ${themeLabel(normalized)}`)
 }
 
 function toggleTheme(){
  const current=localStorage.getItem(THEME_KEY)||document.documentElement.dataset.themeMode||"system";
  const next=current==="light"?"dark":current==="dark"?"system":"light";
- setTheme(next)
+ setTheme(next,true)
 }
 
 window.toggleTheme=toggleTheme;
@@ -386,7 +386,7 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
 $$("[data-theme-mode]").forEach(button=>{
- button.onclick=()=>setTheme(button.dataset.themeMode)
+ button.onclick=()=>setTheme(button.dataset.themeMode,true)
 });
 
 $("#customizeControlWindows").onclick=openControlWindowsDialog;
@@ -415,11 +415,14 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 window.addEventListener("pageshow",()=>applyTheme());
 
-$$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
+$$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
+ const view=button.dataset.fleetView;
+ setDesktopView(view);
+ if(view==="map")openFleetMapV2()
+});
 $("#desktopMapFilter").onchange=()=>{
- desktopMapSelectedCity="";
- desktopMapHasInitialFit=false;
- renderDesktopMap("",{preserveViewport:false,forceFit:true})
+ fleetMapV2SelectedCity="";
+ renderFleetMapV2({fit:true})
 };
 $("#commandOpenCalendar").onclick=()=>showPage("calendarPage");
 $("#desktopApplyStatus").onclick=applyDesktopBulkStatus;
@@ -1742,6 +1745,17 @@ function renderDesktopTable(){
 }
 
 
+
+/* =========================================================
+   Fleet Map V2
+   Lazy initialization, reliable tiles and city-based markers
+   ========================================================= */
+
+let fleetMapV2=null;
+let fleetMapV2Layer=null;
+let fleetMapV2SelectedCity="";
+let fleetMapV2RowsCache=[];
+
 function normalizeMapCity(city){
  const raw=String(city||"").trim();
  if(!raw)return"Без города";
@@ -1762,191 +1776,273 @@ function coordinatesForCity(city){
  return POLAND_CITY_COORDS[key]||null
 }
 
-function cityMapData(){
+function fleetMapV2Cars(){
  const filter=$("#desktopMapFilter")?.value||"all";
- const selected=fleetCars().filter(c=>{
+ const cars=typeof fleetCars==="function"?fleetCars():[];
+
+ return cars.filter(c=>{
   if(filter==="all")return true;
   if(filter==="attention")return attention(c);
   return c.status===filter
- });
+ })
+}
 
+function fleetMapV2Rows(){
  const grouped=new Map();
- selected.forEach(c=>{
+
+ fleetMapV2Cars().forEach(c=>{
   const city=normalizeMapCity(c.city);
   const key=normalizeCityKey(city);
-  const row=grouped.get(key)||{key,city,cars:[],profit:0,attention:0,coords:coordinatesForCity(city)};
+  const row=grouped.get(key)||{
+   key,
+   city,
+   coords:coordinatesForCity(city),
+   cars:[],
+   attention:0,
+   profit:0
+  };
+
   row.cars.push(c);
   row.profit+=safeDesktopCarProfit(c.id);
   if(attention(c))row.attention++;
   grouped.set(key,row)
  });
 
- return[...grouped.values()].sort((a,b)=>b.cars.length-a.cars.length||a.city.localeCompare(b.city,"ru"))
+ return[...grouped.values()].sort((a,b)=>
+  b.cars.length-a.cars.length||a.city.localeCompare(b.city,"ru")
+ )
 }
 
-function cityHealthLevel(row){
- if(row.cars.some(c=>c.status==="repair"))return"danger";
- if(row.attention>0)return"warning";
+function fleetMapV2CarLevel(c){
+ if(c.status==="repair")return"danger";
+ if(attention(c))return"warning";
+ if(c.status==="free")return"free";
  return"good"
 }
 
-function carMapLevel(c){
- if(c.status==="repair")return"danger";
- if(attention(c))return"warning";
- return c.status==="free"?"free":"good"
+function fleetMapV2CityLevel(row){
+ if(row.cars.some(c=>c.status==="repair"))return"danger";
+ if(row.attention>0)return"warning";
+ if(row.cars.every(c=>c.status==="free"))return"free";
+ return"good"
 }
 
-function carPointAroundCity(coords,index,total){
+function fleetMapV2OffsetPoint(coords,index,total){
  if(total<=1)return coords;
+
  const ring=Math.floor(index/8)+1;
  const slot=index%8;
- const angle=(Math.PI*2*slot/8)+(ring%2?0.25:0);
- const radius=0.006*ring;
+ const angle=Math.PI*2*slot/8+(ring%2?0.24:0);
+ const radius=0.0065*ring;
+
  return[
   coords[0]+Math.sin(angle)*radius,
   coords[1]+Math.cos(angle)*radius/Math.max(.55,Math.cos(coords[0]*Math.PI/180))
  ]
 }
 
-function cityClusterIcon(row){
- const level=cityHealthLevel(row);
- const size=Math.max(44,Math.min(68,42+row.cars.length*2));
+function fleetMapV2CityIcon(row){
+ const level=fleetMapV2CityLevel(row);
+ const size=Math.max(46,Math.min(70,44+row.cars.length*2));
+
  return L.divIcon({
-  className:"fleet-city-cluster-wrap",
-  html:`<button class="fleet-city-cluster ${level}" style="width:${size}px;height:${size}px" aria-label="${row.city}: ${row.cars.length} автомобилей">
-    <strong>${row.cars.length}</strong><small>${row.city}</small>
-  </button>`,
+  className:"fleet-map-v2-city-wrap",
+  html:`<div class="fleet-map-v2-city ${level}" style="width:${size}px;height:${size}px">
+   <strong>${row.cars.length}</strong>
+   <small>${row.city}</small>
+  </div>`,
   iconSize:[size,size],
   iconAnchor:[size/2,size/2]
  })
 }
 
-function carMarkerIcon(c){
- const level=carMapLevel(c);
- const m=model(c);
+function fleetMapV2CarIcon(c){
+ const level=fleetMapV2CarLevel(c);
+
  return L.divIcon({
-  className:"fleet-car-marker-wrap",
-  html:`<button class="fleet-car-marker ${level}" aria-label="${m.brand} ${m.model}">
-    <span>🚗</span>
-  </button>`,
+  className:"fleet-map-v2-car-wrap",
+  html:`<div class="fleet-map-v2-car ${level}"><span>🚗</span></div>`,
   iconSize:[34,34],
   iconAnchor:[17,17],
   popupAnchor:[0,-18]
  })
 }
 
-function renderMapCityPanel(row){
+function ensureFleetMapV2(){
+ const container=$("#leafletFleetMap");
+ if(!container||typeof L==="undefined")return null;
+ if(fleetMapV2)return fleetMapV2;
+
+ // Clean stale Leaflet state from earlier failed initialization.
+ if(container._leaflet_id)container._leaflet_id=null;
+ container.innerHTML="";
+
+ fleetMapV2=L.map(container,{
+  zoomControl:true,
+  attributionControl:true,
+  preferCanvas:true
+ }).setView([52.05,19.25],6);
+
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19,
+  minZoom:4,
+  attribution:"&copy; OpenStreetMap contributors"
+ }).addTo(fleetMapV2);
+
+ fleetMapV2Layer=L.layerGroup().addTo(fleetMapV2);
+
+ [40,120,260,500].forEach(delay=>
+  setTimeout(()=>fleetMapV2?.invalidateSize({pan:false}),delay)
+ );
+
+ return fleetMapV2
+}
+
+function renderFleetMapV2Panel(selectedRow=null){
  const panel=$("#mapCityCars");
- if(!panel)return;
-
- const rows=leafletLastRows;
- $("#mapSelectedCity").textContent=row?.city||"Все города";
- $("#mapSelectedCount").textContent=row
-  ?`${row.cars.length} автомобилей · ${money(row.profit)}`
-  :`${rows.reduce((sum,item)=>sum+item.cars.length,0)} автомобилей`;
-
- panel.innerHTML=row
-  ?row.cars.map(c=>{
-    const m=model(c),profit=safeDesktopCarProfit(c.id);
-    return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')">
-      <span class="map-car-status ${carMapLevel(c)}"></span>
-      <div><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"} · ${statusText(c.status)} · ${money(profit)}</small></div>
-      <b>›</b>
-    </button>`
-   }).join("")
-  :rows.map(city=>`<button type="button" class="map-city-summary-row" onclick="focusLeafletCity('${city.key.replace(/'/g,"\\'")}')">
-      <span class="map-city-dot ${cityHealthLevel(city)}"></span>
-      <div><strong>${city.city}</strong><small>${city.cars.length} авто · ${money(city.profit)}</small></div>
-      <b>${city.attention?`${city.attention} ⚠`:"›"}</b>
-    </button>`).join("")||`<div class="map-empty">Укажите город в профиле автомобиля</div>`;
-
- const unknown=rows.filter(item=>!item.coords&&item.city!=="Без города");
+ const title=$("#mapSelectedCity");
+ const count=$("#mapSelectedCount");
  const status=$("#leafletMapStatus");
+
+ if(!panel||!title||!count)return;
+
+ title.textContent=selectedRow?.city||"Все города";
+ count.textContent=selectedRow
+  ?`${selectedRow.cars.length} автомобилей · ${money(selectedRow.profit)}`
+  :`${fleetMapV2RowsCache.reduce((sum,row)=>sum+row.cars.length,0)} автомобилей`;
+
+ if(selectedRow){
+  panel.innerHTML=selectedRow.cars.map(c=>{
+   const m=model(c);
+   return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')">
+    <span class="map-car-status ${fleetMapV2CarLevel(c)}"></span>
+    <div>
+     <strong>${m.brand} ${m.model}</strong>
+     <small>${c.plate||"Без номера"} · ${statusText(c.status)} · ${money(safeDesktopCarProfit(c.id))}</small>
+    </div>
+    <b>›</b>
+   </button>`
+  }).join("")
+ }else{
+  panel.innerHTML=fleetMapV2RowsCache.length
+   ?fleetMapV2RowsCache.map(row=>`<button type="button" class="map-city-summary-row" onclick="focusFleetMapV2City('${row.key.replace(/'/g,"\\'")}')">
+      <span class="map-city-dot ${fleetMapV2CityLevel(row)}"></span>
+      <div>
+       <strong>${row.city}</strong>
+       <small>${row.cars.length} авто · ${money(row.profit)}</small>
+      </div>
+      <b>${row.attention?`${row.attention} ⚠`:"›"}</b>
+    </button>`).join("")
+   :`<div class="map-empty">Нет автомобилей для выбранного фильтра</div>`
+ }
+
+ const unknown=fleetMapV2RowsCache.filter(row=>!row.coords&&row.city!=="Без города");
  if(status){
   status.hidden=!unknown.length;
-  status.textContent=unknown.length?`Не удалось разместить: ${unknown.map(x=>x.city).join(", ")}`:""
+  status.textContent=unknown.length
+   ?`Не удалось разместить: ${unknown.map(row=>row.city).join(", ")}`
+   :""
  }
 }
 
-function focusLeafletCity(cityKey){
- const map=ensureLeafletMap();
- const row=leafletLastRows.find(item=>item.key===cityKey||item.city===cityKey);
+function focusFleetMapV2City(cityKey){
+ const map=ensureFleetMapV2();
+ const row=fleetMapV2RowsCache.find(item=>item.key===cityKey);
  if(!row)return;
- desktopMapSelectedCity=row.key;
- if(map&&row.coords)map.flyTo(row.coords,11,{duration:.55});
- renderMapCityPanel(row)
-}
-window.focusLeafletCity=focusLeafletCity;
 
-function renderDesktopMap(selectedCity=desktopMapSelectedCity,options={}){
- const map=ensureLeafletMap();
- const rows=cityMapData();
- leafletLastRows=rows;
+ fleetMapV2SelectedCity=row.key;
+ renderFleetMapV2Panel(row);
 
- const chosen=rows.find(row=>row.key===selectedCity||row.city===selectedCity)||null;
- if(chosen)desktopMapSelectedCity=chosen.key;
- else if(selectedCity)desktopMapSelectedCity="";
-
- if(!map){
-  renderMapCityPanel(chosen);
-  return
+ if(map&&row.coords){
+  map.flyTo(row.coords,row.cars.length>1?10:12,{duration:.5});
+  setTimeout(()=>map.invalidateSize({pan:false}),100)
  }
+}
+window.focusFleetMapV2City=focusFleetMapV2City;
 
- leafletCityLayer.clearLayers();
+function renderFleetMapV2(options={}){
+ const map=ensureFleetMapV2();
+ fleetMapV2RowsCache=fleetMapV2Rows();
+
+ const selected=fleetMapV2RowsCache.find(row=>row.key===fleetMapV2SelectedCity)||null;
+ renderFleetMapV2Panel(selected);
+
+ if(!map||!fleetMapV2Layer)return;
+
+ fleetMapV2Layer.clearLayers();
  const bounds=[];
 
- rows.forEach(row=>{
+ fleetMapV2RowsCache.forEach(row=>{
   if(!row.coords)return;
   bounds.push(row.coords);
 
-  // City cluster marker.
-  const cluster=L.marker(row.coords,{icon:cityClusterIcon(row),keyboard:true,riseOnHover:true});
-  cluster.on("click",()=>{
-   desktopMapSelectedCity=row.key;
-   renderMapCityPanel(row);
+  const cityMarker=L.marker(row.coords,{
+   icon:fleetMapV2CityIcon(row),
+   keyboard:true,
+   riseOnHover:true
+  });
+
+  cityMarker.bindTooltip(`${row.city}: ${row.cars.length} авто`,{
+   direction:"top",
+   offset:[0,-18]
+  });
+
+  cityMarker.on("click",()=>{
+   fleetMapV2SelectedCity=row.key;
+   renderFleetMapV2Panel(row);
    map.flyTo(row.coords,row.cars.length>1?10:12,{duration:.5})
   });
-  cluster.bindTooltip(`${row.city}: ${row.cars.length} авто`,{direction:"top",offset:[0,-18]});
-  cluster.addTo(leafletCityLayer);
 
-  // Individual vehicle markers with a small radial spread.
+  cityMarker.addTo(fleetMapV2Layer);
+
   row.cars.forEach((c,index)=>{
-   const point=carPointAroundCity(row.coords,index,row.cars.length);
+   const point=fleetMapV2OffsetPoint(row.coords,index,row.cars.length);
    const m=model(c);
-   const marker=L.marker(point,{icon:carMarkerIcon(c),keyboard:true,riseOnHover:true});
+
+   const marker=L.marker(point,{
+    icon:fleetMapV2CarIcon(c),
+    keyboard:true,
+    riseOnHover:true
+   });
+
    marker.bindPopup(`
     <div class="fleet-car-popup">
-      <strong>${m.brand} ${m.model}</strong>
-      <span>${c.plate||"Без номера"}</span>
-      <em class="${carMapLevel(c)}">${statusText(c.status)}</em>
-      <span>${km(Number(c.mileage||0))}</span>
-      <button type="button" onclick="openCar('${c.id}')">Открыть →</button>
+     <strong>${m.brand} ${m.model}</strong>
+     <span>${c.plate||"Без номера"}</span>
+     <em class="${fleetMapV2CarLevel(c)}">${statusText(c.status)}</em>
+     <span>${km(Number(c.mileage||0))}</span>
+     <button type="button" onclick="openCar('${c.id}')">Открыть →</button>
     </div>
    `);
-   marker.on("click",()=>renderMapCityPanel(row));
-   marker.addTo(leafletCityLayer);
+
+   marker.on("click",()=>renderFleetMapV2Panel(row));
+   marker.addTo(fleetMapV2Layer)
   })
  });
 
- const validBounds=bounds;
- const preserveViewport=options.preserveViewport!==false;
- const forceFit=Boolean(options.forceFit);
-
- if(validBounds.length&&(forceFit||!desktopMapHasInitialFit||!preserveViewport)){
-  map.fitBounds(validBounds,{padding:[45,45],maxZoom:8,animate:false});
-  desktopMapHasInitialFit=true
- }else if(chosen&&forceFit&&chosen.coords){
-  map.setView(chosen.coords,11,{animate:false})
- }else if(!validBounds.length&&!desktopMapHasInitialFit){
-  map.setView([52.05,19.25],6,{animate:false});
-  desktopMapHasInitialFit=true
+ if(bounds.length&&options.fit!==false){
+  map.fitBounds(bounds,{padding:[45,45],maxZoom:8,animate:false})
+ }else if(!bounds.length){
+  map.setView([52.05,19.25],6,{animate:false})
  }
 
- renderMapCityPanel(chosen);
+ [0,80,200,450].forEach(delay=>
+  setTimeout(()=>map.invalidateSize({pan:false}),delay)
+ )
+}
+
+function openFleetMapV2(){
+ fleetMapV2SelectedCity="";
  requestAnimationFrame(()=>{
-  map.invalidateSize({pan:false});
-  setTimeout(()=>map.invalidateSize({pan:false}),120)
+  renderFleetMapV2({fit:true});
+  setTimeout(()=>renderFleetMapV2({fit:true}),180)
  })
+}
+
+// Compatibility wrapper for existing desktop code.
+function renderDesktopMap(selectedCity="",options={}){
+ if(selectedCity)fleetMapV2SelectedCity=normalizeCityKey(selectedCity);
+ renderFleetMapV2({fit:options.forceFit!==false})
 }
 
 function renderDesktopEvents(){
