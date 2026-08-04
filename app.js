@@ -1854,6 +1854,75 @@ function updateGpsCountdownUi(){
  }
 }
 
+
+function gpsSignalText(gps){
+ const signal=new Date(gps?.updatedAt||0);
+ return Number.isNaN(signal.getTime())
+  ?"Нет сигнала"
+  :signal.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})
+}
+
+function updateGpsBadgesOnly(){
+ document.querySelectorAll("[data-gps-car-id]").forEach(button=>{
+  const carId=button.dataset.gpsCarId;
+  const c=(db?.cars||[]).find(item=>item.id===carId);
+  const gps=c?gpsStatusForCar(c):null;
+
+  if(!gps){
+   button.hidden=true;
+   return
+  }
+
+  button.hidden=false;
+  button.classList.toggle("online",Boolean(gps.online));
+  button.classList.toggle("offline",!gps.online);
+  button.setAttribute(
+   "aria-label",
+   gps.online
+    ?`GPS online, скорость ${Math.round(gps.speed||0)} км/ч. Найти автомобиль`
+    :`GPS offline, последний сигнал ${gpsSignalText(gps)}. Показать последнюю точку`
+  );
+  button.title=gps.online
+   ?`GPS Online · ${Math.round(gps.speed||0)} км/ч`
+   :`GPS Offline · ${gpsSignalText(gps)}`;
+
+  const label=button.querySelector("[data-gps-label]");
+  if(label)label.textContent=gps.online?"GPS":"OFF";
+
+  const speed=button.querySelector("[data-gps-speed]");
+  if(speed)speed.textContent=gps.online?`${Math.round(gps.speed||0)}`:"";
+ });
+
+ document.querySelectorAll("[data-mobile-gps-copy]").forEach(element=>{
+  const carId=element.dataset.mobileGpsCopy;
+  const c=(db?.cars||[]).find(item=>item.id===carId);
+  const gps=c?gpsStatusForCar(c):null;
+  if(!gps)return;
+  element.textContent=gps.online
+   ?`${Math.round(gps.speed||0)} км/ч`
+   :`Сигнал ${gpsSignalText(gps)}`
+ })
+}
+
+function gpsDesktopMapIsVisible(){
+ const view=$("#desktopMapView");
+ return Boolean(
+  window.innerWidth>=1100 &&
+  view &&
+  !view.hidden &&
+  view.offsetParent!==null
+ )
+}
+
+function gpsMobileMapIsVisible(){
+ const page=$("#mobileMapPage");
+ return Boolean(
+  window.innerWidth<1100 &&
+  page &&
+  page.classList.contains("active")
+ )
+}
+
 async function performAutomaticGpsSync(){
  if(gpsSyncBusy||!gpsConnectionActive())return;
  gpsSyncBusy=true;
@@ -1863,14 +1932,24 @@ async function performAutomaticGpsSync(){
   if(gpsDemoEnabled())updateGpsDemoDevices();
   else await fetchGpsDevices();
 
-  renderGpsConnectionSummary();
-  if(typeof renderFleet==="function")renderFleet();
-  if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});
-  if(typeof renderMobileGpsMap==="function")renderMobileGpsMap({fit:false})
+  updateGpsBadgesOnly();
+
+  // Only the currently visible map is redrawn.
+  // Main page, tables, analytics and other pages remain untouched.
+  if(gpsDesktopMapIsVisible()&&typeof renderFleetMapV2==="function"){
+   renderFleetMapV2({fit:false})
+  }
+
+  if(gpsMobileMapIsVisible()&&typeof renderMobileGpsMap==="function"){
+   renderMobileGpsMap({fit:false})
+  }
  }catch(error){
   console.error("GPS auto sync failed",error);
   const mobileError=$("#mobileMapError");
-  if(mobileError){mobileError.hidden=false;mobileError.textContent=`GPS: ${error.message}`}
+  if(mobileError&&gpsMobileMapIsVisible()){
+   mobileError.hidden=false;
+   mobileError.textContent=`GPS: ${error.message}`
+  }
  }finally{
   gpsSyncBusy=false;
   gpsNextSyncAt=Date.now()+GPS_SYNC_INTERVAL_MS;
@@ -1947,7 +2026,7 @@ function buildGpsDemoDevices(){
 }
 
 function updateGpsDemoDevices(){
- if(!gpsDemoEnabled())return;
+ if(!gpsDemoEnabled())return readGpsDevices();
 
  const tick=Date.now()/7000;
  const devices=readGpsDevices().map((device,index)=>{
@@ -1971,16 +2050,7 @@ function updateGpsDemoDevices(){
  });
 
  gpsWrite(GPS_DEVICES_KEY,devices);
-
- if(typeof renderFleetMapV2==="function"){
-  renderFleetMapV2({fit:false})
- }
-
- if(typeof renderFleet==="function"){
-  renderFleet()
- }
-
- renderGpsConnectionSummary()
+ return devices
 }
 
 function startGpsDemoMovement(){
@@ -2142,7 +2212,7 @@ function renderGpsConnectionSummary(){
   <span class="gps-summary-status"></span>
   <div>
     <strong>${config.providerLabel}${config.demo?" · тестовый режим":""}</strong>
-    <small>${devices.length} устройств · ${Object.values(mapping).filter(Boolean).length} сопоставлено${config.demo?" · обновление каждые 5 сек.":""}</small>
+    <small>${devices.length} устройств · ${Object.values(mapping).filter(Boolean).length} сопоставлено${config.demo?" · обновление каждые 30 сек.":""}</small>
   </div>
   <div class="gps-summary-buttons">
     <button onclick="syncGpsNow()">Синхронизировать</button>
@@ -2176,15 +2246,25 @@ function saveGpsMapping(){
 async function syncGpsNow(){
  try{
   if(gpsDemoEnabled())updateGpsDemoDevices();
-  const d=await fetchGpsDevices();
+  const devices=await fetchGpsDevices();
   renderGpsConnectionSummary();
-  renderFleet();
-  if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});
-  toast(`GPS обновлён: ${d.length}`)
- }catch(e){
-  toast(`Ошибка GPS: ${e.message}`)
+  updateGpsBadgesOnly();
+
+  if(gpsDesktopMapIsVisible()&&typeof renderFleetMapV2==="function"){
+   renderFleetMapV2({fit:false})
+  }
+  if(gpsMobileMapIsVisible()&&typeof renderMobileGpsMap==="function"){
+   renderMobileGpsMap({fit:false})
+  }
+
+  gpsNextSyncAt=Date.now()+GPS_SYNC_INTERVAL_MS;
+  updateGpsCountdownUi();
+  toast(`GPS обновлён: ${devices.length}`)
+ }catch(error){
+  toast(`Ошибка GPS: ${error.message}`)
  }
 }
+
 function disconnectGps(){
  if(!confirm("Отключить GPS?"))return;
  stopUniversalGpsSync();[GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY,GPS_DEMO_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
@@ -2923,6 +3003,21 @@ function renderFleet(){
   <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
+   ${(()=>{
+    const gps=gpsStatusForCar(c);
+    if(!gps)return"";
+    return`<button type="button"
+      class="hero-gps-tracker ${gps.online?"online":"offline"}"
+      data-gps-car-id="${c.id}"
+      onclick="event.stopPropagation();findCarOnGps('${c.id}')"
+      title="${gps.online?`GPS Online · ${Math.round(gps.speed||0)} км/ч`:`GPS Offline · ${gpsSignalText(gps)}`}"
+      aria-label="Найти автомобиль на GPS">
+      <span class="hero-gps-pulse"></span>
+      <span class="hero-gps-pin">⌖</span>
+      <span data-gps-label>${gps.online?"GPS":"OFF"}</span>
+      <b data-gps-speed>${gps.online?Math.round(gps.speed||0):""}</b>
+    </button>`
+   })()}
    <button class="card-menu-button" onclick="openCarQuickMenu('${c.id}',event)" aria-label="Быстрые действия">⋮</button>
    <span class="model-year">${c.year}</span>
   </div>
@@ -2943,17 +3038,6 @@ function renderFleet(){
     <small>Прибыль за месяц</small>
   </div>
  </div>
- ${(()=>{
-   const gps=gpsStatusForCar(c);
-   if(!gps)return"";
-   const signal=new Date(gps.updatedAt);
-   const signalText=Number.isNaN(signal.getTime())?"—":signal.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
-   return`<div class="mobile-card-gps ${gps.online?"online":"offline"}">
-    <span class="mobile-card-gps-icon"><i></i>⌖</span>
-    <span class="mobile-card-gps-copy"><small>GPS ${gps.online?"ONLINE":"OFFLINE"}</small><strong>${gps.online?`${Math.round(gps.speed||0)} км/ч`:`Сигнал ${signalText}`}</strong></span>
-    <button type="button" onclick="event.stopPropagation();findCarOnGps('${c.id}')">Найти</button>
-   </div>`
- })()}
 </div>
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
@@ -3148,6 +3232,7 @@ function renderFleet(){
 </div></div>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
  renderDesktopCommand();
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
+ requestAnimationFrame(updateGpsBadgesOnly);
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
 
@@ -3651,4 +3736,8 @@ document.addEventListener("DOMContentLoaded",()=>{
 window.addEventListener("pageshow",()=>{
  startUniversalGpsSync();
  updateGpsCountdownUi()
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+ requestAnimationFrame(updateGpsBadgesOnly)
 });

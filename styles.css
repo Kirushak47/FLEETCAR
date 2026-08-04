@@ -1147,7 +1147,7 @@ body{color:var(--v5-text);background:radial-gradient(circle at 8% -8%,rgba(79,70
 .appearance-panel{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:18px;margin-bottom:14px}.appearance-panel h3{margin:4px 0 0}
 .theme-switcher{display:flex;gap:5px;padding:4px;border:1px solid var(--v5-border);border-radius:14px;background:rgba(148,163,184,.1)}
 .theme-switcher button{border:0;padding:9px 12px;border-radius:10px;background:transparent;color:var(--v5-muted);font-weight:800}.theme-switcher button.active{color:#fff;background:linear-gradient(135deg,var(--v5-primary),var(--v5-primary2))}
-.quick-action-button{position:fixed;right:max(18px,calc((100vw - 1240px)/2 + 18px));bottom:95px;z-index:42;width:58px;height:58px;border:0;border-radius:20px;color:#fff;font-size:31px;background:linear-gradient(135deg,var(--v5-primary),var(--v5-primary2));box-shadow:0 17px 38px rgba(79,70,229,.35);transition:.18s}.quick-action-button.active{transform:rotate(45deg)}
+.quick-action-button{position:fixed;right:max(18px,calc((100vw - 1240px)/2 + 18px));bottom:calc(env(safe-area-inset-bottom) + 84px);z-index:42;width:58px;height:58px;border:0;border-radius:20px;color:#fff;font-size:31px;background:linear-gradient(135deg,var(--v5-primary),var(--v5-primary2));box-shadow:0 17px 38px rgba(79,70,229,.35);transition:.18s}.quick-action-button.active{transform:rotate(45deg)}
 .quick-action-menu{position:fixed;right:max(18px,calc((100vw - 1240px)/2 + 18px));bottom:162px;z-index:41;display:grid;min-width:205px;padding:8px;border:1px solid var(--v5-border);border-radius:20px;background:var(--v5-solid);box-shadow:0 24px 60px rgba(16,24,40,.22)}.quick-action-menu[hidden]{display:none}.quick-action-menu button{display:flex;align-items:center;gap:10px;border:0;padding:11px;border-radius:13px;background:transparent;color:var(--v5-text);text-align:left;font-weight:800}.quick-action-menu button:hover{background:rgba(79,70,229,.1)}
 .car-detail-tabs{position:sticky;top:70px;z-index:10;display:flex;gap:6px;padding:7px;margin:12px 0;overflow-x:auto;border:1px solid var(--v5-border);border-radius:18px;background:var(--v5-surface);backdrop-filter:blur(20px);box-shadow:0 13px 30px rgba(16,24,40,.08)}
 .car-detail-tabs button{flex:1;min-width:115px;border:0;padding:11px;border-radius:12px;background:transparent;color:var(--v5-muted);font-weight:850}.car-detail-tabs button.active{color:#fff;background:linear-gradient(135deg,var(--v5-primary),var(--v5-primary2))}
@@ -1157,7 +1157,7 @@ body{color:var(--v5-text);background:radial-gradient(circle at 8% -8%,rgba(79,70
 .detail-action-row{display:flex;gap:8px}.detail-document-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--v5-border)}.detail-document-row small{display:block;color:var(--v5-muted);margin-top:3px}.car-management-card{display:flex;gap:8px;margin-top:12px}
 .bottom-nav{background:rgba(11,16,32,.92);border:1px solid rgba(255,255,255,.1)}.bottom-nav button.active{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
 @media(max-width:780px){.vehicle-vitals{grid-template-columns:1fr}.detail-tab-grid{grid-template-columns:1fr}.detail-tab-grid>.detail-primary-card{grid-column:auto}.detail-stat-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.appearance-panel{align-items:stretch;flex-direction:column}.theme-switcher{width:100%}.theme-switcher button{flex:1;padding:9px 5px}.quick-action-button{right:14px;bottom:88px}.quick-action-menu{right:14px;bottom:154px}.detail-stat-grid{grid-template-columns:1fr}.detail-action-row,.car-management-card{flex-direction:column}.car-detail-tabs{top:60px}}
+@media(max-width:560px){.appearance-panel{align-items:stretch;flex-direction:column}.theme-switcher{width:100%}.theme-switcher button{flex:1;padding:9px 5px}.quick-action-button{right:14px;bottom:calc(env(safe-area-inset-bottom) + 84px);bottom:154px}.detail-stat-grid{grid-template-columns:1fr}.detail-action-row,.car-management-card{flex-direction:column}.car-detail-tabs{top:60px}}
 
 /* FleetPilot V5.1 — Intelligence, search, files */
 .topbar-actions{display:flex;gap:8px}.secondary-round{background:var(--v5-surface-solid)!important;color:var(--v5-text)!important;box-shadow:var(--v5-shadow)!important}
@@ -5460,3 +5460,117 @@ html[data-theme="dark"] .map-city-overview{border-color:rgba(255,255,255,.08);ba
 @media(min-width:1100px){#mobileMapPage,.mobile-map-nav-button{display:none!important}}
 @media(max-width:1099px){.desktop-gps-line{display:none!important}.bottom-nav{overflow-x:auto;justify-content:flex-start}.bottom-nav button{min-width:66px;flex:1 0 66px}}
 html[data-theme="dark"] .mobile-gps-sync-card,html[data-theme="dark"] .mobile-map-panel{border-color:rgba(255,255,255,.08);background:#151d31}html[data-theme="dark"] .mobile-map-panel-head,html[data-theme="dark"] .mobile-map-city,html[data-theme="dark"] .mobile-map-car{border-color:rgba(255,255,255,.06)}
+
+
+/* FleetPilot V7.11.2 — compact mobile GPS tracker */
+.mobile-card-gps{
+ display:none!important;
+}
+
+.hero-card-controls{
+ align-items:center;
+}
+
+.hero-gps-tracker{
+ position:relative;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:3px;
+ min-width:42px;
+ height:31px;
+ padding:0 7px;
+ overflow:hidden;
+ border:1px solid rgba(255,255,255,.25);
+ border-radius:10px;
+ background:rgba(15,23,42,.62);
+ color:#fff;
+ font-size:6px;
+ font-weight:900;
+ line-height:1;
+ text-shadow:0 1px 2px rgba(0,0,0,.35);
+ box-shadow:0 6px 16px rgba(15,23,42,.20);
+ backdrop-filter:blur(10px);
+ cursor:pointer;
+ transition:transform .16s ease,background .16s ease,border-color .16s ease;
+}
+
+.hero-gps-tracker:hover,
+.hero-gps-tracker:active{
+ transform:translateY(-1px);
+}
+
+.hero-gps-tracker.online{
+ border-color:rgba(74,222,128,.55);
+ background:rgba(21,128,61,.72);
+}
+
+.hero-gps-tracker.offline{
+ border-color:rgba(248,113,113,.52);
+ background:rgba(153,27,27,.72);
+}
+
+.hero-gps-tracker .hero-gps-pin{
+ position:relative;
+ z-index:2;
+ font-size:14px;
+ line-height:1;
+}
+
+.hero-gps-tracker [data-gps-label]{
+ position:relative;
+ z-index:2;
+ font-size:6px;
+ letter-spacing:.04em;
+}
+
+.hero-gps-tracker [data-gps-speed]{
+ position:relative;
+ z-index:2;
+ min-width:0;
+ font-size:7px;
+}
+
+.hero-gps-tracker [data-gps-speed]:empty{
+ display:none;
+}
+
+.hero-gps-pulse{
+ position:absolute;
+ left:7px;
+ top:5px;
+ width:7px;
+ height:7px;
+ border:2px solid rgba(255,255,255,.9);
+ border-radius:50%;
+ background:#22c55e;
+ box-shadow:0 0 0 0 rgba(34,197,94,.55);
+ animation:gpsTrackerPulse 2s infinite;
+}
+
+.hero-gps-tracker.offline .hero-gps-pulse{
+ background:#ef4444;
+ box-shadow:none;
+ animation:none;
+}
+
+@keyframes gpsTrackerPulse{
+ 0%{box-shadow:0 0 0 0 rgba(34,197,94,.52)}
+ 70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}
+ 100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+
+@media(max-width:390px){
+ .hero-gps-tracker{
+  min-width:34px;
+  padding:0 5px;
+ }
+ .hero-gps-tracker [data-gps-label]{
+  display:none;
+ }
+}
+
+/* Keep GPS updates from creating visible card animations again */
+[data-gps-car-id]{
+ contain:layout paint;
+}
