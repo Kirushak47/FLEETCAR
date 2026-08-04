@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.5","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -318,6 +318,14 @@ $("#desktopThemeToggle").onclick=()=>toggleTheme();
 $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
+
+$("#addQuickTask").onclick=addManualTask;
+$("#openAnalyticsFromTop").onclick=()=>showPage("analyticsPage");
+$("#clearActivityFeed").onclick=()=>{if(confirm("Очистить ленту действий?")){writeLocalArray(ACTIVITY_KEY,[]);renderDesktopActivityFeed()}};
+$("#criticalShowCars").onclick=()=>{localStorage.setItem(ALERT_KEY,today());$("#criticalAlertDialog").close();showPage("fleetPage");$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))};
+$("#criticalRemindLater").onclick=()=>{$("#criticalAlertDialog").close()};
+$("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALERT_KEY,today()));
+
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
 $("#desktopMapFilter").onchange=()=>{
  desktopMapSelectedCity="";
@@ -341,7 +349,7 @@ document.addEventListener("keydown",event=>{
  if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
 });
 window.addEventListener("resize",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();scheduleDesktopLiveRefresh({preserveMapViewport:true})}});
-window.addEventListener("load",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();setTimeout(initializeDesktopCommandCenter,80);setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),180)}});
+window.addEventListener("load",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();setTimeout(initializeDesktopCommandCenter,80);setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),180);setTimeout(()=>maybeShowCriticalAlert(),500)}});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1030,6 +1038,110 @@ function cityLabel(){
 
 
 const DESKTOP_VIEW_KEY="fleetpilot.desktop.view.v1";
+
+const ACTIVITY_KEY="fleetpilot.activity.v1";
+const TASKS_KEY="fleetpilot.tasks.v1";
+const ALERT_KEY="fleetpilot.alert.last.v1";
+
+function readLocalArray(key){
+ try{const value=JSON.parse(localStorage.getItem(key)||"[]");return Array.isArray(value)?value:[]}catch{return[]}
+}
+function writeLocalArray(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function addActivity(text,type="info",carId=""){
+ const rows=readLocalArray(ACTIVITY_KEY);
+ rows.unshift({id:uid(),date:new Date().toISOString(),text,type,carId});
+ writeLocalArray(ACTIVITY_KEY,rows.slice(0,150));
+ renderDesktopActivityFeed()
+}
+function activityIcon(type){return{status:"↔",service:"🔧",insurance:"🛡",inspection:"✓",payment:"$",expense:"↓",car:"🚘",info:"•"}[type]||"•"}
+function renderDesktopActivityFeed(){
+ const root=$("#desktopActivityFeed");if(!root)return;
+ const rows=readLocalArray(ACTIVITY_KEY).slice(0,10);
+ root.innerHTML=rows.length?rows.map(row=>`<button type="button" class="activity-row" ${row.carId?`onclick="openCar('${row.carId}')"`:""}>
+  <span>${activityIcon(row.type)}</span><div><strong>${row.text}</strong><small>${new Date(row.date).toLocaleString("ru-RU")}</small></div>
+ </button>`).join(""):`<div class="control-empty">Действий пока нет</div>`
+}
+
+function systemTodayTasks(){
+ const rows=[];
+ fleetCars().forEach(c=>{
+  const m=model(c),h=safeDesktopHealth(c),forecast=forecastService(c);
+  if(h.insuranceDays<0)rows.push({id:`sys-ins-${c.id}`,system:true,carId:c.id,text:`Продлить страховку: ${m.brand} ${m.model}`,level:"danger"});
+  else if(h.insuranceDays<=7)rows.push({id:`sys-ins-${c.id}`,system:true,carId:c.id,text:`Страховка через ${h.insuranceDays} дн.: ${m.brand} ${m.model}`,level:"warning"});
+  if(h.inspectionDays<0)rows.push({id:`sys-insp-${c.id}`,system:true,carId:c.id,text:`Обновить техосмотр: ${m.brand} ${m.model}`,level:"danger"});
+  else if(h.inspectionDays<=7)rows.push({id:`sys-insp-${c.id}`,system:true,carId:c.id,text:`Техосмотр через ${h.inspectionDays} дн.: ${m.brand} ${m.model}`,level:"warning"});
+  if(h.oilLeft<=0)rows.push({id:`sys-oil-${c.id}`,system:true,carId:c.id,text:`Заменить масло: ${m.brand} ${m.model}`,level:"danger"});
+  else if(forecast&&forecast.days<=7)rows.push({id:`sys-oil-${c.id}`,system:true,carId:c.id,text:`Масло примерно через ${forecast.days} дн.: ${m.brand} ${m.model}`,level:"warning"});
+ });
+ return rows.slice(0,8)
+}
+function renderTodayTasks(){
+ const root=$("#todayTaskList");if(!root)return;
+ const manual=readLocalArray(TASKS_KEY).filter(task=>!task.done);
+ const rows=[...systemTodayTasks(),...manual].slice(0,10);
+ root.innerHTML=rows.length?rows.map(task=>`<label class="today-task ${task.level||""}">
+  <input type="checkbox" onchange="${task.system?`openCar('${task.carId}');this.checked=false`:`completeManualTask('${task.id}')`}">
+  <span></span><strong>${task.text}</strong>
+ </label>`).join(""):`<div class="control-empty success">На сегодня обязательных задач нет</div>`
+}
+function addManualTask(){
+ const text=prompt("Новая задача");
+ if(!text?.trim())return;
+ const tasks=readLocalArray(TASKS_KEY);
+ tasks.unshift({id:uid(),text:text.trim(),done:false,date:today()});
+ writeLocalArray(TASKS_KEY,tasks);renderTodayTasks();addActivity(`Добавлена задача: ${text.trim()}`,"info")
+}
+function completeManualTask(id){
+ const tasks=readLocalArray(TASKS_KEY),task=tasks.find(x=>x.id===id);
+ if(task){task.done=true;writeLocalArray(TASKS_KEY,tasks);addActivity(`Выполнена задача: ${task.text}`,"info")}
+ renderTodayTasks()
+}
+window.completeManualTask=completeManualTask;
+
+function renderTopProfitCars(){
+ const root=$("#topProfitCars");if(!root)return;
+ const rows=fleetCars().map(c=>({c,profit:safeDesktopCarProfit(c.id)})).sort((a,b)=>b.profit-a.profit);
+ const top=rows.slice(0,3),low=rows.filter(x=>x.profit<0).slice(-2);
+ const output=[...top.map((x,i)=>({...x,label:["🥇","🥈","🥉"][i],kind:"top"})),...low.map(x=>({...x,label:"↓",kind:"low"}))];
+ root.innerHTML=output.length?output.map(x=>`<button type="button" class="profit-rank-row ${x.kind}" onclick="openCar('${x.c.id}')">
+  <span>${x.label}</span><div><strong>${model(x.c).brand} ${model(x.c).model}</strong><small>${x.c.plate}</small></div><b>${money(x.profit)}</b>
+ </button>`).join(""):`<div class="control-empty">Нет финансовых данных</div>`
+}
+
+function criticalAlerts(){
+ const alerts=[];
+ fleetCars().forEach(c=>{
+  const m=model(c),h=safeDesktopHealth(c),forecast=forecastService(c);
+  if(h.insuranceDays<0)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: страховка просрочена на ${Math.abs(h.insuranceDays)} дн.`});
+  else if(h.insuranceDays<=7)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: страховка через ${h.insuranceDays} дн.`});
+  if(h.inspectionDays<0)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: техосмотр просрочен на ${Math.abs(h.inspectionDays)} дн.`});
+  else if(h.inspectionDays<=7)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: техосмотр через ${h.inspectionDays} дн.`});
+  if(h.oilLeft<=0)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: требуется замена масла.`});
+  else if(forecast&&forecast.days<=7)alerts.push({carId:c.id,text:`${m.brand} ${m.model}: масло примерно через ${forecast.days} дн.`});
+ });
+ return alerts.slice(0,12)
+}
+function maybeShowCriticalAlert(force=false){
+ const dialog=$("#criticalAlertDialog");if(!dialog||dialog.open)return;
+ const alerts=criticalAlerts();if(!alerts.length)return;
+ const last=localStorage.getItem(ALERT_KEY);
+ if(!force&&last===today())return;
+ $("#criticalAlertTitle").textContent=`Требуют внимания — ${new Set(alerts.map(x=>x.carId)).size} авто`;
+ $("#criticalAlertList").innerHTML=alerts.map(x=>`<button type="button" onclick="openCar('${x.carId}');$('#criticalAlertDialog').close()">${x.text}<span>›</span></button>`).join("");
+ dialog.showModal()
+}
+function exportCarPdf(carId){
+ const c=car(carId);if(!c)return;
+ const m=model(c),h=safeDesktopHealth(c),profit=safeDesktopCarProfit(c.id);
+ const html=`<!doctype html><html><head><meta charset="utf-8"><title>${m.brand} ${m.model}</title><style>body{font-family:Arial;padding:32px;color:#172033}h1{margin-bottom:4px}.muted{color:#64748b}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:24px 0}.card{border:1px solid #ddd;border-radius:12px;padding:14px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}</style></head><body><h1>${m.brand} ${m.model}</h1><div class="muted">${c.plate||""} · ${c.vin||""}</div><div class="grid"><div class="card">Пробег<br><strong>${km(c.mileage)}</strong></div><div class="card">Прибыль месяца<br><strong>${money(profit)}</strong></div><div class="card">Страховка<br><strong>${h.insuranceDays} дн.</strong></div><div class="card">Техосмотр<br><strong>${h.inspectionDays} дн.</strong></div></div><h2>Ремонты</h2><table>${db.repairs.filter(x=>x.carId===c.id).map(x=>`<tr><td>${date(x.date)}</td><td>${x.title}</td><td>${money(x.actual||x.planned)}</td></tr>`).join("")||"<tr><td>Нет записей</td></tr>"}</table><script>window.onload=()=>window.print()</script></body></html>`;
+ const w=window.open("","_blank");if(!w)return toast("Разрешите всплывающие окна");w.document.write(html);w.document.close()
+}
+window.exportCarPdf=exportCarPdf;
+
+function renderControlCenterExtras(){
+ renderTodayTasks();renderTopProfitCars();renderDesktopActivityFeed()
+}
+
 let desktopMapSelectedCity="";
 let desktopMapHasInitialFit=false;
 let desktopRefreshFrame=0;
@@ -1097,6 +1209,7 @@ function updateCarStatusLive(carId,status){
  // Update every desktop representation immediately.
  renderFleet();
  scheduleDesktopLiveRefresh({preserveMapViewport:true});
+ addActivity(`${model(c).brand} ${model(c).model}: статус изменён на «${statusText(status)}»`,"status",c.id);
  toast(`Статус: ${statusText(status)}`)
 }
 
@@ -1146,8 +1259,17 @@ function desktopCommandKpis(){
 
 function renderDesktopCommandKpis(){
  const root=$("#desktopCommandKpis");if(!root)return;
- root.innerHTML=desktopCommandKpis().map(([label,value,hint,type])=>`<article class="desktop-command-kpi ${type}"><small>${label}</small><strong>${value}</strong><span>${hint}</span></article>`).join("")
+ root.innerHTML=desktopCommandKpis().map(([label,value,hint,type],index)=>`<button type="button" class="desktop-command-kpi ${type}" onclick="handleDesktopKpi(${index})"><small>${label}</small><strong>${value}</strong><span>${hint}</span></button>`).join("")
 }
+
+
+function handleDesktopKpi(index){
+ showPage("fleetPage");
+ if(index===2){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===3){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===0||index===1)showPage("analyticsPage")
+}
+window.handleDesktopKpi=handleDesktopKpi;
 
 function renderDesktopBoard(){
  const root=$("#desktopFleetBoard");if(!root)return;
@@ -1326,6 +1448,9 @@ function renderMapCityPanel(row){
   ?`${row.cars.length} автомобилей · ${money(row.profit)}`
   :`${leafletLastRows.reduce((sum,item)=>sum+item.cars.length,0)} автомобилей`;
 
+ const unknownCities=leafletLastRows.filter(item=>!coordinatesForCity(item.city));
+ $("#leafletMapStatus").hidden=!unknownCities.length;
+ $("#leafletMapStatus").textContent=unknownCities.length?`Не размещены на карте: ${unknownCities.map(x=>x.city).join(", ")}`:"";
  panel.innerHTML=row
   ?row.cars.map(c=>{
     const m=model(c),profit=financialData(currentMonth(),c.id).finalProfit||0;
@@ -1458,6 +1583,7 @@ function initializeDesktopCommandCenter(){
  safeDesktopRender("events",renderDesktopEvents);
  safeDesktopRender("insights",renderDesktopInsights);
  safeDesktopRender("selection",syncDesktopSelection);
+ safeDesktopRender("control center",renderControlCenterExtras);
  requestAnimationFrame(()=>{
   safeDesktopRender("view",()=>setDesktopView(view));
   requestAnimationFrame(()=>{
@@ -1708,7 +1834,7 @@ function renderFleet(){
 
   <div class="desktop-row-actions">
     <button class="btn primary desktop-open-btn" onclick="openCar('${c.id}')">Открыть →</button>
-    <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button>
+    <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button><button class="desktop-pdf-btn" onclick="event.stopPropagation();exportCarPdf('${c.id}')" title="PDF">PDF</button>
   </div>
 </div></div>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
  renderDesktopCommand();
