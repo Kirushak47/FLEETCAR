@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.5</title>
-  <link rel="manifest" href="manifest.webmanifest?v=750">
-  <link rel="stylesheet" href="styles.css?v=750">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynx3ZkZQetf/3Qy4JpB2qV0w9jQk=" crossorigin="">
+  <title>FleetPilot V7.5.2</title>
+  <link rel="manifest" href="manifest.webmanifest?v=752">
+  <link rel="stylesheet" href="styles.css?v=752">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -31,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.5</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V7.5.2</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -56,27 +56,28 @@
           <button type="button" data-fleet-view="table">▤ Таблица</button>
           <button type="button" data-fleet-view="map">⌖ Карта</button>
         </div>
+        <button type="button" id="customizeControlWindows" class="customize-control-windows">⚙ Настроить окна</button>
 
         <div id="desktopCommandKpis" class="desktop-command-kpis"></div>
 
         <section class="control-center-grid">
-          <article class="control-center-card control-tasks-card">
-            <div class="control-card-head"><div><span>Сегодня нужно сделать</span><h3>Задачи</h3></div><button id="addQuickTask" type="button">+ Задача</button></div>
+          <article class="control-center-card control-tasks-card" data-control-window="tasks">
+            <div class="control-card-head"><div><span>Сегодня нужно сделать</span><h3>Задачи</h3></div><div class="control-head-actions"><button id="addQuickTask" type="button">+ Задача</button><button type="button" class="control-hide-button" onclick="hideControlWindow('tasks')" title="Скрыть окно">×</button></div></div>
             <div id="todayTaskList" class="today-task-list"></div>
           </article>
 
-          <article class="control-center-card">
-            <div class="control-card-head"><div><span>Эффективность</span><h3>ТОП автомобилей</h3></div><button id="openAnalyticsFromTop" type="button">Аналитика</button></div>
+          <article class="control-center-card" data-control-window="efficiency">
+            <div class="control-card-head"><div><span>Эффективность</span><h3>ТОП автомобилей</h3></div><div class="control-head-actions"><button id="openAnalyticsFromTop" type="button">Аналитика</button><button type="button" class="control-hide-button" onclick="hideControlWindow('efficiency')" title="Скрыть окно">×</button></div></div>
             <div id="topProfitCars" class="top-profit-cars"></div>
           </article>
 
-          <article class="control-center-card">
-            <div class="control-card-head"><div><span>Последние изменения</span><h3>Лента действий</h3></div><button id="clearActivityFeed" type="button">Очистить</button></div>
+          <article class="control-center-card" data-control-window="activity">
+            <div class="control-card-head"><div><span>Последние изменения</span><h3>Журнал действий</h3></div><div class="control-head-actions"><button id="clearActivityFeed" type="button">Очистить</button><button type="button" class="control-hide-button" onclick="hideControlWindow('activity')" title="Скрыть окно">×</button></div></div>
             <div id="desktopActivityFeed" class="desktop-activity-feed"></div>
           </article>
 
-          <article class="control-center-card gps-ready-card">
-            <div class="control-card-head"><div><span>Телематика</span><h3>GPS-ready</h3></div></div>
+          <article class="control-center-card gps-ready-card" data-control-window="gps">
+            <div class="control-card-head"><div><span>Телематика</span><h3>GPS-ready</h3></div><button type="button" class="control-hide-button" onclick="hideControlWindow('gps')" title="Скрыть окно">×</button></div>
             <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong>GPS не подключён</strong><small>Интерфейс готов к будущей интеграции с трекерами.</small></div></div>
           </article>
         </section>
@@ -138,17 +139,18 @@
           </section>
 
           <aside class="desktop-command-side">
-            <section class="command-side-card">
+            <section class="command-side-card" data-control-window="events">
               <div class="command-section-head compact">
                 <div><span>События</span><h3>Сегодня и далее</h3></div>
-                <button type="button" id="commandOpenCalendar">Открыть</button>
+                <div class="control-head-actions"><button type="button" id="commandOpenCalendar">Открыть</button><button type="button" class="control-hide-button" onclick="hideControlWindow('events')" title="Скрыть окно">×</button></div>
               </div>
               <div id="desktopEventFeed" class="desktop-event-feed"></div>
             </section>
 
-            <section class="command-side-card">
+            <section class="command-side-card" data-control-window="insights">
               <div class="command-section-head compact">
                 <div><span>FleetPilot AI</span><h3>Что важно сейчас</h3></div>
+                <button type="button" class="control-hide-button" onclick="hideControlWindow('insights')" title="Скрыть окно">×</button>
               </div>
               <div id="desktopAiInsights" class="desktop-ai-insights"></div>
             </section>
@@ -682,7 +684,7 @@
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="app.js?v=750"></script>
+<script src="app.js?v=752"></script>
 
 <dialog id="criticalAlertDialog" class="critical-alert-dialog">
   <form method="dialog" class="critical-alert-shell">
@@ -696,6 +698,20 @@
       <button type="button" id="criticalShowCars" class="btn primary">Показать автомобили</button>
       <button type="button" id="criticalRemindLater" class="btn">Напомнить позже</button>
       <button value="cancel" class="btn">Закрыть</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="controlWindowsDialog" class="control-windows-dialog">
+  <form method="dialog" class="control-windows-shell">
+    <div class="control-windows-head">
+      <div><small>Главная страница</small><h2>Настроить окна</h2><p>Выберите блоки, которые должны отображаться на компьютере.</p></div>
+      <button value="cancel" aria-label="Закрыть">×</button>
+    </div>
+    <div id="controlWindowsOptions" class="control-windows-options"></div>
+    <div class="control-windows-actions">
+      <button type="button" id="showAllControlWindows" class="btn">Показать все</button>
+      <button value="cancel" class="btn primary">Готово</button>
     </div>
   </form>
 </dialog>

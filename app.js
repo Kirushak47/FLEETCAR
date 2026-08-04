@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.5","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.5.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -319,6 +319,13 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
 
+$("#customizeControlWindows").onclick=openControlWindowsDialog;
+$("#showAllControlWindows").onclick=()=>{
+ const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));
+ saveControlWindowSettings(settings);
+ renderControlWindowsOptions();
+ toast("Все окна включены")
+};
 $("#addQuickTask").onclick=addManualTask;
 $("#openAnalyticsFromTop").onclick=()=>showPage("analyticsPage");
 $("#clearActivityFeed").onclick=()=>{if(confirm("Очистить ленту действий?")){writeLocalArray(ACTIVITY_KEY,[]);renderDesktopActivityFeed()}};
@@ -348,7 +355,7 @@ document.addEventListener("keydown",event=>{
  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();$("#globalSearchButton").click()}
  if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
 });
-window.addEventListener("resize",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();scheduleDesktopLiveRefresh({preserveMapViewport:true})}});
+window.addEventListener("resize",()=>{if(window.innerWidth>=1100){applyControlWindowSettings();initializeDesktopCommandCenter();scheduleDesktopLiveRefresh({preserveMapViewport:true})}});
 window.addEventListener("load",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();setTimeout(initializeDesktopCommandCenter,80);setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),180);setTimeout(()=>maybeShowCriticalAlert(),500)}});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
@@ -1040,6 +1047,66 @@ function cityLabel(){
 const DESKTOP_VIEW_KEY="fleetpilot.desktop.view.v1";
 
 const ACTIVITY_KEY="fleetpilot.activity.v1";
+
+const CONTROL_WINDOWS_KEY="fleetpilot.desktop.windows.v1";
+const CONTROL_WINDOWS=[
+ {id:"tasks",label:"Сегодня нужно сделать"},
+ {id:"efficiency",label:"Эффективность / ТОП автомобилей"},
+ {id:"activity",label:"Журнал действий"},
+ {id:"gps",label:"GPS-ready"},
+ {id:"events",label:"Сегодня и далее"},
+ {id:"insights",label:"Что важно сейчас"}
+];
+
+function controlWindowSettings(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(CONTROL_WINDOWS_KEY)||"null");
+  if(saved&&typeof saved==="object")return saved
+ }catch{}
+ return Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]))
+}
+function saveControlWindowSettings(settings){
+ localStorage.setItem(CONTROL_WINDOWS_KEY,JSON.stringify(settings));
+ applyControlWindowSettings()
+}
+function applyControlWindowSettings(){
+ const settings=controlWindowSettings();
+ $$("[data-control-window]").forEach(element=>{
+  const visible=settings[element.dataset.controlWindow]!==false;
+  element.hidden=!visible
+ });
+ const visibleMain=$$(".control-center-grid>[data-control-window]").filter(el=>!el.hidden).length;
+ document.querySelector(".control-center-grid")?.classList.toggle("few-visible-windows",visibleMain<=2)
+}
+function hideControlWindow(id){
+ const settings=controlWindowSettings();
+ settings[id]=false;
+ saveControlWindowSettings(settings);
+ toast("Окно скрыто")
+}
+function renderControlWindowsOptions(){
+ const root=$("#controlWindowsOptions");if(!root)return;
+ const settings=controlWindowSettings();
+ root.innerHTML=CONTROL_WINDOWS.map(item=>`<label class="control-window-option">
+  <div><strong>${item.label}</strong><small>${settings[item.id]!==false?"Отображается":"Скрыто"}</small></div>
+  <input type="checkbox" data-window-toggle="${item.id}" ${settings[item.id]!==false?"checked":""}>
+  <span></span>
+ </label>`).join("");
+ root.querySelectorAll("[data-window-toggle]").forEach(input=>{
+  input.onchange=()=>{
+   const next=controlWindowSettings();
+   next[input.dataset.windowToggle]=input.checked;
+   saveControlWindowSettings(next);
+   renderControlWindowsOptions()
+  }
+ })
+}
+function openControlWindowsDialog(){
+ renderControlWindowsOptions();
+ $("#controlWindowsDialog").showModal()
+}
+window.hideControlWindow=hideControlWindow;
+
 const TASKS_KEY="fleetpilot.tasks.v1";
 const ALERT_KEY="fleetpilot.alert.last.v1";
 
@@ -1139,7 +1206,7 @@ function exportCarPdf(carId){
 window.exportCarPdf=exportCarPdf;
 
 function renderControlCenterExtras(){
- renderTodayTasks();renderTopProfitCars();renderDesktopActivityFeed()
+ renderTodayTasks();renderTopProfitCars();renderDesktopActivityFeed();applyControlWindowSettings()
 }
 
 let desktopMapSelectedCity="";
@@ -1234,7 +1301,11 @@ function setDesktopView(view){
     preserveViewport:desktopMapHasInitialFit,
     forceFit:!desktopMapHasInitialFit
    });
-   requestAnimationFrame(()=>leafletFleetMap?.invalidateSize({pan:false}))
+   requestAnimationFrame(()=>{
+    leafletFleetMap?.invalidateSize({pan:false});
+    setTimeout(()=>leafletFleetMap?.invalidateSize({pan:false}),120);
+    setTimeout(()=>leafletFleetMap?.invalidateSize({pan:false}),350)
+   })
   }
   renderDesktopEvents();
   renderDesktopInsights();
