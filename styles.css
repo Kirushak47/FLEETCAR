@@ -2955,3 +2955,98 @@ html[data-theme="dark"] .service-notification-row.danger{
 .custom-model-fields[hidden]{display:none!important}
 @media(max-width:680px){.custom-model-fields{grid-template-columns:1fr}}
 @media(min-width:1100px){.app{padding-left:224px!important}.desktop-sidebar{width:224px!important}main{padding:22px 22px 58px!important}#fleetPage{max-width:none!important;margin:0!important}.desktop-fleet-row{grid-template-columns:210px minmax(320px,1.25fr) minmax(245px,.78fr) minmax(245px,.9fr) auto!important}}
+
+/* FleetPilot V7.0.1 — true full-width desktop workspace */
+@media(min-width:1100px){
+  :root{
+    --desktop-sidebar-width:214px;
+    --desktop-content-gap:16px;
+  }
+
+  .app{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding-left:var(--desktop-sidebar-width)!important;
+  }
+
+  .desktop-sidebar{
+    width:var(--desktop-sidebar-width)!important;
+    max-width:none!important;
+  }
+
+  .topbar{
+    width:auto!important;
+    max-width:none!important;
+    margin:0!important;
+    padding-left:var(--desktop-content-gap)!important;
+    padding-right:18px!important;
+  }
+
+  main{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:16px 18px 56px var(--desktop-content-gap)!important;
+  }
+
+  main > .page,
+  #fleetPage,
+  #repairsPage,
+  #paymentsPage,
+  #expensesPage,
+  #calendarPage,
+  #analyticsPage,
+  #morePage,
+  #carPage{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+
+  .desktop-fleet-page-head,
+  .desktop-fleet-summary,
+  .desktop-fleet-toolbar,
+  .fleet-grid,
+  .fleet-card-responsive-wrap,
+  .desktop-fleet-row{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+
+  .desktop-fleet-row{
+    grid-template-columns:
+      minmax(190px,220px)
+      minmax(290px,1.2fr)
+      minmax(220px,.72fr)
+      minmax(230px,.82fr)
+      auto!important;
+  }
+}
+
+@media(min-width:1450px){
+  .desktop-fleet-row{
+    grid-template-columns:
+      minmax(220px,260px)
+      minmax(340px,1.35fr)
+      minmax(250px,.8fr)
+      minmax(270px,.92fr)
+      auto!important;
+  }
+}
+
+@media(min-width:1900px){
+  :root{
+    --desktop-sidebar-width:220px;
+    --desktop-content-gap:20px;
+  }
+
+  main{
+    padding-right:22px!important;
+  }
+}
