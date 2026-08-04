@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.6","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.8","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -281,7 +281,11 @@ function showPage(id){
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("fleetPage");$("#globalSearchInput").oninput=renderGlobalSearch;
-$("#exportActivityLog").onclick=exportActivityCsv;$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
+$("#exportActivityLog").onclick=exportActivityCsv;
+["activitySearch","activityTypeFilter","activityPeriodFilter"].forEach(id=>{
+ const element=$("#"+id);
+ if(element)element.addEventListener(id==="activitySearch"?"input":"change",renderActivityJournal)
+});$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
 $("#closeFileViewer").onclick=()=>$("#fileViewerDialog").close();$("#fileViewerDialog").addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
 
 $("#customizeDashboard").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
@@ -326,6 +330,9 @@ $("#showAllControlWindows").onclick=()=>{
  renderControlWindowsOptions();
  toast("Все окна включены")
 };
+$("#printVehicleReport").onclick=printCurrentVehicleReport;
+$("#downloadVehicleReportHtml").onclick=downloadCurrentVehicleReportHtml;
+$("#closeVehicleReport").onclick=()=>$("#vehicleReportDialog").close();
 $("#addQuickTask").onclick=addManualTask;
 $("#openAnalyticsFromTop").onclick=()=>showPage("analyticsPage");
 $("#clearActivityFeed").onclick=()=>{if(confirm("Очистить ленту действий?")){writeLocalArray(ACTIVITY_KEY,[]);renderDesktopActivityFeed()}};
@@ -717,9 +724,65 @@ function assistantMessages(){
  messages.push(`Общее здоровье автопарка — ${health.overall}%.`);
  if(!attention.length)messages.unshift("Критических предупреждений нет.");return messages
 }
+function activityCategory(row){
+ const text=`${row?.action||""} ${row?.entity||""} ${row?.details||""}`.toLowerCase();
+ if(/пробег|автомоб|машин|арендатор|статус/.test(text))return"vehicle";
+ if(/ремонт|сервис|масл|техосмотр|шина/.test(text))return"service";
+ if(/оплат|расход|доход|платеж|сумм|финанс/.test(text))return"finance";
+ if(/документ|страхов|полис|договор|карта/.test(text))return"documents";
+ return"system"
+}
+function activityCategoryLabel(category){
+ return{vehicle:"Автомобиль",service:"Сервис",finance:"Финансы",documents:"Документы",system:"Система"}[category]||"Система"
+}
+function activityCategoryIcon(category){
+ return{vehicle:"🚘",service:"🔧",finance:"$",documents:"📄",system:"•"}[category]||"•"
+}
+function activityRowsFiltered(){
+ const query=($("#activitySearch")?.value||"").trim().toLowerCase();
+ const category=$("#activityTypeFilter")?.value||"all";
+ const period=$("#activityPeriodFilter")?.value||"all";
+ const now=Date.now();
+ return(db.activity||[])
+  .slice()
+  .sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")))
+  .filter(row=>{
+   const rowCategory=activityCategory(row);
+   if(category!=="all"&&rowCategory!==category)return false;
+   if(query&&!`${row.action||""} ${row.entity||""} ${row.details||""}`.toLowerCase().includes(query))return false;
+   if(period!=="all"){
+    const stamp=new Date(row.date).getTime();
+    if(Number.isNaN(stamp))return false;
+    if(period==="today"&&new Date(row.date).toDateString()!==new Date().toDateString())return false;
+    if(period==="7"&&now-stamp>7*86400000)return false;
+    if(period==="30"&&now-stamp>30*86400000)return false
+   }
+   return true
+  })
+}
+function renderActivityJournal(){
+ const root=$("#activityLog");if(!root)return;
+ const rows=activityRowsFiltered();
+ root.innerHTML=rows.length?rows.slice(0,200).map(row=>{
+  const category=activityCategory(row);
+  const dt=new Date(row.date);
+  const valid=!Number.isNaN(dt.getTime());
+  const dateText=valid?dt.toLocaleDateString("ru-RU"):"—";
+  const timeText=valid?dt.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"";
+  return`<article class="activity-journal-row ${category}">
+    <div class="activity-journal-time"><strong>${timeText}</strong><small>${dateText}</small></div>
+    <div class="activity-journal-icon">${activityCategoryIcon(category)}</div>
+    <div class="activity-journal-main">
+      <div class="activity-journal-title"><strong>${row.action||"Изменение"}</strong><span>${activityCategoryLabel(category)}</span></div>
+      <small>${row.entity||"FleetPilot"}</small>
+      ${row.details?`<p>${row.details}</p>`:""}
+    </div>
+  </article>`
+ }).join(""):`<div class="activity-journal-empty"><span>🕘</span><strong>Записей не найдено</strong><small>Измените фильтры или выполните действие в FleetPilot.</small></div>`
+}
 function renderMorePage(){applyUxSettings();
  const msgs=assistantMessages();$("#dailyAssistant").innerHTML=msgs.map(x=>`<div class="assistant-message">${x}</div>`).join("");
- const rows=(db.activity||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);$("#activityLog").innerHTML=rows.length?rows.map(x=>`<div class="activity-row"><div><strong>${x.action}</strong><small>${new Date(x.date).toLocaleString("ru-RU")} · ${x.entity||"FleetPilot"}</small></div><span>${x.details||""}</span></div>`).join(""):"Действий пока нет"
+ renderActivityJournal()
 }
 function renderGlobalSearch(){
  const q=($("#globalSearchInput")?.value||"").trim().toLowerCase();if(!q){$("#globalSearchResults").innerHTML='<div class="card">Начните вводить запрос.</div>';$("#globalSearchCount").textContent="";return}
@@ -1211,13 +1274,185 @@ function maybeShowCriticalAlert(force=false){
  $("#criticalAlertList").innerHTML=alerts.map(x=>`<button type="button" onclick="openCar('${x.carId}');$('#criticalAlertDialog').close()">${x.text}<span>›</span></button>`).join("");
  dialog.showModal()
 }
-function exportCarPdf(carId){
- const c=car(carId);if(!c)return;
- const m=model(c),h=safeDesktopHealth(c),profit=safeDesktopCarProfit(c.id);
- const html=`<!doctype html><html><head><meta charset="utf-8"><title>${m.brand} ${m.model}</title><style>body{font-family:Arial;padding:32px;color:#172033}h1{margin-bottom:4px}.muted{color:#64748b}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:24px 0}.card{border:1px solid #ddd;border-radius:12px;padding:14px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}</style></head><body><h1>${m.brand} ${m.model}</h1><div class="muted">${c.plate||""} · ${c.vin||""}</div><div class="grid"><div class="card">Пробег<br><strong>${km(c.mileage)}</strong></div><div class="card">Прибыль месяца<br><strong>${money(profit)}</strong></div><div class="card">Страховка<br><strong>${h.insuranceDays} дн.</strong></div><div class="card">Техосмотр<br><strong>${h.inspectionDays} дн.</strong></div></div><h2>Ремонты</h2><table>${db.repairs.filter(x=>x.carId===c.id).map(x=>`<tr><td>${date(x.date)}</td><td>${x.title}</td><td>${money(x.actual||x.planned)}</td></tr>`).join("")||"<tr><td>Нет записей</td></tr>"}</table><script>window.onload=()=>window.print()</script></body></html>`;
- const w=window.open("","_blank");if(!w)return toast("Разрешите всплывающие окна");w.document.write(html);w.document.close()
+
+let currentVehicleReportHtml="";
+let currentVehicleReportFilename="FleetPilot-report.html";
+
+function reportSafe(value,fallback="—"){
+ const text=String(value??"").trim();
+ return text||fallback
 }
+function reportDate(value){
+ if(!value)return"—";
+ try{return new Date(value).toLocaleDateString("ru-RU")}catch{return String(value)}
+}
+function reportMoney(value){
+ const number=Number(value||0);
+ return `${number.toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2})} zł`
+}
+function buildVehicleReportHtml(carId){
+ const c=car(carId);
+ if(!c)throw new Error("Автомобиль не найден");
+
+ const m=model(c)||{brand:"Автомобиль",model:""};
+ const h=safeDesktopHealth(c);
+ const profit=safeDesktopCarProfit(c.id);
+ const repairs=Array.isArray(db.repairs)?db.repairs.filter(x=>x.carId===c.id):[];
+ const expenses=Array.isArray(db.expenses)?db.expenses.filter(x=>x.carId===c.id):[];
+ const payments=Array.isArray(db.payments)?db.payments.filter(x=>x.carId===c.id):[];
+ const generated=new Date().toLocaleString("ru-RU");
+ const photo=c.customPhoto||m.image||"";
+
+ const totalExpenses=expenses.reduce((sum,x)=>sum+Number(x.amount||0),0);
+ const totalPayments=payments.reduce((sum,x)=>sum+Number(x.amount||0),0);
+ const repairTotal=repairs.reduce((sum,x)=>sum+Number(x.actual||x.planned||0),0);
+
+ const repairRows=repairs.length
+  ?repairs.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(x=>`
+    <tr><td>${reportDate(x.date)}</td><td>${reportSafe(x.title,"Ремонт")}</td><td>${reportMoney(x.actual||x.planned)}</td><td>${reportSafe(x.status,"—")}</td></tr>`).join("")
+  :`<tr><td colspan="4" class="empty">Записей о ремонтах нет</td></tr>`;
+
+ const expenseRows=expenses.length
+  ?expenses.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,30).map(x=>`
+    <tr><td>${reportDate(x.date)}</td><td>${reportSafe(x.category||x.title,"Расход")}</td><td>${reportMoney(x.amount)}</td><td>${reportSafe(x.note,"")}</td></tr>`).join("")
+  :`<tr><td colspan="4" class="empty">Расходов нет</td></tr>`;
+
+ return`<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FleetPilot — ${reportSafe(m.brand)} ${reportSafe(m.model,"")}</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:#f4f7fb;color:#172033;font-family:Arial,Helvetica,sans-serif}
+.report{max-width:960px;margin:auto;background:#fff;border:1px solid #e3e8ef;border-radius:22px;overflow:hidden;box-shadow:0 18px 55px rgba(15,23,42,.10)}
+.hero{position:relative;min-height:210px;padding:28px;background:linear-gradient(135deg,#111827,#28385e);color:#fff;overflow:hidden}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(15,23,42,.48))}
+.hero-content{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;min-height:154px}
+.brand{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#a5b4fc}
+h1{margin:8px 0 7px;font-size:32px;letter-spacing:-.04em}
+.meta{color:#d7deea;font-size:12px}
+.status{padding:9px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.10);font-size:11px;font-weight:800}
+.content{padding:24px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.card{padding:15px;border:1px solid #e5e9ef;border-radius:15px;background:#f8fafc}
+.card small{display:block;color:#8994a5;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.card strong{display:block;margin-top:8px;font-size:18px}
+.section{margin-top:26px}
+.section h2{margin:0 0 11px;font-size:17px}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.info{display:flex;justify-content:space-between;gap:16px;padding:11px 12px;border-bottom:1px solid #edf0f4;font-size:11px}
+.info span{color:#7b8798}.info strong{text-align:right}
+table{width:100%;border-collapse:collapse;border:1px solid #e5e9ef;border-radius:12px;overflow:hidden}
+th{padding:10px;background:#f4f7fb;color:#64748b;font-size:9px;text-align:left;text-transform:uppercase}
+td{padding:10px;border-top:1px solid #edf0f4;font-size:10px}
+.empty{text-align:center;color:#94a3b8;padding:24px}
+.footer{display:flex;justify-content:space-between;padding:16px 24px;border-top:1px solid #edf0f4;color:#8792a3;font-size:9px}
+@media(max-width:700px){body{padding:0}.report{border-radius:0}.grid{grid-template-columns:repeat(2,1fr)}.info-grid{grid-template-columns:1fr}.hero-content{display:block}.status{display:inline-block;margin-top:14px}}
+@media print{body{padding:0;background:#fff}.report{max-width:none;border:0;border-radius:0;box-shadow:none}.section{break-inside:avoid}.hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<main class="report">
+ <header class="hero">
+  ${photo?`<img src="${photo}" alt="">`:""}
+  <div class="hero-content">
+   <div><div class="brand">FleetPilot Vehicle Report</div><h1>${reportSafe(m.brand)} ${reportSafe(m.model,"")}</h1><div class="meta">${reportSafe(c.plate)} · ${reportSafe(c.city)} · ${reportSafe(c.tenant,"Без водителя")}</div></div>
+   <div class="status">${statusText(c.status)}</div>
+  </div>
+ </header>
+ <div class="content">
+  <section class="grid">
+   <div class="card"><small>Пробег</small><strong>${km(Number(c.mileage||0))}</strong></div>
+   <div class="card"><small>Прибыль месяца</small><strong>${reportMoney(profit)}</strong></div>
+   <div class="card"><small>До замены масла</small><strong>${h.oilLeft<=0?"Просрочено":km(h.oilLeft)}</strong></div>
+   <div class="card"><small>Платежи всего</small><strong>${reportMoney(totalPayments)}</strong></div>
+  </section>
+
+  <section class="section">
+   <h2>Основная информация</h2>
+   <div class="info-grid">
+    <div class="info"><span>Госномер</span><strong>${reportSafe(c.plate)}</strong></div>
+    <div class="info"><span>VIN</span><strong>${reportSafe(c.vin)}</strong></div>
+    <div class="info"><span>Год выпуска</span><strong>${reportSafe(c.year)}</strong></div>
+    <div class="info"><span>Город</span><strong>${reportSafe(c.city)}</strong></div>
+    <div class="info"><span>Водитель</span><strong>${reportSafe(c.tenant,"Без водителя")}</strong></div>
+    <div class="info"><span>Статус</span><strong>${statusText(c.status)}</strong></div>
+    <div class="info"><span>Страховка до</span><strong>${reportDate(c.insurance)}</strong></div>
+    <div class="info"><span>Техосмотр до</span><strong>${reportDate(c.inspection)}</strong></div>
+    <div class="info"><span>Расходы</span><strong>${reportMoney(totalExpenses)}</strong></div>
+    <div class="info"><span>Ремонты</span><strong>${reportMoney(repairTotal)}</strong></div>
+   </div>
+  </section>
+
+  <section class="section">
+   <h2>История ремонтов</h2>
+   <table><thead><tr><th>Дата</th><th>Работа</th><th>Стоимость</th><th>Статус</th></tr></thead><tbody>${repairRows}</tbody></table>
+  </section>
+
+  <section class="section">
+   <h2>Последние расходы</h2>
+   <table><thead><tr><th>Дата</th><th>Категория</th><th>Сумма</th><th>Комментарий</th></tr></thead><tbody>${expenseRows}</tbody></table>
+  </section>
+ </div>
+ <footer class="footer"><span>Создано автоматически в FleetPilot</span><span>${generated}</span></footer>
+</main>
+</body>
+</html>`
+}
+
+function exportCarPdf(carId){
+ try{
+  const c=car(carId);
+  if(!c)return toast("Автомобиль не найден");
+
+  currentVehicleReportHtml=buildVehicleReportHtml(carId);
+  const m=model(c)||{brand:"Автомобиль",model:""};
+  currentVehicleReportFilename=`FleetPilot-${String(c.plate||`${m.brand}-${m.model}`).replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]+/g,"-")}.html`;
+
+  const frame=$("#vehicleReportFrame");
+  const dialog=$("#vehicleReportDialog");
+  if(!frame||!dialog)throw new Error("Окно отчёта не найдено");
+
+  $("#vehicleReportDialogTitle").textContent=`${m.brand} ${m.model} · ${c.plate||"без номера"}`;
+  frame.srcdoc=currentVehicleReportHtml;
+  dialog.showModal();
+  addActivity(`${m.brand} ${m.model}: сформирован отчёт`,"info",c.id)
+ }catch(error){
+  console.error("FleetPilot report error",error);
+  toast(`Не удалось сформировать отчёт: ${error.message||"ошибка"}`)
+ }
+}
+
+function printCurrentVehicleReport(){
+ const frame=$("#vehicleReportFrame");
+ if(!frame?.contentWindow)return toast("Отчёт ещё загружается");
+ try{
+  frame.contentWindow.focus();
+  frame.contentWindow.print()
+ }catch(error){
+  console.error(error);
+  toast("Браузер заблокировал печать")
+ }
+}
+
+function downloadCurrentVehicleReportHtml(){
+ if(!currentVehicleReportHtml)return toast("Сначала сформируйте отчёт");
+ const blob=new Blob([currentVehicleReportHtml],{type:"text/html;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download=currentVehicleReportFilename;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+
 window.exportCarPdf=exportCarPdf;
+
 
 function renderControlCenterExtras(){
  renderTodayTasks();renderTopProfitCars();renderDesktopActivityFeed();applyControlWindowSettings()
@@ -1228,28 +1463,32 @@ let desktopMapHasInitialFit=false;
 let desktopRefreshFrame=0;
 const desktopSelection=new Set();
 const POLAND_CITY_COORDS={
- "Warszawa":[52.2297,21.0122],"Warsaw":[52.2297,21.0122],
- "Kraków":[50.0647,19.9450],"Cracow":[50.0647,19.9450],
- "Łódź":[51.7592,19.4560],"Lodz":[51.7592,19.4560],
- "Wrocław":[51.1079,17.0385],"Wroclaw":[51.1079,17.0385],
- "Poznań":[52.4064,16.9252],"Poznan":[52.4064,16.9252],
- "Gdańsk":[54.3520,18.6466],"Gdansk":[54.3520,18.6466],
- "Szczecin":[53.4285,14.5528],"Bydgoszcz":[53.1235,18.0084],
- "Lublin":[51.2465,22.5684],"Katowice":[50.2649,19.0238],
- "Białystok":[53.1325,23.1688],"Gdynia":[54.5189,18.5305],
- "Częstochowa":[50.8118,19.1203],"Radom":[51.4027,21.1471],
- "Toruń":[53.0138,18.5984],"Rzeszów":[50.0412,21.9991],
- "Kielce":[50.8661,20.6286],"Olsztyn":[53.7784,20.4801],
- "Opole":[50.6751,17.9213],"Zielona Góra":[51.9356,15.5062],
- "Bielsko-Biała":[49.8224,19.0469],"Gliwice":[50.2945,18.6714],
- "Zabrze":[50.3249,18.7857],"Rybnik":[50.1022,18.5463],
- "Tychy":[50.1372,18.9664],"Sopot":[54.4416,18.5601],
- "Koszalin":[54.1944,16.1722],"Elbląg":[54.1522,19.4045],
- "Płock":[52.5463,19.7065],"Kalisz":[51.7611,18.0910],
- "Legnica":[51.2070,16.1553],"Wałbrzych":[50.7714,16.2843],
- "Grudziądz":[53.4837,18.7536],"Włocławek":[52.6483,19.0678],
- "Słupsk":[54.4641,17.0287],"Nowy Sącz":[49.6218,20.6970],
- "Jelenia Góra":[50.9044,15.7194],"Piotrków Trybunalski":[51.4052,19.7030]
+ "warszawa":[52.2297,21.0122],"warsaw":[52.2297,21.0122],
+ "kraków":[50.0647,19.9450],"krakow":[50.0647,19.9450],"cracow":[50.0647,19.9450],
+ "łódź":[51.7592,19.4560],"lodz":[51.7592,19.4560],
+ "wrocław":[51.1079,17.0385],"wroclaw":[51.1079,17.0385],
+ "poznań":[52.4064,16.9252],"poznan":[52.4064,16.9252],
+ "gdańsk":[54.3520,18.6466],"gdansk":[54.3520,18.6466],
+ "szczecin":[53.4285,14.5528],"bydgoszcz":[53.1235,18.0084],
+ "lublin":[51.2465,22.5684],"katowice":[50.2649,19.0238],
+ "białystok":[53.1325,23.1688],"bialystok":[53.1325,23.1688],
+ "gdynia":[54.5189,18.5305],"częstochowa":[50.8118,19.1203],"czestochowa":[50.8118,19.1203],
+ "radom":[51.4027,21.1471],"toruń":[53.0138,18.5984],"torun":[53.0138,18.5984],
+ "rzeszów":[50.0412,21.9991],"rzeszow":[50.0412,21.9991],
+ "kielce":[50.8661,20.6286],"olsztyn":[53.7784,20.4801],"opole":[50.6751,17.9213],
+ "zielona góra":[51.9356,15.5062],"zielona gora":[51.9356,15.5062],
+ "bielsko-biała":[49.8224,19.0469],"bielsko biala":[49.8224,19.0469],
+ "gliwice":[50.2945,18.6714],"zabrze":[50.3249,18.7857],"rybnik":[50.1022,18.5463],
+ "tychy":[50.1372,18.9664],"sopot":[54.4416,18.5601],"koszalin":[54.1944,16.1722],
+ "elbląg":[54.1522,19.4045],"elblag":[54.1522,19.4045],
+ "płock":[52.5463,19.7065],"plock":[52.5463,19.7065],
+ "kalisz":[51.7611,18.0910],"legnica":[51.2070,16.1553],"wałbrzych":[50.7714,16.2843],"walbrzych":[50.7714,16.2843],
+ "grudziądz":[53.4837,18.7536],"grudziadz":[53.4837,18.7536],
+ "włocławek":[52.6483,19.0678],"wloclawek":[52.6483,19.0678],
+ "słupsk":[54.4641,17.0287],"slupsk":[54.4641,17.0287],
+ "nowy sącz":[49.6218,20.6970],"nowy sacz":[49.6218,20.6970],
+ "jelenia góra":[50.9044,15.7194],"jelenia gora":[50.9044,15.7194],
+ "piotrków trybunalski":[51.4052,19.7030],"piotrkow trybunalski":[51.4052,19.7030]
 };
 
 
@@ -1434,10 +1673,25 @@ function renderDesktopTable(){
  syncDesktopSelection()
 }
 
+
 function normalizeMapCity(city){
  const raw=String(city||"").trim();
  if(!raw)return"Без города";
  return raw.split(",")[0].trim()
+}
+
+function normalizeCityKey(city){
+ return normalizeMapCity(city)
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"")
+  .replace(/\s+/g," ")
+  .trim()
+}
+
+function coordinatesForCity(city){
+ const key=normalizeCityKey(city);
+ return POLAND_CITY_COORDS[key]||null
 }
 
 function cityMapData(){
@@ -1447,80 +1701,69 @@ function cityMapData(){
   if(filter==="attention")return attention(c);
   return c.status===filter
  });
- const map=new Map();
+
+ const grouped=new Map();
  selected.forEach(c=>{
-  const city=normalizeMapCity(c.city),row=map.get(city)||{city,cars:[],profit:0,attention:0};
-  row.cars.push(c);row.profit+=financialData(currentMonth(),c.id).finalProfit||0;if(attention(c))row.attention++;map.set(city,row)
+  const city=normalizeMapCity(c.city);
+  const key=normalizeCityKey(city);
+  const row=grouped.get(key)||{key,city,cars:[],profit:0,attention:0,coords:coordinatesForCity(city)};
+  row.cars.push(c);
+  row.profit+=safeDesktopCarProfit(c.id);
+  if(attention(c))row.attention++;
+  grouped.set(key,row)
  });
- return[...map.values()].sort((a,b)=>b.cars.length-a.cars.length)
+
+ return[...grouped.values()].sort((a,b)=>b.cars.length-a.cars.length||a.city.localeCompare(b.city,"ru"))
 }
 
-
-let leafletFleetMap=null;
-let leafletCityLayer=null;
-let leafletLastRows=[];
-
-function coordinatesForCity(city){
- if(POLAND_CITY_COORDS[city])return POLAND_CITY_COORDS[city];
- const exact=Object.keys(POLAND_CITY_COORDS).find(key=>key.toLowerCase()===String(city).toLowerCase());
- if(exact)return POLAND_CITY_COORDS[exact];
-
- // Try matching city names stored with region/country suffixes.
- const normalized=String(city).split(",")[0].trim().toLowerCase();
- const partial=Object.keys(POLAND_CITY_COORDS).find(key=>key.toLowerCase()===normalized);
- return partial?POLAND_CITY_COORDS[partial]:null
-}
-
-function ensureLeafletMap(){
- const container=$("#leafletFleetMap");
- if(!container)return null;
-
- if(typeof L==="undefined"){
-  const status=$("#leafletMapStatus");
-  if(status){
-   status.hidden=false;
-   status.textContent="Не удалось загрузить карту. Проверьте подключение к интернету."
-  }
-  return null
- }
-
- if(leafletFleetMap)return leafletFleetMap;
-
- leafletFleetMap=L.map(container,{
-  zoomControl:true,
-  attributionControl:true,
-  preferCanvas:true
- }).setView([52.05,19.25],6);
-
- L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
-  maxZoom:19,
-  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  crossOrigin:true
- }).addTo(leafletFleetMap);
-
- leafletCityLayer=L.layerGroup().addTo(leafletFleetMap);
-
- // Leaflet often initializes while the view is hidden.
- setTimeout(()=>leafletFleetMap.invalidateSize(),80);
- return leafletFleetMap
-}
-
-function cityMarkerClass(row){
+function cityHealthLevel(row){
+ if(row.cars.some(c=>c.status==="repair"))return"danger";
  if(row.attention>0)return"warning";
- if(row.profit<0)return"danger";
  return"good"
 }
 
-function cityMarkerIcon(row){
- const level=cityMarkerClass(row);
- const count=row.cars.length;
- const size=Math.max(38,Math.min(62,36+count*2));
+function carMapLevel(c){
+ if(c.status==="repair")return"danger";
+ if(attention(c))return"warning";
+ return c.status==="free"?"free":"good"
+}
+
+function carPointAroundCity(coords,index,total){
+ if(total<=1)return coords;
+ const ring=Math.floor(index/8)+1;
+ const slot=index%8;
+ const angle=(Math.PI*2*slot/8)+(ring%2?0.25:0);
+ const radius=0.006*ring;
+ return[
+  coords[0]+Math.sin(angle)*radius,
+  coords[1]+Math.cos(angle)*radius/Math.max(.55,Math.cos(coords[0]*Math.PI/180))
+ ]
+}
+
+function cityClusterIcon(row){
+ const level=cityHealthLevel(row);
+ const size=Math.max(44,Math.min(68,42+row.cars.length*2));
  return L.divIcon({
-  className:"fleet-leaflet-marker-wrapper",
-  html:`<button type="button" class="fleet-leaflet-marker ${level}" style="width:${size}px;height:${size}px" aria-label="${row.city}, ${count} автомобилей"><strong>${count}</strong><small>${row.city}</small></button>`,
+  className:"fleet-city-cluster-wrap",
+  html:`<button class="fleet-city-cluster ${level}" style="width:${size}px;height:${size}px" aria-label="${row.city}: ${row.cars.length} автомобилей">
+    <strong>${row.cars.length}</strong><small>${row.city}</small>
+  </button>`,
   iconSize:[size,size],
-  iconAnchor:[size/2,size/2],
-  popupAnchor:[0,-size/2]
+  iconAnchor:[size/2,size/2]
+ })
+}
+
+function carMarkerIcon(c){
+ const level=carMapLevel(c);
+ const m=model(c);
+ return L.divIcon({
+  className:"fleet-car-marker-wrap",
+  html:`<button class="fleet-car-marker ${level}" aria-label="${m.brand} ${m.model}">
+    <span>🚗</span>
+  </button>`,
+  iconSize:[34,34],
+  iconAnchor:[17,17],
+  popupAnchor:[0,-18]
  })
 }
 
@@ -1528,34 +1771,41 @@ function renderMapCityPanel(row){
  const panel=$("#mapCityCars");
  if(!panel)return;
 
+ const rows=leafletLastRows;
  $("#mapSelectedCity").textContent=row?.city||"Все города";
  $("#mapSelectedCount").textContent=row
   ?`${row.cars.length} автомобилей · ${money(row.profit)}`
-  :`${leafletLastRows.reduce((sum,item)=>sum+item.cars.length,0)} автомобилей`;
+  :`${rows.reduce((sum,item)=>sum+item.cars.length,0)} автомобилей`;
 
- const unknownCities=leafletLastRows.filter(item=>!coordinatesForCity(item.city));
- $("#leafletMapStatus").hidden=!unknownCities.length;
- $("#leafletMapStatus").textContent=unknownCities.length?`Не размещены на карте: ${unknownCities.map(x=>x.city).join(", ")}`:"";
  panel.innerHTML=row
   ?row.cars.map(c=>{
-    const m=model(c),profit=financialData(currentMonth(),c.id).finalProfit||0;
+    const m=model(c),profit=safeDesktopCarProfit(c.id);
     return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')">
-      <div><strong>${m.brand} ${m.model}</strong><small>${c.plate} · ${statusText(c.status)} · ${money(profit)}</small></div>
-      <span>${attention(c)?"⚠":"›"}</span>
+      <span class="map-car-status ${carMapLevel(c)}"></span>
+      <div><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"} · ${statusText(c.status)} · ${money(profit)}</small></div>
+      <b>›</b>
     </button>`
    }).join("")
-  :leafletLastRows.map(city=>`<button type="button" class="map-city-summary-row" onclick="focusLeafletCity('${city.city.replace(/'/g,"\\'")}')">
+  :rows.map(city=>`<button type="button" class="map-city-summary-row" onclick="focusLeafletCity('${city.key.replace(/'/g,"\\'")}')">
+      <span class="map-city-dot ${cityHealthLevel(city)}"></span>
       <div><strong>${city.city}</strong><small>${city.cars.length} авто · ${money(city.profit)}</small></div>
-      <span>${city.attention?`${city.attention} ⚠`:"›"}</span>
-    </button>`).join("")||`<div class="map-empty">Укажите город в профиле автомобиля</div>`
+      <b>${city.attention?`${city.attention} ⚠`:"›"}</b>
+    </button>`).join("")||`<div class="map-empty">Укажите город в профиле автомобиля</div>`;
+
+ const unknown=rows.filter(item=>!item.coords&&item.city!=="Без города");
+ const status=$("#leafletMapStatus");
+ if(status){
+  status.hidden=!unknown.length;
+  status.textContent=unknown.length?`Не удалось разместить: ${unknown.map(x=>x.city).join(", ")}`:""
+ }
 }
 
-function focusLeafletCity(city){
- const map=ensureLeafletMap(),row=leafletLastRows.find(item=>item.city===city);
+function focusLeafletCity(cityKey){
+ const map=ensureLeafletMap();
+ const row=leafletLastRows.find(item=>item.key===cityKey||item.city===cityKey);
  if(!row)return;
- desktopMapSelectedCity=row.city;
- const coords=coordinatesForCity(row.city);
- if(map&&coords)map.flyTo(coords,11,{duration:.55});
+ desktopMapSelectedCity=row.key;
+ if(map&&row.coords)map.flyTo(row.coords,11,{duration:.55});
  renderMapCityPanel(row)
 }
 window.focusLeafletCity=focusLeafletCity;
@@ -1565,8 +1815,8 @@ function renderDesktopMap(selectedCity=desktopMapSelectedCity,options={}){
  const rows=cityMapData();
  leafletLastRows=rows;
 
- const chosen=rows.find(row=>row.city===selectedCity)||null;
- if(chosen)desktopMapSelectedCity=chosen.city;
+ const chosen=rows.find(row=>row.key===selectedCity||row.city===selectedCity)||null;
+ if(chosen)desktopMapSelectedCity=chosen.key;
  else if(selectedCity)desktopMapSelectedCity="";
 
  if(!map){
@@ -1578,49 +1828,59 @@ function renderDesktopMap(selectedCity=desktopMapSelectedCity,options={}){
  const bounds=[];
 
  rows.forEach(row=>{
-  const coords=coordinatesForCity(row.city);
-  if(!coords)return;
+  if(!row.coords)return;
+  bounds.push(row.coords);
 
-  bounds.push(coords);
-  const marker=L.marker(coords,{
-   icon:cityMarkerIcon(row),
-   keyboard:true,
-   riseOnHover:true
+  // City cluster marker.
+  const cluster=L.marker(row.coords,{icon:cityClusterIcon(row),keyboard:true,riseOnHover:true});
+  cluster.on("click",()=>{
+   desktopMapSelectedCity=row.key;
+   renderMapCityPanel(row);
+   map.flyTo(row.coords,row.cars.length>1?10:12,{duration:.5})
   });
+  cluster.bindTooltip(`${row.city}: ${row.cars.length} авто`,{direction:"top",offset:[0,-18]});
+  cluster.addTo(leafletCityLayer);
 
-  marker.bindPopup(`
-    <div class="fleet-map-popup">
-      <strong>${row.city}</strong>
-      <span>${row.cars.length} автомобилей</span>
-      <span>${money(row.profit)} за месяц</span>
-      ${row.attention?`<em>${row.attention} требуют внимания</em>`:""}
+  // Individual vehicle markers with a small radial spread.
+  row.cars.forEach((c,index)=>{
+   const point=carPointAroundCity(row.coords,index,row.cars.length);
+   const m=model(c);
+   const marker=L.marker(point,{icon:carMarkerIcon(c),keyboard:true,riseOnHover:true});
+   marker.bindPopup(`
+    <div class="fleet-car-popup">
+      <strong>${m.brand} ${m.model}</strong>
+      <span>${c.plate||"Без номера"}</span>
+      <em class="${carMapLevel(c)}">${statusText(c.status)}</em>
+      <span>${km(Number(c.mileage||0))}</span>
+      <button type="button" onclick="openCar('${c.id}')">Открыть →</button>
     </div>
-  `);
-
-  marker.on("click",()=>{
-   desktopMapSelectedCity=row.city;
-   renderMapCityPanel(row)
-  });
-  marker.addTo(leafletCityLayer)
+   `);
+   marker.on("click",()=>renderMapCityPanel(row));
+   marker.addTo(leafletCityLayer);
+  })
  });
 
+ const validBounds=bounds;
  const preserveViewport=options.preserveViewport!==false;
  const forceFit=Boolean(options.forceFit);
 
- if(bounds.length&&(forceFit||!desktopMapHasInitialFit||!preserveViewport)){
-  map.fitBounds(bounds,{padding:[42,42],maxZoom:8,animate:false});
+ if(validBounds.length&&(forceFit||!desktopMapHasInitialFit||!preserveViewport)){
+  map.fitBounds(validBounds,{padding:[45,45],maxZoom:8,animate:false});
   desktopMapHasInitialFit=true
- }else if(chosen&&forceFit){
-  const coords=coordinatesForCity(chosen.city);
-  if(coords)map.setView(coords,11,{animate:false})
- }else if(!bounds.length&&!desktopMapHasInitialFit){
+ }else if(chosen&&forceFit&&chosen.coords){
+  map.setView(chosen.coords,11,{animate:false})
+ }else if(!validBounds.length&&!desktopMapHasInitialFit){
   map.setView([52.05,19.25],6,{animate:false});
   desktopMapHasInitialFit=true
  }
 
  renderMapCityPanel(chosen);
- requestAnimationFrame(()=>map.invalidateSize({pan:false}))
+ requestAnimationFrame(()=>{
+  map.invalidateSize({pan:false});
+  setTimeout(()=>map.invalidateSize({pan:false}),120)
+ })
 }
+
 function renderDesktopEvents(){
  const root=$("#desktopEventFeed");if(!root)return;
  const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
