@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.3.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -340,15 +340,8 @@ document.addEventListener("keydown",event=>{
  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();$("#globalSearchButton").click()}
  if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
 });
-window.addEventListener("resize",()=>{if(window.innerWidth>=1100)scheduleDesktopLiveRefresh({preserveMapViewport:true})});
-window.addEventListener("load",()=>{
- if(window.innerWidth>=1100){
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-   renderDesktopCommand();
-   setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),120)
-  }))
- }
-});
+window.addEventListener("resize",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();scheduleDesktopLiveRefresh({preserveMapViewport:true})}});
+window.addEventListener("load",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();setTimeout(initializeDesktopCommandCenter,80);setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),180)}});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1191,24 +1184,46 @@ function renderDesktopBoard(){
  })
 }
 
+function safeDesktopCarProfit(carId,period=currentMonth()){
+ try{return Number(financialData(period,carId)?.finalProfit||0)}catch(error){console.warn("FleetPilot table profit fallback",carId,error);return 0}
+}
+function safeDesktopHealth(c){
+ try{
+  const h=healthDetails(c)||{};
+  return{level:h.level||"good",oilLeft:Number.isFinite(Number(h.oilLeft))?Number(h.oilLeft):oil(c),insuranceDays:Number.isFinite(Number(h.insuranceDays))?Number(h.insuranceDays):days(c.insurance),inspectionDays:Number.isFinite(Number(h.inspectionDays))?Number(h.inspectionDays):days(c.inspection)}
+ }catch(error){
+  console.warn("FleetPilot table health fallback",c?.id,error);
+  return{level:"good",oilLeft:oil(c),insuranceDays:days(c.insurance),inspectionDays:days(c.inspection)}
+ }
+}
+function desktopTableRow(c,period){
+ try{
+  const m=model(c)||{brand:"Автомобиль",model:"Без модели"},h=safeDesktopHealth(c),profit=safeDesktopCarProfit(c.id,period),status=["active","repair","free"].includes(c.status)?c.status:"free";
+  return`<tr class="${h.level}" data-table-car="${c.id}">
+   <td><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"></td>
+   <td><button type="button" class="table-car-link" onclick="openCar('${c.id}')"><strong>${m.brand||"Автомобиль"} ${m.model||""}</strong><small>${c.plate||"Без номера"}</small></button></td>
+   <td>${c.city||"—"}</td><td>${c.tenant||"—"}</td>
+   <td><span class="table-status ${status}">${statusText(status)}</span></td>
+   <td>${km(Number(c.mileage||0))}</td>
+   <td class="${h.oilLeft<=1500?"warn":""}">${h.oilLeft<=0?"Просрочено":km(h.oilLeft)}</td>
+   <td class="${h.insuranceDays<=30?"warn":""}">${h.insuranceDays<0?"Просрочена":h.insuranceDays>=9999?"—":`${h.insuranceDays} дн.`}</td>
+   <td class="${h.inspectionDays<=30?"warn":""}">${h.inspectionDays<0?"Просрочен":h.inspectionDays>=9999?"—":`${h.inspectionDays} дн.`}</td>
+   <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
+   <td><button type="button" class="table-open" onclick="openCar('${c.id}')">Открыть</button></td>
+  </tr>`
+ }catch(error){
+  console.error("FleetPilot table row failed",c?.id,error);
+  return`<tr class="table-row-error"><td></td><td><strong>Ошибка данных автомобиля</strong><small>${c?.plate||c?.id||"Неизвестная запись"}</small></td><td colspan="8">Откройте автомобиль и сохраните данные повторно.</td><td>${c?.id?`<button type="button" class="table-open" onclick="openCar('${c.id}')">Исправить</button>`:""}</td></tr>`
+ }
+}
 function renderDesktopTable(){
  const root=$("#desktopFleetTableBody");if(!root)return;
- const period=currentMonth();
- root.innerHTML=fleetCars().map(c=>{
-  const m=model(c),h=healthDetails(c),profit=financialData(period,c.id).finalProfit;
-  return`<tr class="${h.level}">
-   <td><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"></td>
-   <td><button class="table-car-link" onclick="openCar('${c.id}')"><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></button></td>
-   <td>${c.city||"—"}</td><td>${c.tenant||"—"}</td>
-   <td><span class="table-status ${c.status}">${statusText(c.status)}</span></td>
-   <td>${km(c.mileage)}</td>
-   <td class="${h.oilLeft<=1500?"warn":""}">${h.oilLeft<=0?"Просрочено":km(h.oilLeft)}</td>
-   <td class="${h.insuranceDays<=30?"warn":""}">${h.insuranceDays<0?"Просрочена":`${h.insuranceDays} дн.`}</td>
-   <td class="${h.inspectionDays<=30?"warn":""}">${h.inspectionDays<0?"Просрочен":`${h.inspectionDays} дн.`}</td>
-   <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
-   <td><button class="table-open" onclick="openCar('${c.id}')">Открыть</button></td>
-  </tr>`
- }).join("");
+ const cars=fleetCars(),period=currentMonth();
+ if(!cars.length){
+  root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11"><div class="desktop-table-empty"><span>🚘</span><strong>В автопарке пока нет автомобилей</strong><small>Добавьте первый автомобиль, и он появится здесь автоматически.</small><button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button></div></td></tr>`;
+  return
+ }
+ root.innerHTML=cars.map(c=>desktopTableRow(c,period)).join("");
  syncDesktopSelection()
 }
 
@@ -1424,17 +1439,36 @@ function renderDesktopInsights(){
  root.innerHTML=desktopInsightRows().map(row=>`<article class="desktop-ai-row ${row.type}"><span></span><p>${row.text}</p></article>`).join("")||`<div class="command-empty">Сейчас всё стабильно.</div>`
 }
 
-function renderDesktopCommand(){
+function safeDesktopRender(name,callback){
+ try{callback()}catch(error){console.error(`FleetPilot desktop render failed: ${name}`,error)}
+}
+function initializeDesktopCommandCenter(){
  if(window.innerWidth<1100)return;
- renderDesktopCommandKpis();
- setDesktopView(desktopView());
+ const saved=desktopView();
+ const view=["list","board","table","map"].includes(saved)?saved:"list";
+ const grid=$("#fleetGrid"),carsBlock=grid?.closest("[data-dashboard-block='cars']");
+ document.documentElement.dataset.desktopFleetView=view;
+ $$("[data-fleet-view]").forEach(button=>button.classList.toggle("active",button.dataset.fleetView===view));
+ $$("[data-command-view]").forEach(panel=>panel.hidden=panel.dataset.commandView!==view);
+ if(carsBlock){
+  carsBlock.classList.toggle("desktop-command-hidden",view!=="list");
+  if(view==="list"){carsBlock.classList.remove("desktop-command-hidden");carsBlock.style.removeProperty("display")}
+ }
+ safeDesktopRender("KPI",renderDesktopCommandKpis);
+ safeDesktopRender("events",renderDesktopEvents);
+ safeDesktopRender("insights",renderDesktopInsights);
+ safeDesktopRender("selection",syncDesktopSelection);
  requestAnimationFrame(()=>{
-  renderDesktopEvents();
-  renderDesktopInsights();
-  syncDesktopSelection();
-  leafletFleetMap?.invalidateSize({pan:false})
+  safeDesktopRender("view",()=>setDesktopView(view));
+  requestAnimationFrame(()=>{
+   if(view==="list"&&carsBlock){carsBlock.classList.remove("desktop-command-hidden");carsBlock.style.removeProperty("display")}
+   safeDesktopRender("events second pass",renderDesktopEvents);
+   safeDesktopRender("insights second pass",renderDesktopInsights);
+   leafletFleetMap?.invalidateSize({pan:false})
+  })
  })
 }
+function renderDesktopCommand(){initializeDesktopCommandCenter()}
 
 function toggleDesktopSelection(id,checked){
  checked?desktopSelection.add(id):desktopSelection.delete(id);syncDesktopSelection()
@@ -1537,12 +1571,12 @@ function renderFleet(){
 </button>
 </div>${(()=>{
  const notices=[];
- if(health.insuranceDays<0)notices.push({type:"insurance",level:"danger",icon:"🛡",text:`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`});
- else if(health.insuranceDays<=30)notices.push({type:"insurance",level:"warning",icon:"🛡",text:`Страховка заканчивается через ${health.insuranceDays} дн.`});
- if(health.inspectionDays<0)notices.push({type:"inspection",level:"danger",icon:"✓",text:`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`});
- else if(health.inspectionDays<=30)notices.push({type:"inspection",level:"warning",icon:"✓",text:`Техосмотр заканчивается через ${health.inspectionDays} дн.`});
- if(health.oilLeft<=0)notices.push({type:"oil",level:"danger",icon:"◉",text:`Замена масла просрочена на ${Math.abs(health.oilLeft)} км.`});
- else if(serviceForecast&&serviceForecast.days<=30)notices.push({type:"oil",level:"warning",icon:"◉",text:`Замена масла ориентировочно через ${serviceForecast.days} дн. (${km(health.oilLeft)}).`});
+ if(health.insuranceDays<0)notices.push({type:"insurance",level:"danger",icon:"S",text:`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`});
+ else if(health.insuranceDays<=30)notices.push({type:"insurance",level:"warning",icon:"S",text:`Страховка заканчивается через ${health.insuranceDays} дн.`});
+ if(health.inspectionDays<0)notices.push({type:"inspection",level:"danger",icon:"T",text:`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`});
+ else if(health.inspectionDays<=30)notices.push({type:"inspection",level:"warning",icon:"T",text:`Техосмотр заканчивается через ${health.inspectionDays} дн.`});
+ if(health.oilLeft<=0)notices.push({type:"oil",level:"danger",icon:"O",text:`Замена масла просрочена на ${Math.abs(health.oilLeft)} км.`});
+ else if(serviceForecast&&serviceForecast.days<=30)notices.push({type:"oil",level:"warning",icon:"O",text:`Замена масла ориентировочно через ${serviceForecast.days} дн. (${km(health.oilLeft)}).`});
  return notices.length?`<div class="service-notification-list">${notices.map(n=>`<button type="button" class="service-notification-row ${n.level}" onclick="event.stopPropagation();openQuickService('${c.id}','${n.type}')"><span>${n.icon}</span><strong>${n.text}</strong><b>›</b></button>`).join("")}</div>`:"";
 })()}<div class="metrics no-photo-metrics compact-car-metrics single-event-metrics">
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}">
@@ -1649,7 +1683,7 @@ function renderFleet(){
       reminders.push({
         type:"repair",
         level:repairEvent.days<=7?"warning":"info",
-        icon:"🔧",
+        icon:"R",
         title:repairEvent.title,
         detail:repairEvent.days===0?"сегодня":repairEvent.days===1?"завтра":`через ${repairEvent.days} дн.`
       });
