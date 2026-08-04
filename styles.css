@@ -3893,3 +3893,31 @@ html[data-theme="dark"] .control-window-option:hover{
 .leaflet-control-container .leaflet-control{
  clear:both;
 }
+
+/* FleetPilot V7.5.3 — guaranteed initial desktop fleet render */
+@media(min-width:1100px){
+ html[data-desktop-fleet-view="list"] #fleetGrid,
+ html[data-desktop-fleet-view="list"] #fleetGrid.fleet-grid{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+ }
+
+ html[data-desktop-fleet-view="list"] #fleetGrid.closest{
+  display:block!important;
+ }
+
+ html[data-desktop-fleet-view="list"] [data-dashboard-block="cars"]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+ }
+
+ html[data-desktop-fleet-view="list"] [data-dashboard-block="cars"].desktop-command-hidden{
+  display:block!important;
+ }
+
+ #fleetPage.active{
+  display:block!important;
+ }
+}

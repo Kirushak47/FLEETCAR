@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.5.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.5.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -333,6 +333,13 @@ $("#criticalShowCars").onclick=()=>{localStorage.setItem(ALERT_KEY,today());$("#
 $("#criticalRemindLater").onclick=()=>{$("#criticalAlertDialog").close()};
 $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALERT_KEY,today()));
 
+
+document.addEventListener("DOMContentLoaded",()=>{
+ if(window.innerWidth>=1100){
+  setTimeout(scheduleInitialFleetBoot,0)
+ }
+});
+
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
 $("#desktopMapFilter").onchange=()=>{
  desktopMapSelectedCity="";
@@ -356,7 +363,14 @@ document.addEventListener("keydown",event=>{
  if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
 });
 window.addEventListener("resize",()=>{if(window.innerWidth>=1100){applyControlWindowSettings();initializeDesktopCommandCenter();scheduleDesktopLiveRefresh({preserveMapViewport:true})}});
-window.addEventListener("load",()=>{if(window.innerWidth>=1100){initializeDesktopCommandCenter();setTimeout(initializeDesktopCommandCenter,80);setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),180);setTimeout(()=>maybeShowCriticalAlert(),500)}});
+window.addEventListener("load",()=>{
+ if(window.innerWidth>=1100){
+  applyControlWindowSettings();
+  scheduleInitialFleetBoot();
+  setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),500);
+  setTimeout(()=>maybeShowCriticalAlert(),700)
+ }
+});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1638,6 +1652,87 @@ function renderDesktopInsights(){
 function safeDesktopRender(name,callback){
  try{callback()}catch(error){console.error(`FleetPilot desktop render failed: ${name}`,error)}
 }
+
+let fleetPilotBootCompleted=false;
+let fleetPilotBootAttempts=0;
+
+function fleetPilotCarsAreLoaded(){
+ return Boolean(db&&Array.isArray(db.cars))
+}
+
+function forceInitialFleetRender(){
+ if(window.innerWidth<1100)return;
+
+ fleetPilotBootAttempts++;
+
+ const fleetPage=$("#fleetPage");
+ const fleetGrid=$("#fleetGrid");
+ const carsBlock=fleetGrid?.closest("[data-dashboard-block='cars']");
+
+ // Make the fleet page and the list visible before rendering.
+ $$(".page").forEach(page=>page.classList.toggle("active",page.id==="fleetPage"));
+ if(fleetPage)fleetPage.classList.add("active");
+
+ document.documentElement.dataset.desktopFleetView="list";
+ localStorage.setItem(DESKTOP_VIEW_KEY,"list");
+
+ $$("[data-fleet-view]").forEach(button=>{
+  button.classList.toggle("active",button.dataset.fleetView==="list")
+ });
+ $$("[data-command-view]").forEach(panel=>{
+  panel.hidden=true
+ });
+
+ if(carsBlock){
+  carsBlock.hidden=false;
+  carsBlock.classList.remove("desktop-command-hidden");
+  carsBlock.style.removeProperty("display")
+ }
+
+ // Wait for IndexedDB/local data initialization if necessary.
+ if(!fleetPilotCarsAreLoaded()){
+  if(fleetPilotBootAttempts<20){
+   setTimeout(forceInitialFleetRender,80)
+  }
+  return
+ }
+
+ safeDesktopRender("initial fleet",renderFleet);
+ safeDesktopRender("initial summary",renderDesktopCommandKpis);
+ safeDesktopRender("initial events",renderDesktopEvents);
+ safeDesktopRender("initial insights",renderDesktopInsights);
+ safeDesktopRender("initial control center",renderControlCenterExtras);
+ safeDesktopRender("initial window settings",applyControlWindowSettings);
+
+ requestAnimationFrame(()=>{
+  if(carsBlock){
+   carsBlock.hidden=false;
+   carsBlock.classList.remove("desktop-command-hidden");
+   carsBlock.style.removeProperty("display")
+  }
+
+  // A second pass is intentional: images, fonts and layout can finish
+  // after the first render on GitHub Pages/PWA.
+  requestAnimationFrame(()=>{
+   safeDesktopRender("fleet second pass",renderFleet);
+   if(carsBlock){
+    carsBlock.hidden=false;
+    carsBlock.classList.remove("desktop-command-hidden");
+    carsBlock.style.removeProperty("display")
+   }
+   fleetPilotBootCompleted=true
+  })
+ })
+}
+
+function scheduleInitialFleetBoot(){
+ if(window.innerWidth<1100||fleetPilotBootCompleted)return;
+ fleetPilotBootAttempts=0;
+ requestAnimationFrame(forceInitialFleetRender);
+ setTimeout(forceInitialFleetRender,120);
+ setTimeout(forceInitialFleetRender,350)
+}
+
 function initializeDesktopCommandCenter(){
  if(window.innerWidth<1100)return;
  const saved=desktopView();
