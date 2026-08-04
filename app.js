@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v8.0","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -387,6 +387,29 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 $$("[data-theme-mode]").forEach(button=>{
  button.onclick=()=>setTheme(button.dataset.themeMode)
+});
+
+
+$("#v8GlobalSearch").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput")?.focus(),60)};
+$("#v8OpenTasks").onclick=()=>$("#v8TodayOperations")?.scrollIntoView({behavior:"smooth",block:"center"});
+$("#v8AddCar").onclick=()=>openCarDialog();
+$("#v8ShowActiveCars").onclick=()=>{$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"));$("#fleetGrid")?.scrollIntoView({behavior:"smooth"})};
+$("#v8OpenAnalytics").onclick=()=>showPage("analyticsPage");
+$("#v8OpenAttention").onclick=()=>showPage("attentionPage");
+$("#v8AddTask").onclick=()=>{addManualTask();renderV8Desktop()};
+$("#v8OpenJournal").onclick=v8OpenJournal;
+$$("[data-v8-ranking]").forEach(button=>button.onclick=()=>{
+ v8RankingMode=button.dataset.v8Ranking;
+ $$("[data-v8-ranking]").forEach(item=>item.classList.toggle("active",item===button));
+ renderV8Desktop()
+});
+$$("[data-v8-view]").forEach(button=>button.onclick=()=>v8SetView(button.dataset.v8View));
+$("#v8ExecutiveKpis").addEventListener("click",event=>{
+ const card=event.target.closest("[data-v8-kpi]");if(!card)return;
+ const action=card.dataset.v8Kpi;
+ if(action==="analytics")showPage("analyticsPage");
+ else if(action==="attention")showPage("attentionPage");
+ else if(action==="active"){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"));$("#fleetGrid")?.scrollIntoView({behavior:"smooth"})}
 });
 
 $("#customizeControlWindows").onclick=openControlWindowsDialog;
@@ -1263,7 +1286,7 @@ function addActivity(text,type="info",carId=""){
  const rows=readLocalArray(ACTIVITY_KEY);
  rows.unshift({id:uid(),date:new Date().toISOString(),text,type,carId});
  writeLocalArray(ACTIVITY_KEY,rows.slice(0,150));
- renderDesktopActivityFeed()
+ renderDesktopActivityFeed();if(window.innerWidth>=1100)renderV8Desktop()
 }
 function activityIcon(type){return{status:"↔",service:"🔧",insurance:"🛡",inspection:"✓",payment:"$",expense:"↓",car:"🚘",info:"•"}[type]||"•"}
 function renderDesktopActivityFeed(){
@@ -1648,6 +1671,252 @@ function desktopCommandKpis(){
   ["Сервис и контроль",String(repair+attentionCount),`${repair} в ремонте · ${attentionCount} требуют внимания`,repair+attentionCount?"warning":"good"]
  ]
 }
+
+
+let v8RankingMode="profit";
+
+function v8SafeNumber(value){
+ const number=Number(value||0);
+ return Number.isFinite(number)?number:0
+}
+
+function v8FleetData(){
+ const cars=fleetCars();
+ const month=(()=>{try{return financialData("month")}catch{return{grossRevenue:0,grossCosts:0,finalProfit:0}}})();
+ const active=cars.filter(c=>c.status==="active");
+ const repair=cars.filter(c=>c.status==="repair");
+ const free=cars.filter(c=>c.status==="free");
+ const attentionCars=cars.filter(c=>attention(c));
+ const critical=cars.filter(c=>healthDetails(c).level==="danger");
+ const productive=active.filter(c=>safeDesktopCarProfit(c.id)>0);
+ const utilization=cars.length?Math.round(active.length/cars.length*100):0;
+ const productiveRate=active.length?Math.round(productive.length/active.length*100):0;
+ const margin=v8SafeNumber(month.grossRevenue)>0
+  ?Math.round(v8SafeNumber(month.finalProfit)/v8SafeNumber(month.grossRevenue)*100)
+  :0;
+ const avgProfit=cars.length?v8SafeNumber(month.finalProfit)/cars.length:0;
+ return{
+  cars,month,active,repair,free,attentionCars,critical,
+  utilization,productiveRate,margin,avgProfit
+ }
+}
+
+function v8RiskScore(c){
+ const h=healthDetails(c);
+ let score=h.level==="danger"?70:h.level==="warning"?35:0;
+ if(c.status==="repair")score+=25;
+ if(safeDesktopCarProfit(c.id)<0)score+=15;
+ return Math.min(100,score)
+}
+
+function v8CarUtilization(c){
+ if(c.status==="active")return attention(c)?72:94;
+ if(c.status==="repair")return 18;
+ return 35
+}
+
+function v8GreetingText(){
+ const hour=new Date().getHours();
+ return hour<12?"Доброе утро":hour<18?"Добрый день":"Добрый вечер"
+}
+
+function v8RenderExecutiveKpis(data){
+ const root=$("#v8ExecutiveKpis");if(!root)return;
+ const revenue=v8SafeNumber(data.month.grossRevenue);
+ const costs=v8SafeNumber(data.month.grossCosts);
+ const profit=v8SafeNumber(data.month.finalProfit);
+ const cards=[
+  {label:"Чистая прибыль",value:money(profit),detail:`Маржа ${data.margin}%`,type:profit<0?"danger":"success",icon:"↗",action:"analytics"},
+  {label:"Доход месяца",value:money(revenue),detail:`Расходы ${money(costs)}`,type:"primary",icon:"$",action:"analytics"},
+  {label:"Продуктивность",value:`${data.productiveRate}%`,detail:`${data.active.filter(c=>safeDesktopCarProfit(c.id)>0).length} прибыльных на линии`,type:data.productiveRate<60?"warning":"success",icon:"◎",action:"active"},
+  {label:"Использование парка",value:`${data.utilization}%`,detail:`${data.active.length} из ${data.cars.length} на линии`,type:data.utilization<65?"warning":"neutral",icon:"◫",action:"active"},
+  {label:"Требуют внимания",value:String(data.attentionCars.length),detail:`${data.critical.length} критических`,type:data.critical.length?"danger":data.attentionCars.length?"warning":"success",icon:"!",action:"attention"}
+ ];
+ root.innerHTML=cards.map((card,index)=>`<button type="button" class="v8-kpi-card ${card.type}" data-v8-kpi="${card.action}" style="--i:${index}">
+   <span class="v8-kpi-icon">${card.icon}</span>
+   <div><small>${card.label}</small><strong>${card.value}</strong><em>${card.detail}</em></div>
+  </button>`).join("")
+}
+
+function v8RenderProductivity(data){
+ const root=$("#v8Productivity");if(!root)return;
+ const inactive=Math.max(0,100-data.utilization);
+ const rows=[
+  ["На линии",data.active.length,data.cars.length,"active"],
+  ["Свободны",data.free.length,data.cars.length,"free"],
+  ["В ремонте",data.repair.length,data.cars.length,"repair"],
+  ["Прибыльные",data.active.filter(c=>safeDesktopCarProfit(c.id)>0).length,Math.max(1,data.active.length),"profit"]
+ ];
+ root.innerHTML=`<div class="v8-productivity-main">
+   <div class="v8-productivity-ring" style="--value:${data.utilization}">
+    <div><strong>${data.utilization}%</strong><span>загрузка</span></div>
+   </div>
+   <div class="v8-productivity-summary">
+    <strong>${data.active.length} автомобилей работают</strong>
+    <p>${data.free.length+data.repair.length} автомобилей сейчас не генерируют полную выручку.</p>
+    <div class="v8-productivity-status ${data.utilization>=80?"good":data.utilization>=60?"warning":"danger"}">
+      <span></span>${data.utilization>=80?"Высокая загрузка":data.utilization>=60?"Есть резерв роста":"Низкая загрузка"}
+    </div>
+   </div>
+  </div>
+  <div class="v8-productivity-bars">${rows.map(row=>{
+   const pct=Math.round(row[1]/Math.max(1,row[2])*100);
+   return`<div class="v8-metric-bar ${row[3]}"><div><span>${row[0]}</span><strong>${row[1]}</strong></div><i><b style="width:${pct}%"></b></i></div>`
+  }).join("")}</div>`
+}
+
+function v8RenderFinance(data){
+ const root=$("#v8FinancePerformance");if(!root)return;
+ const revenue=v8SafeNumber(data.month.grossRevenue);
+ const costs=v8SafeNumber(data.month.grossCosts);
+ const profit=v8SafeNumber(data.month.finalProfit);
+ const costShare=revenue?Math.min(100,Math.round(costs/revenue*100)):0;
+ const profitShare=revenue?Math.max(0,Math.min(100,Math.round(profit/revenue*100))):0;
+ root.innerHTML=`<div class="v8-finance-total">
+   <small>Результат за текущий месяц</small>
+   <strong class="${profit<0?"negative":""}">${money(profit)}</strong>
+   <span>${profit>=0?"Бизнес работает с прибылью":"Расходы превышают доход"}</span>
+  </div>
+  <div class="v8-finance-waterfall">
+   <div class="income"><span>Доход</span><strong>${money(revenue)}</strong><i><b style="width:100%"></b></i></div>
+   <div class="cost"><span>Расходы</span><strong>${money(costs)}</strong><i><b style="width:${costShare}%"></b></i></div>
+   <div class="profit"><span>Прибыль</span><strong>${money(profit)}</strong><i><b style="width:${profitShare}%"></b></i></div>
+  </div>
+  <div class="v8-finance-footer"><span>Средняя прибыль на авто</span><strong>${money(data.avgProfit)}</strong></div>`
+}
+
+function v8PriorityRows(data){
+ const rows=[];
+ data.cars.forEach(c=>{
+  const h=healthDetails(c),m=model(c);
+  h.items.forEach(item=>rows.push({
+   carId:c.id,
+   level:item.level,
+   title:item.title,
+   value:item.value,
+   car:`${m.brand} ${m.model}`,
+   plate:c.plate||"Без номера"
+  }));
+  if(safeDesktopCarProfit(c.id)<0)rows.push({
+   carId:c.id,level:"warning",title:"Отрицательная прибыль",
+   value:money(safeDesktopCarProfit(c.id)),car:`${m.brand} ${m.model}`,plate:c.plate||"Без номера"
+  })
+ });
+ return rows.sort((a,b)=>(a.level==="danger"?0:1)-(b.level==="danger"?0:1)).slice(0,6)
+}
+
+function v8RenderPriorities(data){
+ const root=$("#v8PriorityQueue");if(!root)return;
+ const rows=v8PriorityRows(data);
+ root.innerHTML=rows.length?rows.map(row=>`<button type="button" class="v8-priority-row ${row.level}" onclick="openCar('${row.carId}')">
+   <span class="v8-priority-dot"></span>
+   <div><strong>${row.title}</strong><small>${row.car} · ${row.plate}</small></div>
+   <b>${row.value}</b>
+  </button>`).join(""):`<div class="v8-empty-state"><span>✓</span><strong>Критических задач нет</strong><small>Автопарк работает в штатном режиме.</small></div>`
+}
+
+function v8RankingRows(data){
+ return data.cars.map(c=>{
+  const m=model(c);
+  return{
+   c,m,
+   profit:safeDesktopCarProfit(c.id),
+   utilization:v8CarUtilization(c),
+   risk:v8RiskScore(c)
+  }
+ }).sort((a,b)=>{
+  if(v8RankingMode==="utilization")return b.utilization-a.utilization;
+  if(v8RankingMode==="risk")return b.risk-a.risk;
+  return b.profit-a.profit
+ }).slice(0,8)
+}
+
+function v8RenderRanking(data){
+ const root=$("#v8FleetRanking");if(!root)return;
+ const rows=v8RankingRows(data);
+ root.innerHTML=`<div class="v8-ranking-head"><span>Автомобиль</span><span>Статус</span><span>${v8RankingMode==="profit"?"Прибыль":v8RankingMode==="utilization"?"Загрузка":"Риск"}</span><span></span></div>
+ ${rows.map((row,index)=>{
+  const value=v8RankingMode==="profit"?money(row.profit):`${v8RankingMode==="utilization"?row.utilization:row.risk}%`;
+  const valueClass=v8RankingMode==="profit"?(row.profit<0?"danger":"good"):v8RankingMode==="risk"?(row.risk>=60?"danger":row.risk>=30?"warning":"good"):(row.utilization>=80?"good":row.utilization>=50?"warning":"danger");
+  return`<button type="button" class="v8-ranking-row" onclick="openCar('${row.c.id}')">
+   <div class="v8-ranking-car"><span>${index+1}</span><div><strong>${row.m.brand} ${row.m.model}</strong><small>${row.c.plate||"Без номера"} · ${row.c.city||"Без города"}</small></div></div>
+   <span class="v8-status-pill ${row.c.status}">${statusText(row.c.status)}</span>
+   <strong class="v8-ranking-value ${valueClass}">${value}</strong>
+   <b>›</b>
+  </button>`
+ }).join("")||`<div class="v8-empty-state"><strong>Нет автомобилей</strong></div>`}`
+}
+
+function v8TodayRows(){
+ const system=systemTodayTasks();
+ const manual=readLocalArray(TASKS_KEY).filter(task=>!task.done);
+ return[...system,...manual].slice(0,7)
+}
+
+function v8RenderToday(){
+ const root=$("#v8TodayOperations");if(!root)return;
+ const rows=v8TodayRows();
+ root.innerHTML=rows.length?rows.map(task=>`<label class="v8-today-row ${task.level||""}">
+   <input type="checkbox" onchange="${task.system?`openCar('${task.carId}');this.checked=false`:`completeManualTask('${task.id}')`}">
+   <span></span><strong>${task.text}</strong>
+  </label>`).join(""):`<div class="v8-empty-state"><span>✓</span><strong>Все задачи выполнены</strong><small>На сегодня срочных действий нет.</small></div>`
+}
+
+function v8CombinedActivity(){
+ const local=readLocalArray(ACTIVITY_KEY).map(row=>({
+  date:row.date,text:row.text,type:row.type||"info",carId:row.carId||""
+ }));
+ const dbRows=(db.activity||[]).map(row=>({
+  date:row.date,text:`${row.action||"Изменение"}${row.details?`: ${row.details}`:""}`,
+  type:activityCategory(row),carId:""
+ }));
+ return[...local,...dbRows]
+  .filter(row=>row.date)
+  .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
+  .slice(0,7)
+}
+
+function v8RenderActivity(){
+ const root=$("#v8ActivityStream");if(!root)return;
+ const rows=v8CombinedActivity();
+ root.innerHTML=rows.length?rows.map(row=>{
+  const d=new Date(row.date);
+  return`<button type="button" class="v8-activity-row" ${row.carId?`onclick="openCar('${row.carId}')"`:""}>
+    <span class="v8-activity-icon">${activityIcon(row.type)}</span>
+    <div><strong>${row.text}</strong><small>${Number.isNaN(d.getTime())?"":d.toLocaleString("ru-RU")}</small></div>
+  </button>`
+ }).join(""):`<div class="v8-empty-state"><strong>История пока пуста</strong></div>`
+}
+
+function renderV8Desktop(){
+ if(window.innerWidth<1100)return;
+ const root=$("#v8DesktopCockpit");if(!root)return;
+ const data=v8FleetData();
+
+ $("#v8Greeting").textContent=`${v8GreetingText()}, Kyrylo`;
+ $("#v8Context").textContent=`${data.cars.length} автомобилей · ${data.active.length} на линии · данные обновлены автоматически`;
+
+ v8RenderExecutiveKpis(data);
+ v8RenderProductivity(data);
+ v8RenderFinance(data);
+ v8RenderPriorities(data);
+ v8RenderRanking(data);
+ v8RenderToday();
+ v8RenderActivity()
+}
+
+function v8OpenJournal(){
+ showPage("morePage");
+ setTimeout(()=>$("#activitySearch")?.focus(),80)
+}
+
+function v8SetView(view){
+ const button=document.querySelector(`[data-fleet-view="${view}"]`);
+ if(button)button.click();
+ $$(".v8-view-actions button").forEach(item=>item.classList.toggle("active",item.dataset.v8View===view))
+}
+
+window.renderV8Desktop=renderV8Desktop;
 
 function renderDesktopCommandKpis(){
  const root=$("#desktopCommandKpis");if(!root)return;
@@ -2078,6 +2347,7 @@ function initializeDesktopCommandCenter(){
  safeDesktopRender("insights",renderDesktopInsights);
  safeDesktopRender("selection",syncDesktopSelection);
  safeDesktopRender("control center",renderControlCenterExtras);
+ safeDesktopRender("V8 desktop",renderV8Desktop);
  requestAnimationFrame(()=>{
   safeDesktopRender("view",()=>setDesktopView(view));
   requestAnimationFrame(()=>{
@@ -2120,6 +2390,7 @@ function applyDesktopBulkCity(){
 window.toggleDesktopSelection=toggleDesktopSelection;
 
 function renderFleet(){
+ if(window.innerWidth>=1100)requestAnimationFrame(renderV8Desktop);
  refreshCityControls();
  applyUxSettings();
  renderOwnerDashboard();

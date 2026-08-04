@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.8.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=781">
-  <link rel="stylesheet" href="styles.css?v=781">
+  <title>FleetPilot V8 Desktop Pro</title>
+  <link rel="manifest" href="manifest.webmanifest?v=800">
+  <link rel="stylesheet" href="styles.css?v=800">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -31,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.8.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V8 Desktop Pro</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -48,6 +48,93 @@
           <button type="button" id="desktopAddCar" class="btn primary">+ Автомобиль</button>
         </div>
       </div>
+
+
+      <section id="v8DesktopCockpit" class="v8-desktop-cockpit" aria-label="FleetPilot V8 Executive Control Center">
+        <header class="v8-cockpit-hero">
+          <div class="v8-cockpit-copy">
+            <span class="v8-kicker">Executive Control Center</span>
+            <h2 id="v8Greeting">Добрый день</h2>
+            <p id="v8Context">Полная картина бизнеса, автопарка и ближайших решений.</p>
+          </div>
+          <div class="v8-hero-actions">
+            <button type="button" id="v8GlobalSearch">⌕ <span>Поиск</span></button>
+            <button type="button" id="v8OpenTasks">✓ <span>Задачи</span></button>
+            <button type="button" id="v8AddCar" class="primary">＋ <span>Добавить авто</span></button>
+          </div>
+        </header>
+
+        <section id="v8ExecutiveKpis" class="v8-executive-kpis"></section>
+
+        <section class="v8-command-grid">
+          <article class="v8-panel v8-productivity-panel">
+            <div class="v8-panel-head">
+              <div><span>Продуктивность автопарка</span><h3>Использование активов</h3></div>
+              <button type="button" id="v8ShowActiveCars">Открыть парк →</button>
+            </div>
+            <div id="v8Productivity" class="v8-productivity"></div>
+          </article>
+
+          <article class="v8-panel v8-finance-panel">
+            <div class="v8-panel-head">
+              <div><span>Финансовый результат</span><h3>Доходность месяца</h3></div>
+              <button type="button" id="v8OpenAnalytics">Аналитика →</button>
+            </div>
+            <div id="v8FinancePerformance" class="v8-finance-performance"></div>
+          </article>
+
+          <article class="v8-panel v8-priority-panel">
+            <div class="v8-panel-head">
+              <div><span>Требует решения</span><h3>Приоритеты сегодня</h3></div>
+              <button type="button" id="v8OpenAttention">Все риски →</button>
+            </div>
+            <div id="v8PriorityQueue" class="v8-priority-queue"></div>
+          </article>
+        </section>
+
+        <section class="v8-operations-grid">
+          <article class="v8-panel v8-fleet-ranking-panel">
+            <div class="v8-panel-head">
+              <div><span>Эффективность машин</span><h3>Портфель автомобилей</h3></div>
+              <div class="v8-segmented">
+                <button type="button" class="active" data-v8-ranking="profit">Прибыль</button>
+                <button type="button" data-v8-ranking="utilization">Загрузка</button>
+                <button type="button" data-v8-ranking="risk">Риски</button>
+              </div>
+            </div>
+            <div id="v8FleetRanking" class="v8-fleet-ranking"></div>
+          </article>
+
+          <article class="v8-panel v8-today-panel">
+            <div class="v8-panel-head">
+              <div><span>Операционный день</span><h3>Сегодня в работе</h3></div>
+              <button type="button" id="v8AddTask">+ Задача</button>
+            </div>
+            <div id="v8TodayOperations" class="v8-today-operations"></div>
+          </article>
+
+          <article class="v8-panel v8-activity-panel">
+            <div class="v8-panel-head">
+              <div><span>История изменений</span><h3>Последние действия</h3></div>
+              <button type="button" id="v8OpenJournal">Журнал →</button>
+            </div>
+            <div id="v8ActivityStream" class="v8-activity-stream"></div>
+          </article>
+        </section>
+
+        <section class="v8-fleet-toolbar">
+          <div>
+            <span>Управление автопарком</span>
+            <h3>Все автомобили</h3>
+          </div>
+          <div class="v8-view-actions">
+            <button type="button" class="active" data-v8-view="list">Список</button>
+            <button type="button" data-v8-view="board">Доска</button>
+            <button type="button" data-v8-view="table">Таблица</button>
+            <button type="button" data-v8-view="map">Карта</button>
+          </div>
+        </section>
+      </section>
 
       <section class="desktop-command-center" aria-label="FleetPilot Command Center">
         <div class="desktop-view-switcher" role="tablist" aria-label="Вид автопарка">
@@ -756,5 +843,5 @@
   </div>
 </dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="app.js?v=781"></script>
+<script src="app.js?v=800"></script>
 </body></html>

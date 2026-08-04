@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V7.8.1",
+  "name": "FleetPilot V8 Desktop Pro",
   "short_name": "FleetPilot",
-  "start_url": "./?v=781",
+  "start_url": "./?v=800",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
