@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.9","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -389,6 +389,12 @@ $$("[data-theme-mode]").forEach(button=>{
  button.onclick=()=>setTheme(button.dataset.themeMode,true)
 });
 
+$("#openGpsSetup").onclick=openGpsSetup;
+$("#closeGpsSetup").onclick=()=>$("#gpsSetupDialog").close();
+$("#testGpsConnection").onclick=testGpsConnection;
+$("#gpsSetupForm").onsubmit=saveGpsConnection;
+$("#closeGpsMapping").onclick=()=>$("#gpsMappingDialog").close();
+$("#saveGpsMapping").onclick=saveGpsMapping;
 $("#customizeControlWindows").onclick=openControlWindowsDialog;
 $("#showAllControlWindows").onclick=()=>{
  const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));
@@ -851,7 +857,7 @@ function renderActivityJournal(){
   </article>`
  }).join(""):`<div class="activity-journal-empty"><span>🕘</span><strong>Записей не найдено</strong><small>Измените фильтры или выполните действие в FleetPilot.</small></div>`
 }
-function renderMorePage(){applyUxSettings();
+function renderMorePage(){applyUxSettings();renderGpsConnectionSummary();
  const msgs=assistantMessages();$("#dailyAssistant").innerHTML=msgs.map(x=>`<div class="assistant-message">${x}</div>`).join("");
  renderActivityJournal()
 }
@@ -1764,6 +1770,111 @@ let fleetMapV2Layer=null;
 let fleetMapV2SelectedCity="";
 let fleetMapV2RowsCache=[];
 
+
+const GPS_CONFIG_KEY="fleetpilot.gps.config.v1";
+const GPS_DEVICES_KEY="fleetpilot.gps.devices.v1";
+const GPS_MAPPING_KEY="fleetpilot.gps.mapping.v1";
+
+function gpsRead(key,fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}}
+function gpsWrite(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function readGpsConfig(){return gpsRead(GPS_CONFIG_KEY,null)}
+function readGpsDevices(){return gpsRead(GPS_DEVICES_KEY,[])}
+function readGpsMapping(){return gpsRead(GPS_MAPPING_KEY,{})}
+
+function normalizeGpsDevice(raw,index=0){
+ const lat=Number(raw.latitude??raw.lat??raw.position?.latitude??raw.position?.lat);
+ const lng=Number(raw.longitude??raw.lng??raw.lon??raw.position?.longitude??raw.position?.lng??raw.position?.lon);
+ return{
+  id:String(raw.id??raw.deviceId??raw.imei??`device-${index}`),
+  name:String(raw.name??raw.vehicleName??raw.label??`GPS ${index+1}`),
+  plate:String(raw.plate??raw.registration??""),
+  latitude:Number.isFinite(lat)?lat:null,
+  longitude:Number.isFinite(lng)?lng:null,
+  speed:Number(raw.speed??raw.position?.speed??0)||0,
+  updatedAt:String(raw.updatedAt??raw.lastUpdate??raw.timestamp??new Date().toISOString()),
+  online:raw.online!==false
+ }
+}
+function gpsArray(payload){
+ if(Array.isArray(payload))return payload;
+ for(const key of["devices","vehicles","items","data"])if(Array.isArray(payload?.[key]))return payload[key];
+ return[]
+}
+async function fetchGpsDevices(config=readGpsConfig()){
+ if(!config?.apiUrl)throw new Error("Укажите адрес API");
+ let url=config.apiUrl.trim();
+ const headers={Accept:"application/json"};
+ if(config.authMode==="bearer"&&config.token)headers.Authorization=`Bearer ${config.token}`;
+ if(config.authMode==="query"&&config.token){const u=new URL(url,location.href);u.searchParams.set("token",config.token);url=u.toString()}
+ const response=await fetch(url,{headers,cache:"no-store"});
+ if(!response.ok)throw new Error(`Сервер ответил ${response.status}`);
+ const devices=gpsArray(await response.json()).map(normalizeGpsDevice);
+ if(!devices.length)throw new Error("GPS-устройства не найдены");
+ gpsWrite(GPS_DEVICES_KEY,devices);
+ return devices
+}
+function gpsForCar(carId){
+ const mapping=readGpsMapping();
+ const deviceId=Object.keys(mapping).find(id=>mapping[id]===carId);
+ return readGpsDevices().find(x=>x.id===deviceId)||null
+}
+function gpsPositionForCar(c){
+ const d=gpsForCar(c.id);
+ return d&&Number.isFinite(d.latitude)&&Number.isFinite(d.longitude)?[d.latitude,d.longitude]:null
+}
+function gpsStatusForCar(c){
+ const d=gpsForCar(c.id);if(!d)return null;
+ const stamp=new Date(d.updatedAt).getTime();
+ return{...d,online:d.online!==false&&Number.isFinite(stamp)&&Date.now()-stamp<15*60*1000}
+}
+function currentGpsFormConfig(){
+ return{
+  provider:$("#gpsProvider").value,
+  providerLabel:$("#gpsProvider").selectedOptions[0]?.textContent||"GPS",
+  apiUrl:$("#gpsApiUrl").value.trim(),
+  token:$("#gpsApiToken").value.trim(),
+  authMode:$("#gpsAuthMode").value,
+  updatedAt:new Date().toISOString()
+ }
+}
+function renderGpsConnectionSummary(){
+ const root=$("#gpsConnectionSummary");if(!root)return;
+ const config=readGpsConfig(),devices=readGpsDevices(),mapping=readGpsMapping();
+ if(!config){root.innerHTML=`<div class="gps-summary-empty"><span>⌖</span><div><strong>GPS не подключён</strong><small>Нажмите «Подключить GPS» и введите данные системы.</small></div></div>`;return}
+ root.innerHTML=`<div class="gps-summary-connected"><span class="gps-summary-status"></span><div><strong>${config.providerLabel}</strong><small>${devices.length} устройств · ${Object.values(mapping).filter(Boolean).length} сопоставлено</small></div><div class="gps-summary-buttons"><button onclick="syncGpsNow()">Синхронизировать</button><button onclick="openGpsMapping()">Сопоставить</button><button onclick="disconnectGps()">Отключить</button></div></div>`
+}
+function openGpsSetup(){
+ const c=readGpsConfig()||{};
+ $("#gpsProvider").value=c.provider||"generic";$("#gpsApiUrl").value=c.apiUrl||"";$("#gpsApiToken").value=c.token||"";$("#gpsAuthMode").value=c.authMode||"bearer";$("#gpsTestResult").hidden=true;$("#gpsSetupDialog").showModal()
+}
+async function testGpsConnection(){
+ const r=$("#gpsTestResult");r.hidden=false;r.className="gps-test-result loading";r.textContent="Проверяем…";
+ try{const d=await fetchGpsDevices(currentGpsFormConfig());r.className="gps-test-result success";r.textContent=`Подключение успешно. Найдено: ${d.length}`}
+ catch(e){r.className="gps-test-result danger";r.textContent=`Ошибка: ${e.message}`}
+}
+async function saveGpsConnection(e){
+ e.preventDefault();const config=currentGpsFormConfig();if(!config.apiUrl)return toast("Укажите адрес API");
+ try{const devices=await fetchGpsDevices(config);gpsWrite(GPS_CONFIG_KEY,config);$("#gpsSetupDialog").close();renderGpsConnectionSummary();openGpsMapping(devices);toast("GPS подключён")}
+ catch(err){const r=$("#gpsTestResult");r.hidden=false;r.className="gps-test-result danger";r.textContent=`Ошибка: ${err.message}`}
+}
+function openGpsMapping(devices=readGpsDevices()){
+ const root=$("#gpsMappingList"),mapping=readGpsMapping(),cars=(db?.cars||[]).filter(c=>!c.archived&&!c.deletedAt);
+ root.innerHTML=devices.map(d=>`<div class="gps-mapping-row"><div><strong>${d.name}</strong><small>${d.plate||d.id}</small></div><span>→</span><select data-gps-device="${d.id}"><option value="">Не сопоставлено</option>${cars.map(c=>{const m=model(c);return`<option value="${c.id}" ${mapping[d.id]===c.id?"selected":""}>${m.brand} ${m.model} · ${c.plate||"Без номера"}</option>`}).join("")}</select></div>`).join("");
+ $("#gpsMappingDialog").showModal()
+}
+function saveGpsMapping(){
+ const mapping={};$$("[data-gps-device]").forEach(s=>{if(s.value)mapping[s.dataset.gpsDevice]=s.value});gpsWrite(GPS_MAPPING_KEY,mapping);$("#gpsMappingDialog").close();renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("Сопоставление сохранено")
+}
+async function syncGpsNow(){
+ try{const d=await fetchGpsDevices();renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});toast(`GPS обновлён: ${d.length}`)}
+ catch(e){toast(`Ошибка GPS: ${e.message}`)}
+}
+function disconnectGps(){
+ if(!confirm("Отключить GPS?"))return;
+ [GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
+}
+window.openGpsSetup=openGpsSetup;window.openGpsMapping=openGpsMapping;window.syncGpsNow=syncGpsNow;window.disconnectGps=disconnectGps;
+
 function normalizeMapCity(city){
  const raw=String(city||"").trim();
  if(!raw)return"Без города";
@@ -1801,11 +1912,12 @@ function fleetMapV2Rows(){
 
  fleetMapV2Cars().forEach(c=>{
   const city=normalizeMapCity(c.city);
-  const key=normalizeCityKey(city);
+  const liveGps=gpsPositionForCar(c);
+  const key=liveGps?`gps-${c.id}`:normalizeCityKey(city);
   const row=grouped.get(key)||{
    key,
-   city,
-   coords:coordinatesForCity(city),
+   city:liveGps?`${city} · GPS`:city,
+   coords:liveGps||coordinatesForCity(city),
    cars:[],
    attention:0,
    profit:0
@@ -2357,6 +2469,7 @@ function renderFleet(){
       <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
       <span class="desktop-status ${c.status}">${statusText(c.status)}</span>
     </div>
+    ${(()=>{const gps=gpsStatusForCar(c);return gps?`<div class="desktop-gps-line"><span class="desktop-gps-badge ${gps.online?"online":"offline"}"><i></i>${gps.online?`GPS · ${Math.round(gps.speed||0)} км/ч`:"GPS offline"}</span></div>`:""})()}
     <div class="desktop-service-mini-grid">
       <button type="button" class="desktop-service-mini ${health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')">
         <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M4 9h10l2 3h3a2 2 0 0 1 2 2v2h-2v-1h-3.2l-2.3-3.5H8V15H4V9Zm1-4h7v2H5V5Zm-2 8h3v4H3v-4Zm15.5-6.5c.9 1.2 1.5 2.1 1.5 3a1.5 1.5 0 1 1-3 0c0-.9.6-1.8 1.5-3Z"/></svg></span>
