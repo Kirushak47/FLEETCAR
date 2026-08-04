@@ -5434,3 +5434,9 @@ html[data-theme="dark"] .stable-table-open{
  background:#1b2438;
  color:#aeb4ff;
 }
+
+/* FleetPilot V7.10.1 — stable map navigation */
+.map-city-overview{display:grid;gap:10px;margin:0 0 8px;padding:12px;border:1px solid #e5e9f0;border-radius:12px;background:linear-gradient(180deg,#fbfcfe,#f7f9fc)}
+.map-city-overview>div:first-child small,.map-city-overview>div:first-child strong{display:block}.map-city-overview>div:first-child small{color:#8b96a8;font-size:6.5px;font-weight:900;text-transform:uppercase}.map-city-overview>div:first-child strong{margin-top:4px;color:#1e293b;font-size:12px}
+.map-city-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.map-city-overview-grid span{display:grid;gap:3px;padding:8px;border:1px solid #edf1f5;border-radius:9px;background:#fff}.map-city-overview-grid small{color:#8b96a8;font-size:6px}.map-city-overview-grid strong{color:#334155;font-size:8px}.map-city-overview-grid .online strong{color:#15803d}.map-city-overview-grid .offline strong{color:#b91c1c}.map-city-last-update{color:#94a3b8;font-size:6.5px}
+html[data-theme="dark"] .map-city-overview{border-color:rgba(255,255,255,.08);background:linear-gradient(180deg,#182136,#151d31)}html[data-theme="dark"] .map-city-overview>div:first-child strong,html[data-theme="dark"] .map-city-overview-grid strong{color:#f8fafc}html[data-theme="dark"] .map-city-overview-grid span{border-color:rgba(255,255,255,.07);background:#1b2438}

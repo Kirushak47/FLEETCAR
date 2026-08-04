@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.10","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.10.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -1802,42 +1802,29 @@ function gpsDemoBasePoints(){
 }
 
 function buildGpsDemoDevices(){
- const cars=(Array.isArray(db?.cars)?db.cars:[])
-  .filter(c=>!c.archived&&!c.deletedAt);
-
- const fallbackPoints=[
-  [52.2297,21.0122],
-  [52.2364,21.0219],
-  [52.2188,20.9852],
-  [52.2471,21.0410],
-  [52.2085,21.0315],
-  [52.2580,20.9960]
+ const cars=(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt);
+ const source=cars.length?cars:[
+  {id:"demo-car-1",plate:"WAW 001",city:"Warszawa"},
+  {id:"demo-car-2",plate:"BIA 002",city:"Białystok"},
+  {id:"demo-car-3",plate:"KR 003",city:"Kraków"}
  ];
-
- const sourceCars=cars.length?cars:[{
-  id:"demo-car-1",plate:"WAW 001",city:"Warszawa"
- },{
-  id:"demo-car-2",plate:"WAW 002",city:"Warszawa"
- },{
-  id:"demo-car-3",plate:"WAW 003",city:"Warszawa"
- }];
-
- return sourceCars.map((c,index)=>{
+ const counters={};
+ return source.map((c,index)=>{
   const m=typeof model==="function"?model(c):{brand:"Автомобиль",model:""};
-  const base=fallbackPoints[index%fallbackPoints.length];
-  const ring=Math.floor(index/fallbackPoints.length);
-  const offset=ring*0.003;
-
+  const city=normalizeMapCity(c.city);
+  const key=normalizeCityKey(city);
+  const center=coordinatesForCity(city)||[52.2297,21.0122];
+  const n=counters[key]||0;counters[key]=n+1;
+  const angle=Math.PI*2*(n%8)/8;
+  const radius=.0045*(Math.floor(n/8)+1);
+  const lat=center[0]+Math.sin(angle)*radius;
+  const lng=center[1]+Math.cos(angle)*radius;
   return{
-   id:`demo-${c.id||index+1}`,
-   name:`${m.brand||"Автомобиль"} ${m.model||""}`.trim(),
-   plate:c.plate||`DEMO ${index+1}`,
-   latitude:base[0]+offset,
-   longitude:base[1]+offset,
-   speed:index%4===3?0:18+(index*9)%48,
-   updatedAt:new Date().toISOString(),
-   online:index%5!==4,
-   linkedCarId:c.id||""
+   id:`demo-${c.id||index+1}`,name:`${m.brand||"Автомобиль"} ${m.model||""}`.trim(),
+   plate:c.plate||`DEMO ${index+1}`,latitude:lat,longitude:lng,
+   demoBaseLat:lat,demoBaseLng:lng,demoCity:city,
+   speed:index%4===3?0:18+(index*9)%48,updatedAt:new Date().toISOString(),
+   online:index%5!==4,linkedCarId:c.id||""
   }
  })
 }
@@ -1882,7 +1869,7 @@ function updateGpsDemoDevices(){
 function startGpsDemoMovement(){
  clearInterval(gpsDemoTimer);
  if(!gpsDemoEnabled())return;
- gpsDemoTimer=setInterval(updateGpsDemoDevices,5000)
+ gpsDemoTimer=setInterval(updateGpsDemoDevices,30000)
 }
 
 function stopGpsDemoMovement(){
@@ -2119,17 +2106,30 @@ function fleetMapV2Cars(){
  })
 }
 
+function nearestFleetMapCity(latitude,longitude,fallbackCity="Без города"){
+ if(!Number.isFinite(latitude)||!Number.isFinite(longitude))return normalizeMapCity(fallbackCity);
+ let best=normalizeMapCity(fallbackCity),dist=Infinity;
+ const seen=new Set();
+ Object.entries(POLAND_CITY_COORDS).forEach(([name,coords])=>{
+  const key=normalizeCityKey(name); if(seen.has(key))return; seen.add(key);
+  const a=latitude-coords[0],b=(longitude-coords[1])*Math.cos(latitude*Math.PI/180);
+  const d=a*a+b*b;if(d<dist){dist=d;best=normalizeMapCity(name)}
+ });
+ return dist<=.16?best:normalizeMapCity(fallbackCity)
+}
+
 function fleetMapV2Rows(){
  const grouped=new Map();
 
  fleetMapV2Cars().forEach(c=>{
-  const city=normalizeMapCity(c.city);
+  const profileCity=normalizeMapCity(c.city);
   const liveGps=gpsPositionForCar(c);
-  const key=liveGps?`gps-${c.id}`:normalizeCityKey(city);
+  const city=liveGps?nearestFleetMapCity(liveGps[0],liveGps[1],profileCity):profileCity;
+  const key=normalizeCityKey(city);
   const row=grouped.get(key)||{
    key,
-   city:liveGps?`${city} · GPS`:city,
-   coords:liveGps||coordinatesForCity(city),
+   city,
+   coords:coordinatesForCity(city)||liveGps,
    cars:[],
    attention:0,
    profit:0
@@ -2245,54 +2245,49 @@ function ensureFleetMapV2(){
 }
 
 function renderFleetMapV2Panel(selectedRow=null){
- const panel=$("#mapCityCars");
- const title=$("#mapSelectedCity");
- const count=$("#mapSelectedCount");
- const status=$("#leafletMapStatus");
-
+ const panel=$("#mapCityCars"),title=$("#mapSelectedCity"),count=$("#mapSelectedCount"),status=$("#leafletMapStatus");
  if(!panel||!title||!count)return;
-
  title.textContent=selectedRow?.city||"Все города";
- count.textContent=selectedRow
-  ?`${selectedRow.cars.length} автомобилей · ${money(selectedRow.profit)}`
-  :`${fleetMapV2RowsCache.reduce((sum,row)=>sum+row.cars.length,0)} автомобилей`;
+ count.textContent=selectedRow?`${selectedRow.cars.length} автомобилей`:`${fleetMapV2RowsCache.reduce((s,r)=>s+r.cars.length,0)} автомобилей`;
 
  if(selectedRow){
-  panel.innerHTML=`<button type="button" class="map-back-to-cities" onclick="showAllFleetMapCities()">← Все города</button>`+
-  selectedRow.cars.map(c=>{
-   const m=model(c);
-   const gps=gpsStatusForCar(c);
-   return`<div class="map-car-row map-car-row-v2">
-    <span class="map-car-status ${fleetMapV2CarLevel(c)}"></span>
-    <button type="button" class="map-car-main" onclick="openCar('${c.id}')">
-      <strong>${m.brand} ${m.model}</strong>
-      <small>${c.plate||"Без номера"} · ${statusText(c.status)}${gps?` · GPS ${gps.online?"online":"offline"}`:""}</small>
-    </button>
-    ${gps?`<button type="button" class="map-car-locate" onclick="findCarOnGps('${c.id}')" title="Найти на GPS">⌖</button>`:`<b>›</b>`}
-   </div>`
-  }).join("")
+  const gpsRows=selectedRow.cars.map(c=>({c,g:gpsStatusForCar(c)}));
+  const online=gpsRows.filter(x=>x.g?.online).length;
+  const offline=gpsRows.filter(x=>x.g&&!x.g.online).length;
+  const moving=gpsRows.filter(x=>x.g?.online&&Number(x.g.speed)>0);
+  const avg=moving.length?Math.round(moving.reduce((s,x)=>s+Number(x.g.speed||0),0)/moving.length):0;
+  const latest=gpsRows.map(x=>new Date(x.g?.updatedAt||0)).filter(d=>!Number.isNaN(d.getTime())).sort((a,b)=>b-a)[0];
+  panel.innerHTML=`<button class="map-back-to-cities" onclick="showAllFleetMapCities()">← Все города</button>
+   <div class="map-city-overview">
+    <div><small>Город</small><strong>${selectedRow.city}</strong></div>
+    <div class="map-city-overview-grid">
+     <span><small>Всего</small><strong>${selectedRow.cars.length}</strong></span>
+     <span class="online"><small>Online</small><strong>${online}</strong></span>
+     <span class="offline"><small>Offline</small><strong>${offline}</strong></span>
+     <span><small>Ср. скорость</small><strong>${avg} км/ч</strong></span>
+    </div>
+    <small class="map-city-last-update">Последний сигнал: ${latest?latest.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"—"}</small>
+   </div>`+
+   selectedRow.cars.map(c=>{
+    const m=model(c),gps=gpsStatusForCar(c);
+    return`<div class="map-car-row map-car-row-v2">
+     <span class="map-car-status ${fleetMapV2CarLevel(c)}"></span>
+     <button class="map-car-main" onclick="openCar('${c.id}')"><strong>${m.brand} ${m.model}</strong>
+     <small>${c.plate||"Без номера"} · ${gps?`GPS ${gps.online?"online":"offline"}${gps.online?` · ${Math.round(gps.speed||0)} км/ч`:""}`:statusText(c.status)}</small></button>
+     ${gps?`<button class="map-car-locate" onclick="findCarOnGps('${c.id}')" title="Найти">⌖</button>`:`<b>›</b>`}
+    </div>`
+   }).join("")
  }else{
-  panel.innerHTML=fleetMapV2RowsCache.length
-   ?fleetMapV2RowsCache.map(row=>`<button type="button" class="map-city-summary-row" onclick="focusFleetMapV2City('${row.key.replace(/'/g,"\\'")}')">
-      <span class="map-city-dot ${fleetMapV2CityLevel(row)}"></span>
-      <div>
-       <strong>${row.city}</strong>
-       <small>${row.cars.length} авто · ${money(row.profit)}</small>
-      </div>
-      <b>${row.attention?`${row.attention} ⚠`:"›"}</b>
-    </button>`).join("")
-   :`<div class="map-empty">Нет автомобилей для выбранного фильтра</div>`
+  panel.innerHTML=fleetMapV2RowsCache.length?fleetMapV2RowsCache.map(row=>{
+   const gps=row.cars.map(c=>gpsStatusForCar(c)).filter(Boolean),on=gps.filter(x=>x.online).length,off=gps.filter(x=>!x.online).length;
+   return`<button class="map-city-summary-row" onclick="focusFleetMapV2City('${row.key.replace(/'/g,"\\'")}')">
+    <span class="map-city-dot ${fleetMapV2CityLevel(row)}"></span><div><strong>${row.city}</strong>
+    <small>${row.cars.length} авто · ${on} online${off?` · ${off} offline`:""}</small></div><b>›</b></button>`
+  }).join(""):`<div class="map-empty">Нет автомобилей для выбранного фильтра</div>`
  }
-
- const unknown=fleetMapV2RowsCache.filter(row=>!row.coords&&row.city!=="Без города");
- if(status){
-  status.hidden=!unknown.length;
-  status.textContent=unknown.length
-   ?`Не удалось разместить: ${unknown.map(row=>row.city).join(", ")}`
-   :""
- }
+ const unknown=fleetMapV2RowsCache.filter(r=>!r.coords&&r.city!=="Без города");
+ if(status){status.hidden=!unknown.length;status.textContent=unknown.length?`Не удалось разместить: ${unknown.map(r=>r.city).join(", ")}`:""}
 }
-
 
 function showAllFleetMapCities(){
  fleetMapV2SelectedCity="";
@@ -2304,15 +2299,13 @@ function showAllFleetMapCities(){
 window.showAllFleetMapCities=showAllFleetMapCities;
 
 function focusFleetMapV2City(cityKey){
- const map=ensureFleetMapV2();
- const row=fleetMapV2RowsCache.find(item=>item.key===cityKey);
- if(!row)return;
-
- fleetMapV2SelectedCity=row.key;
- renderFleetMapV2Panel(row);
-
- if(map&&row.coords){
-  map.flyTo(row.coords,row.cars.length>1?10:12,{duration:.5});
+ const map=ensureFleetMapV2(),row=fleetMapV2RowsCache.find(x=>x.key===cityKey);if(!row)return;
+ fleetMapV2SelectedCity=row.key;renderFleetMapV2Panel(row);
+ if(map){
+  const pts=row.cars.map(c=>gpsPositionForCar(c)).filter(Boolean);
+  if(pts.length>1)map.fitBounds(pts,{padding:[55,55],maxZoom:13});
+  else if(pts.length===1)map.flyTo(pts[0],14,{duration:.5});
+  else if(row.coords)map.flyTo(row.coords,11,{duration:.5});
   setTimeout(()=>map.invalidateSize({pan:false}),100)
  }
 }
@@ -2365,7 +2358,7 @@ function renderFleetMapV2(options={}){
   cityMarker.addTo(fleetMapV2Layer);
 
   row.cars.forEach((c,index)=>{
-   const point=fleetMapV2OffsetPoint(row.coords,index,row.cars.length);
+   const point=gpsPositionForCar(c)||fleetMapV2OffsetPoint(row.coords,index,row.cars.length);
    const m=model(c);
 
    const marker=L.marker(point,{
@@ -2391,7 +2384,7 @@ function renderFleetMapV2(options={}){
 
  if(bounds.length&&options.fit!==false){
   map.fitBounds(bounds,{padding:[45,45],maxZoom:8,animate:false})
- }else if(!bounds.length){
+ }else if(!bounds.length&&options.fit!==false){
   map.setView([52.05,19.25],6,{animate:false})
  }
 
