@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -257,6 +257,7 @@ function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof 
 function showPage(id){
  if(isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
+ syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("fleetPage");$("#globalSearchInput").oninput=renderGlobalSearch;
@@ -279,6 +280,22 @@ $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);render
 ["quickServiceExpiry","quickServiceMileage","quickServiceOilInterval","quickServiceCost"].forEach(id=>{
  const el=$("#"+id);if(el)el.oninput=updateQuickServicePreview
 });
+
+
+function syncDesktopNavigation(pageId){
+ $$("[data-desktop-page]").forEach(button=>button.classList.toggle("active",button.dataset.desktopPage===pageId))
+}
+$$("[data-desktop-page]").forEach(button=>{
+ button.onclick=()=>{
+  const pageId=button.dataset.desktopPage;
+  showPage(pageId);
+  syncDesktopNavigation(pageId)
+ }
+});
+$("#desktopAddCar").onclick=()=>openCarDialog();
+$("#desktopSearchButton").onclick=()=>$("#fleetSearch")?.focus();
+$("#desktopThemeToggle").onclick=()=>toggleTheme();
+$("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}

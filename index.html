@@ -4,27 +4,57 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V6.3</title>
-  <link rel="manifest" href="manifest.webmanifest?v=630">
-  <link rel="stylesheet" href="styles.css?v=630">
+  <title>FleetPilot V6.4</title>
+  <link rel="manifest" href="manifest.webmanifest?v=640">
+  <link rel="stylesheet" href="styles.css?v=640">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
+  <aside class="desktop-sidebar" aria-label="Навигация FleetPilot">
+    <div class="desktop-brand">
+      <span class="desktop-brand-mark">F</span>
+      <div><strong>FleetPilot</strong><small>Fleet management</small></div>
+    </div>
+    <nav class="desktop-sidebar-nav">
+      <button type="button" data-desktop-page="fleetPage" class="active"><span>⌂</span>Автопарк</button>
+      <button type="button" data-desktop-page="repairsPage"><span>◇</span>Сервис</button>
+      <button type="button" data-desktop-page="paymentsPage"><span>▣</span>Аренда</button>
+      <button type="button" data-desktop-page="expensesPage"><span>↘</span>Расходы</button>
+      <button type="button" data-desktop-page="calendarPage"><span>□</span>Календарь</button>
+      <button type="button" data-desktop-page="analyticsPage"><span>▥</span>Аналитика</button>
+      <button type="button" data-desktop-page="morePage"><span>•••</span>Ещё</button>
+    </nav>
+    <div class="desktop-sidebar-footer">
+      <button type="button" id="desktopThemeToggle"><span>◐</span>Тема</button>
+      <button type="button" id="desktopSettingsButton"><span>⚙</span>Настройки</button>
+    </div>
+  </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V6.3</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V6.4</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
   <main>
     <section id="fleetPage" class="page active">
-      <div class="today-hero" data-dashboard-block="hero">
+      <div class="desktop-fleet-page-head">
+        <div>
+          <span class="desktop-page-kicker">Fleet overview</span>
+          <h2>Мои автомобили</h2>
+          <p>Управляйте автопарком и контролируйте важные события.</p>
+        </div>
+        <div class="desktop-page-actions">
+          <button type="button" id="desktopSearchButton" class="desktop-icon-button" aria-label="Поиск">⌕</button>
+          <button type="button" id="desktopAddCar" class="btn primary">+ Автомобиль</button>
+        </div>
+      </div>
+      <div class="today-hero" data-dashboard-block="hero" data-mobile-dashboard="true">
         <div><span class="eyebrow">Сегодня</span><h2>Состояние автопарка</h2><p>Все важные события в одном месте</p></div>
         <div class="hero-actions">
       <button id="customizeDashboard" class="hero-tool-button" type="button">⚙ <span>Настроить</span></button>
       <button id="openAttention" class="attention-button"><span>🔔</span><strong id="attentionCount">0</strong></button>
     </div>
       </div>
-      <section class="owner-dashboard" data-dashboard-block="finance" aria-label="Финансовая сводка владельца">
+      <section class="owner-dashboard" data-dashboard-block="finance" data-mobile-dashboard="true" aria-label="Финансовая сводка владельца">
         <div class="owner-dashboard-head">
           <div>
             <span class="eyebrow">Центр управления</span>
@@ -37,7 +67,7 @@
         </div>
         <div id="ownerDashboardGrid" class="owner-dashboard-grid"></div>
       </section>
-      <section class="intelligence-grid" data-dashboard-block="intelligence">
+      <section class="intelligence-grid" data-dashboard-block="intelligence" data-mobile-dashboard="true">
         <article class="fleet-score-card card">
           <div class="fleet-score-ring" id="fleetScoreRing"><div><strong id="fleetScoreValue">0</strong><span>/100</span></div></div>
           <div class="fleet-score-copy"><span class="eyebrow">Состояние автопарка</span><h3 id="fleetScoreLabel">Оценка автопарка</h3><p id="fleetScoreReason">Анализируем состояние автомобилей…</p></div>
@@ -47,7 +77,7 @@
           <div id="assistantInsights" class="assistant-insights"></div>
         </article>
       </section>
-      <div class="week-plan card" data-dashboard-block="week">
+      <div class="week-plan card" data-dashboard-block="week" data-mobile-dashboard="true">
         <div class="week-plan-head">
           <div>
             <span class="eyebrow">План недели</span>
@@ -57,9 +87,9 @@
         </div>
         <div id="weekPlanSummary" class="week-plan-summary"></div>
       </div>
-      <div id="healthSummary" class="health-summary" data-dashboard-block="health"></div>
-      <div id="fleetSummary" class="summary-grid operational-summary"></div>
-      <div class="toolbar card" data-dashboard-block="filters">
+      <div id="healthSummary" class="health-summary" data-dashboard-block="health" data-mobile-dashboard="true"></div>
+      <div id="fleetSummary" class="summary-grid operational-summary desktop-fleet-summary"></div>
+      <div class="toolbar card desktop-fleet-toolbar" data-dashboard-block="filters">
         <input id="fleetSearch" placeholder="Поиск по авто, номеру или арендатору"><select id="fleetCityFilter" aria-label="Фильтр по городу">
   <option value="all">Все города</option>
 </select>
@@ -524,5 +554,5 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=630"></script>
+<script src="app.js?v=640"></script>
 </body></html>
