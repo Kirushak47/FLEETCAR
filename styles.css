@@ -2371,3 +2371,21 @@ html[data-theme="dark"] .premium-service-card.danger{
   font-size:7px!important;
  }
 }
+
+/* FleetPilot V6.2 — Premium Minimal */
+.minimal-service-strip{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.minimal-service-chip{position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;min-width:0;min-height:72px;padding:10px 10px 10px 13px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--surface-soft);color:var(--text);text-align:left;cursor:pointer;box-shadow:none;transition:.18s ease}
+.minimal-service-chip:hover{transform:translateY(-2px);background:var(--surface-main)}
+.minimal-service-chip:active{transform:scale(.985)}
+.minimal-service-accent{position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:999px;background:#22c55e}
+.minimal-service-chip.warning .minimal-service-accent{background:#f59e0b}.minimal-service-chip.danger .minimal-service-accent{background:#ef4444}
+.minimal-service-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(148,163,184,.10);color:var(--muted)}
+.minimal-service-icon svg{width:20px;height:20px;fill:currentColor}
+.minimal-service-copy{display:block;min-width:0}.minimal-service-copy strong{display:block;font-size:18px;line-height:1;letter-spacing:-.025em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.minimal-service-copy small{display:block;margin-top:5px;color:var(--muted);font-size:9px;line-height:1.15}
+.minimal-service-chip.warning{border-color:rgba(245,158,11,.28)}.minimal-service-chip.danger{border-color:rgba(239,68,68,.34)}
+html[data-theme="dark"] .minimal-service-chip{background:#1b243b;border-color:rgba(255,255,255,.08)}html[data-theme="dark"] .minimal-service-chip:hover{background:#202b46}
+html[data-theme="dark"] .minimal-service-icon{background:rgba(255,255,255,.05)}
+.vehicle-alert-banner.actionable-alert{min-height:48px!important;padding:8px 12px!important;margin-top:8px!important;border-radius:14px!important}.vehicle-alert-banner.actionable-alert strong{font-size:11px!important;line-height:1.25!important}.vehicle-alert-banner.actionable-alert b{display:none!important}
+@media(max-width:680px){.minimal-service-strip{gap:5px!important}.minimal-service-chip{grid-template-columns:1fr;justify-items:center;gap:5px;min-height:82px;padding:8px 4px 7px;border-radius:13px;text-align:center}.minimal-service-accent{left:7px;right:7px;top:auto;bottom:0;width:auto;height:3px}.minimal-service-icon{width:28px;height:28px;border-radius:9px}.minimal-service-icon svg{width:16px;height:16px}.minimal-service-copy strong{font-size:14px}.minimal-service-copy small{margin-top:3px;font-size:7px;min-height:16px}}
+@media(max-width:380px){.minimal-service-strip{gap:4px!important}.minimal-service-chip{min-height:78px;padding-left:2px;padding-right:2px}.minimal-service-copy strong{font-size:13px}.minimal-service-copy small{font-size:6.5px}}
