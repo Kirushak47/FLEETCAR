@@ -2224,3 +2224,150 @@ html[data-theme="dark"] .premium-service-card.danger{
   font-size:18px!important;
  }
 }
+
+/* FleetPilot V6.1.4 — all three service cards visible on mobile */
+@media(max-width:680px){
+ .premium-service-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin:0!important;
+  padding:2px 0 8px!important;
+  overflow:visible!important;
+  scroll-snap-type:none!important;
+ }
+
+ .premium-service-card{
+  min-width:0!important;
+  width:100%!important;
+  min-height:142px!important;
+  padding:8px 6px!important;
+  border-radius:15px!important;
+  scroll-snap-align:none!important;
+  box-shadow:0 5px 15px rgba(15,23,42,.06)!important;
+ }
+
+ .service-card-top{
+  justify-content:center!important;
+  position:relative;
+ }
+
+ .premium-service-icon{
+  width:36px!important;
+  height:36px!important;
+  box-shadow:
+   0 0 0 4px rgba(255,255,255,.66),
+   0 4px 11px rgba(15,23,42,.10)!important;
+ }
+
+ .premium-service-icon svg{
+  width:19px!important;
+  height:19px!important;
+ }
+
+ .service-state-dot{
+  position:absolute;
+  right:1px;
+  top:0;
+  width:7px!important;
+  height:7px!important;
+  box-shadow:0 0 0 3px rgba(34,197,94,.12)!important;
+ }
+
+ .premium-service-card.warning .service-state-dot{
+  box-shadow:0 0 0 3px rgba(249,115,22,.12)!important;
+ }
+
+ .premium-service-card.danger .service-state-dot{
+  box-shadow:0 0 0 3px rgba(239,68,68,.12)!important;
+ }
+
+ .service-card-copy{
+  margin-top:8px!important;
+  text-align:center;
+  min-width:0;
+ }
+
+ .service-card-copy small{
+  font-size:8px!important;
+  line-height:1.1;
+ }
+
+ .service-card-copy strong{
+  display:block;
+  margin-top:3px!important;
+  font-size:11px!important;
+  line-height:1.15!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  word-break:break-word;
+ }
+
+ .service-card-copy em{
+  display:block;
+  margin-top:3px!important;
+  font-size:8px!important;
+  line-height:1.15;
+  white-space:normal!important;
+  min-height:18px;
+ }
+
+ .service-progress{
+  height:4px!important;
+  margin:7px 1px 6px!important;
+ }
+
+ .premium-service-action{
+  min-height:27px!important;
+  padding:3px 2px!important;
+  border-radius:9px!important;
+  font-size:8px!important;
+  line-height:1!important;
+  gap:2px!important;
+ }
+
+ .premium-service-action b{
+  font-size:13px!important;
+ }
+
+ .premium-service-card.warning,
+ .premium-service-card.danger{
+  border-width:1.5px!important;
+ }
+
+ .actionable-alert{
+  margin-top:4px!important;
+ }
+}
+
+/* Very narrow phones keep all three visible by reducing only typography. */
+@media(max-width:380px){
+ .premium-service-grid{
+  gap:4px!important;
+ }
+
+ .premium-service-card{
+  min-height:136px!important;
+  padding:7px 4px!important;
+  border-radius:13px!important;
+ }
+
+ .premium-service-icon{
+  width:32px!important;
+  height:32px!important;
+ }
+
+ .premium-service-icon svg{
+  width:17px!important;
+  height:17px!important;
+ }
+
+ .service-card-copy strong{
+  font-size:10px!important;
+ }
+
+ .premium-service-action{
+  font-size:7px!important;
+ }
+}

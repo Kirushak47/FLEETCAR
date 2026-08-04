@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.1.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.1.4","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -916,7 +916,7 @@ function renderOwnerDashboard(){
  ];
  $("#ownerDashboardContext").textContent=`${cityLabel()} · данные обновлены автоматически`;
  $("#ownerDashboardGrid").innerHTML=cards.map((x,index)=>`<article class="owner-kpi ${x[2]}" style="--index:${index}">
-   <div class="owner-kpi-icon ${x[3]}">${x[3]==="wallet"?"₽":x[3]==="trend"?"↗":x[3]==="expense"?"↓":"✓"}</div>
+   <div class="owner-kpi-icon ${x[3]}">${x[3]==="wallet"?"$":x[3]==="trend"?"↗":x[3]==="expense"?"↓":"✓"}</div>
    <div><small>${x[0]}</small><strong data-animate-value="${x[1]}" data-animate-format="money">${money(0)}</strong></div>
   </article>`).join("");
  const status=$("#ownerDashboardStatus");
