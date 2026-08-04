@@ -2081,3 +2081,146 @@ html[data-theme="dark"] .premium-service-card.danger{
  .premium-service-grid{grid-template-columns:1fr}
  .premium-service-card{min-height:220px}
 }
+
+/* FleetPilot V6.1.3 — compact premium service cards on mobile */
+@media(max-width:680px){
+ .premium-service-grid{
+  display:flex!important;
+  gap:10px;
+  margin:0 -10px;
+  padding:4px 10px 12px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+ }
+ .premium-service-grid::-webkit-scrollbar{
+  display:none;
+ }
+ .premium-service-card{
+  flex:0 0 205px;
+  min-width:205px;
+  min-height:158px!important;
+  padding:12px!important;
+  border-radius:18px!important;
+  scroll-snap-align:start;
+  box-shadow:0 8px 22px rgba(15,23,42,.07)!important;
+ }
+ .premium-service-card:hover{
+  transform:none!important;
+ }
+ .service-card-top{
+  align-items:center;
+ }
+ .premium-service-icon{
+  width:43px;
+  height:43px;
+  box-shadow:
+   0 0 0 5px rgba(255,255,255,.68),
+   0 6px 15px rgba(15,23,42,.12);
+ }
+ .premium-service-icon svg{
+  width:23px;
+  height:23px;
+ }
+ .service-state-dot{
+  width:9px;
+  height:9px;
+  box-shadow:0 0 0 4px rgba(34,197,94,.12);
+ }
+ .premium-service-card.warning .service-state-dot{
+  box-shadow:0 0 0 4px rgba(249,115,22,.12);
+ }
+ .premium-service-card.danger .service-state-dot{
+  box-shadow:0 0 0 4px rgba(239,68,68,.12);
+ }
+ .service-card-copy{
+  margin-top:10px;
+ }
+ .service-card-copy small{
+  font-size:10px!important;
+ }
+ .service-card-copy strong{
+  margin-top:3px;
+  font-size:15px!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+ }
+ .service-card-copy em{
+  margin-top:3px;
+  font-size:10px!important;
+  white-space:nowrap;
+ }
+ .service-progress{
+  height:5px;
+  margin-top:10px;
+  margin-bottom:9px;
+ }
+ .premium-service-action{
+  min-height:31px;
+  border-radius:11px;
+  font-size:11px;
+  gap:5px;
+ }
+ .premium-service-action b{
+  font-size:17px;
+ }
+ .actionable-alert{
+  min-height:52px;
+  padding:8px 11px!important;
+  border-radius:15px!important;
+ }
+ .actionable-alert span{
+  flex:0 0 27px!important;
+  height:27px!important;
+  font-size:14px!important;
+ }
+ .actionable-alert strong{
+  font-size:11px;
+  line-height:1.25;
+ }
+ .actionable-alert b{
+  font-size:8px;
+  gap:3px;
+ }
+ .actionable-alert b span{
+  font-size:15px!important;
+ }
+}
+
+/* Very narrow phones: show almost two cards to hint horizontal scrolling */
+@media(max-width:430px){
+ .premium-service-card{
+  flex-basis:172px;
+  min-width:172px;
+  min-height:151px!important;
+ }
+ .service-card-copy strong{
+  font-size:14px!important;
+ }
+}
+
+/* Tablet keeps three compact cards in one row */
+@media(min-width:681px) and (max-width:900px){
+ .premium-service-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px;
+ }
+ .premium-service-card{
+  min-height:210px;
+  padding:14px!important;
+ }
+ .premium-service-icon{
+  width:54px;
+  height:54px;
+ }
+ .premium-service-icon svg{
+  width:28px;
+  height:28px;
+ }
+ .service-card-copy strong{
+  font-size:18px!important;
+ }
+}
