@@ -2389,3 +2389,154 @@ html[data-theme="dark"] .minimal-service-icon{background:rgba(255,255,255,.05)}
 .vehicle-alert-banner.actionable-alert{min-height:48px!important;padding:8px 12px!important;margin-top:8px!important;border-radius:14px!important}.vehicle-alert-banner.actionable-alert strong{font-size:11px!important;line-height:1.25!important}.vehicle-alert-banner.actionable-alert b{display:none!important}
 @media(max-width:680px){.minimal-service-strip{gap:5px!important}.minimal-service-chip{grid-template-columns:1fr;justify-items:center;gap:5px;min-height:82px;padding:8px 4px 7px;border-radius:13px;text-align:center}.minimal-service-accent{left:7px;right:7px;top:auto;bottom:0;width:auto;height:3px}.minimal-service-icon{width:28px;height:28px;border-radius:9px}.minimal-service-icon svg{width:16px;height:16px}.minimal-service-copy strong{font-size:14px}.minimal-service-copy small{margin-top:3px;font-size:7px;min-height:16px}}
 @media(max-width:380px){.minimal-service-strip{gap:4px!important}.minimal-service-chip{min-height:78px;padding-left:2px;padding-right:2px}.minimal-service-copy strong{font-size:13px}.minimal-service-copy small{font-size:6.5px}}
+
+/* FleetPilot V6.2.1 — cleaner header and 30-day notifications */
+.hero-business-metrics{
+ position:absolute;
+ left:18px;
+ bottom:16px;
+ display:flex;
+ align-items:center;
+ gap:14px;
+ z-index:3;
+}
+.hero-business-metric{
+ min-width:0;
+ padding:0;
+ border:0;
+ background:transparent;
+ color:#fff;
+ text-align:left;
+ font:inherit;
+}
+button.hero-business-metric{
+ cursor:pointer;
+}
+.hero-business-metric strong{
+ display:block;
+ color:#f8fafc;
+ font-size:22px;
+ line-height:1;
+ letter-spacing:-.025em;
+ text-shadow:0 2px 12px rgba(0,0,0,.35);
+}
+.hero-business-metric.profit strong{
+ color:#bbf7d0;
+}
+.hero-business-metric.profit.negative strong{
+ color:#fecaca;
+}
+.hero-business-metric small{
+ display:block;
+ margin-top:5px;
+ color:rgba(255,255,255,.76);
+ font-size:10px;
+ font-weight:750;
+}
+.hero-business-divider{
+ width:1px;
+ height:42px;
+ background:rgba(255,255,255,.28);
+}
+.health-score{
+ display:none!important;
+}
+.service-notification-list{
+ display:grid;
+ gap:7px;
+ margin-top:14px;
+}
+.service-notification-row{
+ display:grid;
+ grid-template-columns:30px minmax(0,1fr) 18px;
+ align-items:center;
+ gap:9px;
+ width:100%;
+ min-height:48px;
+ padding:8px 11px;
+ border:1px solid;
+ border-radius:14px;
+ background:var(--surface-soft);
+ color:var(--text);
+ text-align:left;
+ cursor:pointer;
+ font:inherit;
+}
+.service-notification-row>span{
+ display:grid;
+ place-items:center;
+ width:30px;
+ height:30px;
+ border-radius:10px;
+ font-size:14px;
+}
+.service-notification-row strong{
+ font-size:11px;
+ line-height:1.3;
+}
+.service-notification-row b{
+ font-size:22px;
+ font-weight:500;
+ text-align:right;
+}
+.service-notification-row.warning{
+ border-color:rgba(245,158,11,.34);
+ background:rgba(245,158,11,.07);
+ color:#9a3412;
+}
+.service-notification-row.warning>span{
+ background:rgba(245,158,11,.15);
+}
+.service-notification-row.danger{
+ border-color:rgba(239,68,68,.38);
+ background:rgba(239,68,68,.08);
+ color:#991b1b;
+}
+.service-notification-row.danger>span{
+ background:rgba(239,68,68,.15);
+}
+html[data-theme="dark"] .service-notification-row.warning{
+ background:rgba(146,64,14,.24);
+ color:#fed7aa;
+}
+html[data-theme="dark"] .service-notification-row.danger{
+ background:rgba(153,27,27,.25);
+ color:#fecaca;
+}
+.single-event-metrics{
+ display:block!important;
+ margin-top:16px!important;
+}
+.single-event-metrics .next-event-metric{
+ width:100%;
+ min-height:74px;
+}
+.car-body>.actions{
+ margin-top:14px;
+}
+.condition-pill{
+ display:none!important;
+}
+
+@media(max-width:680px){
+ .hero-business-metrics{
+  left:14px;
+  bottom:13px;
+  gap:10px;
+ }
+ .hero-business-metric strong{
+  font-size:17px;
+ }
+ .hero-business-metric small{
+  font-size:8px;
+ }
+ .hero-business-divider{
+  height:34px;
+ }
+ .service-notification-list{
+  margin-top:12px;
+ }
+ .single-event-metrics{
+  margin-top:14px!important;
+ }
+}

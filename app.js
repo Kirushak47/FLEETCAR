@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.2.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -990,12 +990,12 @@ function renderFleet(){
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0];const health=healthDetails(c);return `<article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
-<div class="no-photo-hero ${att?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
+<div class="no-photo-hero ${c.status} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${att?"attention":c.status}">${att?"Требует внимания":statusText(c.status)}</span><span class="condition-pill ${health.level}">${health.level==="danger"?"Критично":health.level==="warning"?"Нужен контроль":"Отличное состояние"}</span></div>
+  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    <button class="card-menu-button" onclick="openCarQuickMenu('${c.id}',event)" aria-label="Быстрые действия">⋮</button>
@@ -1007,12 +1007,17 @@ function renderFleet(){
   <h3>${m.brand} ${m.model}</h3>
   <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
  </div>
- <div class="hero-profit animated-profit ${monthProfit<0?"negative":""}">
-  <small>Прибыль за текущий месяц</small>
-  <strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong>
-  <span class="profit-trend ${monthProfit>=0?"up":"down"}">${monthProfit>=0?"↗":"↘"}</span>
+ <div class="hero-business-metrics">
+  <button type="button" class="hero-business-metric mileage" onclick="event.stopPropagation();openMileage('${c.id}')">
+    <strong>${km(c.mileage)}</strong>
+    <small>Пробег</small>
+  </button>
+  <span class="hero-business-divider"></span>
+  <div class="hero-business-metric profit ${monthProfit<0?"negative":""}">
+    <strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong>
+    <small>Прибыль за месяц</small>
+  </div>
  </div>
- <div class="health-score ${health.level}"><span>Состояние</span><strong>${health.score}%</strong></div>
 </div>
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
@@ -1030,10 +1035,20 @@ function renderFleet(){
 <span class="minimal-service-accent"></span><span class="minimal-service-icon"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2h3l1-2Zm1.2 2-.5 1H5v12h14V7h-4.7l-.5-1h-3.6Zm.3 8.2 5.1-5.1 1.4 1.4-6.5 6.5-3.4-3.4 1.4-1.4 2 2Z"/></svg></span>
 <span class="minimal-service-copy"><strong>${Math.max(0,health.inspectionDays)}</strong><small>${health.inspectionDays<0?"техосмотр просрочен":"дн. техосмотр"}</small></span>
 </button>
-</div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);const overdue=alerts.filter(x=>x.includes("просроч"));const primary=health.insuranceDays<=health.inspectionDays?"insurance":"inspection";return overdue.length?`<button type="button" class="vehicle-alert-banner actionable-alert danger" onclick="event.stopPropagation();openQuickService('${c.id}','${primary}')"><span>!</span><strong>${overdue.join(" · ")}</strong></button>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
-<div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
-<div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
-<div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>
+</div>${(()=>{
+ const notices=[];
+ if(health.insuranceDays<0)notices.push({type:"insurance",level:"danger",icon:"🛡",text:`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`});
+ else if(health.insuranceDays<=30)notices.push({type:"insurance",level:"warning",icon:"🛡",text:`Страховка заканчивается через ${health.insuranceDays} дн.`});
+ if(health.inspectionDays<0)notices.push({type:"inspection",level:"danger",icon:"✓",text:`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`});
+ else if(health.inspectionDays<=30)notices.push({type:"inspection",level:"warning",icon:"✓",text:`Техосмотр заканчивается через ${health.inspectionDays} дн.`});
+ if(health.oilLeft<=0)notices.push({type:"oil",level:"danger",icon:"◉",text:`Замена масла просрочена на ${Math.abs(health.oilLeft)} км.`});
+ else if(serviceForecast&&serviceForecast.days<=30)notices.push({type:"oil",level:"warning",icon:"◉",text:`Замена масла ориентировочно через ${serviceForecast.days} дн. (${km(health.oilLeft)}).`});
+ return notices.length?`<div class="service-notification-list">${notices.map(n=>`<button type="button" class="service-notification-row ${n.level}" onclick="event.stopPropagation();openQuickService('${c.id}','${n.type}')"><span>${n.icon}</span><strong>${n.text}</strong><b>›</b></button>`).join("")}</div>`:"";
+})()}<div class="metrics no-photo-metrics compact-car-metrics single-event-metrics">
+<div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}">
+ <small>Ближайшее событие</small>
+ <strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет запланированных событий"}</strong>
+</div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
 }
