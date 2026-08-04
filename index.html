@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.2</title>
-  <link rel="manifest" href="manifest.webmanifest?v=720">
-  <link rel="stylesheet" href="styles.css?v=720">
+  <title>FleetPilot V7.3</title>
+  <link rel="manifest" href="manifest.webmanifest?v=730">
+  <link rel="stylesheet" href="styles.css?v=730">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynx3ZkZQetf/3Qy4JpB2qV0w9jQk=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -30,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.2</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V7.3</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -97,11 +98,14 @@
                 </select>
               </div>
               <div class="fleet-map-layout">
-                <div class="poland-map-card">
-                  <svg id="polandFleetMap" viewBox="0 0 700 560" role="img" aria-label="Карта Польши">
-                    <path class="poland-shape" d="M136 90 210 62 286 73 348 48 431 74 510 67 571 116 613 180 592 242 623 310 584 377 521 402 483 468 402 489 333 520 263 492 194 503 139 456 101 394 79 325 98 259 73 194 102 142Z"/>
-                    <g id="polandCityMarkers"></g>
-                  </svg>
+                <div class="poland-map-card leaflet-map-card">
+                  <div id="leafletFleetMap" class="leaflet-fleet-map" aria-label="Интерактивная карта автопарка"></div>
+                  <div id="leafletMapStatus" class="leaflet-map-status" hidden></div>
+                  <div class="leaflet-map-legend">
+                    <span><i class="good"></i> Всё в порядке</span>
+                    <span><i class="warning"></i> Требует внимания</span>
+                    <span><i class="danger"></i> Убыток / просрочка</span>
+                  </div>
                 </div>
                 <aside class="map-city-panel">
                   <div class="map-city-panel-head"><strong id="mapSelectedCity">Все города</strong><span id="mapSelectedCount">0 автомобилей</span></div>
@@ -655,5 +659,6 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=720"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="app.js?v=730"></script>
 </body></html>

@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -1026,14 +1026,29 @@ function cityLabel(){
 
 const DESKTOP_VIEW_KEY="fleetpilot.desktop.view.v1";
 const desktopSelection=new Set();
-const POLAND_CITY_POINTS={
- "Warszawa":[423,274],"Kraków":[398,423],"Łódź":[344,304],"Wrocław":[244,360],
- "Poznań":[216,253],"Gdańsk":[342,103],"Szczecin":[112,207],"Bydgoszcz":[280,197],
- "Lublin":[516,341],"Katowice":[342,405],"Białystok":[540,212],"Gdynia":[331,91],
- "Częstochowa":[351,361],"Radom":[438,330],"Toruń":[309,214],"Rzeszów":[486,433],
- "Kielce":[416,377],"Olsztyn":[437,166],"Opole":[286,386],"Zielona Góra":[170,319],
- "Warsaw":[423,274],"Cracow":[398,423],"Lodz":[344,304],"Wroclaw":[244,360],
- "Poznan":[216,253],"Gdansk":[342,103]
+const POLAND_CITY_COORDS={
+ "Warszawa":[52.2297,21.0122],"Warsaw":[52.2297,21.0122],
+ "Kraków":[50.0647,19.9450],"Cracow":[50.0647,19.9450],
+ "Łódź":[51.7592,19.4560],"Lodz":[51.7592,19.4560],
+ "Wrocław":[51.1079,17.0385],"Wroclaw":[51.1079,17.0385],
+ "Poznań":[52.4064,16.9252],"Poznan":[52.4064,16.9252],
+ "Gdańsk":[54.3520,18.6466],"Gdansk":[54.3520,18.6466],
+ "Szczecin":[53.4285,14.5528],"Bydgoszcz":[53.1235,18.0084],
+ "Lublin":[51.2465,22.5684],"Katowice":[50.2649,19.0238],
+ "Białystok":[53.1325,23.1688],"Gdynia":[54.5189,18.5305],
+ "Częstochowa":[50.8118,19.1203],"Radom":[51.4027,21.1471],
+ "Toruń":[53.0138,18.5984],"Rzeszów":[50.0412,21.9991],
+ "Kielce":[50.8661,20.6286],"Olsztyn":[53.7784,20.4801],
+ "Opole":[50.6751,17.9213],"Zielona Góra":[51.9356,15.5062],
+ "Bielsko-Biała":[49.8224,19.0469],"Gliwice":[50.2945,18.6714],
+ "Zabrze":[50.3249,18.7857],"Rybnik":[50.1022,18.5463],
+ "Tychy":[50.1372,18.9664],"Sopot":[54.4416,18.5601],
+ "Koszalin":[54.1944,16.1722],"Elbląg":[54.1522,19.4045],
+ "Płock":[52.5463,19.7065],"Kalisz":[51.7611,18.0910],
+ "Legnica":[51.2070,16.1553],"Wałbrzych":[50.7714,16.2843],
+ "Grudziądz":[53.4837,18.7536],"Włocławek":[52.6483,19.0678],
+ "Słupsk":[54.4641,17.0287],"Nowy Sącz":[49.6218,20.6970],
+ "Jelenia Góra":[50.9044,15.7194],"Piotrków Trybunalski":[51.4052,19.7030]
 };
 
 function desktopView(){
@@ -1049,7 +1064,7 @@ function setDesktopView(view){
  if(grid)grid.closest("[data-dashboard-block='cars']")?.classList.toggle("desktop-command-hidden",view!=="list");
  if(view==="board")renderDesktopBoard();
  if(view==="table")renderDesktopTable();
- if(view==="map")renderDesktopMap();
+ if(view==="map"){renderDesktopMap();setTimeout(()=>leafletFleetMap?.invalidateSize(),120)}
 }
 
 function desktopCommandKpis(){
@@ -1144,32 +1159,151 @@ function cityMapData(){
  return[...map.values()].sort((a,b)=>b.cars.length-a.cars.length)
 }
 
-function mapPointForCity(city,index){
- if(POLAND_CITY_POINTS[city])return POLAND_CITY_POINTS[city];
- const aliases=Object.keys(POLAND_CITY_POINTS).find(key=>key.toLowerCase()===city.toLowerCase());
- if(aliases)return POLAND_CITY_POINTS[aliases];
- const cols=4,row=Math.floor(index/cols),col=index%cols;
- return[165+col*115,155+row*78]
+
+let leafletFleetMap=null;
+let leafletCityLayer=null;
+let leafletLastRows=[];
+
+function coordinatesForCity(city){
+ if(POLAND_CITY_COORDS[city])return POLAND_CITY_COORDS[city];
+ const exact=Object.keys(POLAND_CITY_COORDS).find(key=>key.toLowerCase()===String(city).toLowerCase());
+ if(exact)return POLAND_CITY_COORDS[exact];
+
+ // Try matching city names stored with region/country suffixes.
+ const normalized=String(city).split(",")[0].trim().toLowerCase();
+ const partial=Object.keys(POLAND_CITY_COORDS).find(key=>key.toLowerCase()===normalized);
+ return partial?POLAND_CITY_COORDS[partial]:null
 }
 
+function ensureLeafletMap(){
+ const container=$("#leafletFleetMap");
+ if(!container)return null;
+
+ if(typeof L==="undefined"){
+  const status=$("#leafletMapStatus");
+  if(status){
+   status.hidden=false;
+   status.textContent="Не удалось загрузить карту. Проверьте подключение к интернету."
+  }
+  return null
+ }
+
+ if(leafletFleetMap)return leafletFleetMap;
+
+ leafletFleetMap=L.map(container,{
+  zoomControl:true,
+  attributionControl:true,
+  preferCanvas:true
+ }).setView([52.05,19.25],6);
+
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  crossOrigin:true
+ }).addTo(leafletFleetMap);
+
+ leafletCityLayer=L.layerGroup().addTo(leafletFleetMap);
+
+ // Leaflet often initializes while the view is hidden.
+ setTimeout(()=>leafletFleetMap.invalidateSize(),80);
+ return leafletFleetMap
+}
+
+function cityMarkerClass(row){
+ if(row.attention>0)return"warning";
+ if(row.profit<0)return"danger";
+ return"good"
+}
+
+function cityMarkerIcon(row){
+ const level=cityMarkerClass(row);
+ const count=row.cars.length;
+ const size=Math.max(38,Math.min(62,36+count*2));
+ return L.divIcon({
+  className:"fleet-leaflet-marker-wrapper",
+  html:`<button type="button" class="fleet-leaflet-marker ${level}" style="width:${size}px;height:${size}px" aria-label="${row.city}, ${count} автомобилей"><strong>${count}</strong><small>${row.city}</small></button>`,
+  iconSize:[size,size],
+  iconAnchor:[size/2,size/2],
+  popupAnchor:[0,-size/2]
+ })
+}
+
+function renderMapCityPanel(row){
+ const panel=$("#mapCityCars");
+ if(!panel)return;
+
+ $("#mapSelectedCity").textContent=row?.city||"Все города";
+ $("#mapSelectedCount").textContent=row
+  ?`${row.cars.length} автомобилей · ${money(row.profit)}`
+  :`${leafletLastRows.reduce((sum,item)=>sum+item.cars.length,0)} автомобилей`;
+
+ panel.innerHTML=row
+  ?row.cars.map(c=>{
+    const m=model(c),profit=financialData(currentMonth(),c.id).finalProfit||0;
+    return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')">
+      <div><strong>${m.brand} ${m.model}</strong><small>${c.plate} · ${statusText(c.status)} · ${money(profit)}</small></div>
+      <span>${attention(c)?"⚠":"›"}</span>
+    </button>`
+   }).join("")
+  :leafletLastRows.map(city=>`<button type="button" class="map-city-summary-row" onclick="focusLeafletCity('${city.city.replace(/'/g,"\\'")}')">
+      <div><strong>${city.city}</strong><small>${city.cars.length} авто · ${money(city.profit)}</small></div>
+      <span>${city.attention?`${city.attention} ⚠`:"›"}</span>
+    </button>`).join("")||`<div class="map-empty">Укажите город в профиле автомобиля</div>`
+}
+
+function focusLeafletCity(city){
+ const map=ensureLeafletMap(),row=leafletLastRows.find(item=>item.city===city);
+ if(!map||!row)return;
+ const coords=coordinatesForCity(row.city);
+ if(coords)map.flyTo(coords,11,{duration:.7});
+ renderMapCityPanel(row)
+}
+window.focusLeafletCity=focusLeafletCity;
+
 function renderDesktopMap(selectedCity=""){
- const markers=$("#polandCityMarkers"),panel=$("#mapCityCars");if(!markers||!panel)return;
+ const map=ensureLeafletMap();
  const rows=cityMapData();
- markers.innerHTML=rows.map((row,index)=>{
-  const [x,y]=mapPointForCity(row.city,index),level=row.attention?"warning":row.profit<0?"danger":"good";
-  return`<g class="map-marker ${level}" data-map-city="${row.city}" transform="translate(${x} ${y})" role="button" tabindex="0">
-    <circle r="${Math.min(27,15+row.cars.length*1.5)}"></circle><text text-anchor="middle" dy="4">${row.cars.length}</text>
-    <title>${row.city}: ${row.cars.length} авто · ${money(row.profit)}</title>
-  </g>`
- }).join("");
- markers.querySelectorAll("[data-map-city]").forEach(marker=>{
-  marker.onclick=()=>renderDesktopMap(marker.dataset.mapCity);
-  marker.onkeydown=e=>{if(e.key==="Enter")renderDesktopMap(marker.dataset.mapCity)}
+ leafletLastRows=rows;
+
+ if(!map){
+  renderMapCityPanel(rows.find(r=>r.city===selectedCity)||rows[0]||null);
+  return
+ }
+
+ leafletCityLayer.clearLayers();
+ const bounds=[];
+
+ rows.forEach(row=>{
+  const coords=coordinatesForCity(row.city);
+  if(!coords)return;
+
+  bounds.push(coords);
+  const marker=L.marker(coords,{icon:cityMarkerIcon(row),keyboard:true});
+  marker.bindPopup(`
+    <div class="fleet-map-popup">
+      <strong>${row.city}</strong>
+      <span>${row.cars.length} автомобилей</span>
+      <span>${money(row.profit)} за месяц</span>
+      ${row.attention?`<em>${row.attention} требуют внимания</em>`:""}
+    </div>
+  `);
+  marker.on("click",()=>renderMapCityPanel(row));
+  marker.addTo(leafletCityLayer)
  });
- const chosen=rows.find(r=>r.city===selectedCity)||rows[0];
- $("#mapSelectedCity").textContent=chosen?.city||"Все города";
- $("#mapSelectedCount").textContent=chosen?`${chosen.cars.length} автомобилей · ${money(chosen.profit)}`:"0 автомобилей";
- panel.innerHTML=chosen?chosen.cars.map(c=>{const m=model(c);return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate} · ${statusText(c.status)}</small></div><span>${attention(c)?"⚠":"›"}</span></button>`}).join(""):`<div class="map-empty">Нет данных по городам</div>`
+
+ if(bounds.length){
+  if(selectedCity){
+   const row=rows.find(r=>r.city===selectedCity),coords=row&&coordinatesForCity(row.city);
+   if(coords)map.flyTo(coords,11,{duration:.6})
+  }else{
+   map.fitBounds(bounds,{padding:[45,45],maxZoom:8})
+  }
+ }else{
+  map.setView([52.05,19.25],6)
+ }
+
+ renderMapCityPanel(rows.find(r=>r.city===selectedCity)||null);
+ setTimeout(()=>map.invalidateSize(),80)
 }
 
 function renderDesktopEvents(){
