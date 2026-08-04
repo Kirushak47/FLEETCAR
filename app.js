@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.2.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -990,7 +990,7 @@ function renderFleet(){
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
 <div class="no-photo-hero ${c.status} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
@@ -1049,7 +1049,47 @@ function renderFleet(){
  <small>Ближайшее событие</small>
  <strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет запланированных событий"}</strong>
 </div>
-</div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
+</div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
+<div class="desktop-fleet-row health-${health.level}">
+  <span class="desktop-row-accent"></span>
+  <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
+    ${c.customPhoto?`<img class="desktop-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:`<div class="desktop-car-photo-placeholder">🚘</div>`}
+  </div>
+  <div class="desktop-car-identity">
+    <div class="desktop-car-title-line">
+      <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
+      <span class="desktop-status ${c.status}">${statusText(c.status)}</span>
+    </div>
+    <div class="desktop-service-mini-grid">
+      <button type="button" class="desktop-service-mini ${health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')">
+        <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M4 9h10l2 3h3a2 2 0 0 1 2 2v2h-2v-1h-3.2l-2.3-3.5H8V15H4V9Zm1-4h7v2H5V5Zm-2 8h3v4H3v-4Zm15.5-6.5c.9 1.2 1.5 2.1 1.5 3a1.5 1.5 0 1 1-3 0c0-.9.6-1.8 1.5-3Z"/></svg></span>
+        <span><strong>${health.oilLeft<=0?"0":Math.max(0,Math.round(health.oilLeft)).toLocaleString("ru-RU")}</strong><small>км до замены</small></span>
+      </button>
+      <button type="button" class="desktop-service-mini ${health.insuranceDays<0?"danger":health.insuranceDays<=30?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','insurance')">
+        <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M12 2 4.5 5.2V11c0 5 3.2 9.5 7.5 11 4.3-1.5 7.5-6 7.5-11V5.2L12 2Zm0 3 4.5 1.9V11c0 3.5-1.9 6.8-4.5 8.2C9.4 17.8 7.5 14.5 7.5 11V6.9L12 5Zm-1 3v3H8v2h3v3h2v-3h3v-2h-3V8h-2Z"/></svg></span>
+        <span><strong>${Math.max(0,health.insuranceDays)}</strong><small>дн. страховка</small></span>
+      </button>
+      <button type="button" class="desktop-service-mini ${health.inspectionDays<0?"danger":health.inspectionDays<=30?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','inspection')">
+        <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2h3l1-2Zm1.2 2-.5 1H5v12h14V7h-4.7l-.5-1h-3.6Zm.3 8.2 5.1-5.1 1.4 1.4-6.5 6.5-3.4-3.4 1.4-1.4 2 2Z"/></svg></span>
+        <span><strong>${Math.max(0,health.inspectionDays)}</strong><small>дн. техосмотр</small></span>
+      </button>
+    </div>
+  </div>
+  <div class="desktop-car-kpis">
+    <button type="button" class="desktop-kpi" onclick="event.stopPropagation();openMileage('${c.id}')"><strong>${km(c.mileage)}</strong><small>Пробег</small></button>
+    <span class="desktop-kpi-divider"></span>
+    <div class="desktop-kpi profit ${monthProfit<0?"negative":""}"><strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong><small>Прибыль за месяц</small></div>
+  </div>
+  <div class="desktop-today-card ${nextEvent&&nextEvent.days<=14?"warning":""}">
+    <small>Сегодня</small>
+    <strong>${nextEvent?nextEvent.title:"Автомобиль не требует внимания"}</strong>
+    <span>${nextEvent?`${nextEvent.days} дн.`:"Все основные показатели в норме"}</span>
+  </div>
+  <div class="desktop-row-actions">
+    <button class="btn primary desktop-open-btn" onclick="openCar('${c.id}')">Открыть →</button>
+    <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button>
+  </div>
+</div></div>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
