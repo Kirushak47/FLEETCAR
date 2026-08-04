@@ -5001,3 +5001,222 @@ html[data-theme="dark"] .gps-summary-connected.demo{
   width:100%;
  }
 }
+
+/* FleetPilot V7.9.2 — GPS badges, locate controls and map city list */
+@media(min-width:1100px){
+ .desktop-gps-line{
+  margin:8px 0 0!important;
+ }
+
+ .desktop-gps-status-card{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  min-height:48px;
+  padding:7px 8px;
+  overflow:hidden;
+  border:1px solid rgba(34,197,94,.18);
+  border-radius:14px;
+  background:linear-gradient(135deg,rgba(34,197,94,.085),rgba(34,197,94,.025));
+ }
+
+ .desktop-gps-status-card.offline{
+  border-color:rgba(239,68,68,.16);
+  background:linear-gradient(135deg,rgba(239,68,68,.075),rgba(239,68,68,.02));
+ }
+
+ .desktop-gps-status-icon{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  border-radius:11px;
+  background:rgba(34,197,94,.12);
+  color:#168354;
+ }
+
+ .desktop-gps-status-card.offline .desktop-gps-status-icon{
+  background:rgba(239,68,68,.11);
+  color:#bd3737;
+ }
+
+ .desktop-gps-status-icon svg{
+  width:17px;
+  height:17px;
+  fill:currentColor;
+ }
+
+ .desktop-gps-status-icon i{
+  position:absolute;
+  top:4px;
+  right:4px;
+  width:7px;
+  height:7px;
+  border:2px solid #fff;
+  border-radius:50%;
+  background:#22c55e;
+  box-shadow:0 0 0 3px rgba(34,197,94,.11);
+ }
+
+ .desktop-gps-status-card.offline .desktop-gps-status-icon i{
+  background:#ef4444;
+  box-shadow:none;
+ }
+
+ .desktop-gps-status-copy{
+  display:grid;
+  min-width:0;
+ }
+
+ .desktop-gps-status-copy small{
+  color:#168354;
+  font-size:6.5px;
+  font-weight:950;
+  letter-spacing:.08em;
+ }
+
+ .desktop-gps-status-card.offline .desktop-gps-status-copy small{
+  color:#bd3737;
+ }
+
+ .desktop-gps-status-copy strong{
+  margin-top:4px;
+  overflow:hidden;
+  color:#334155;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+ }
+
+ .desktop-gps-locate{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:31px;
+  padding:0 9px;
+  border:1px solid rgba(34,197,94,.19);
+  border-radius:9px;
+  background:#fff;
+  color:#168354;
+  font-size:7px;
+  font-weight:900;
+  cursor:pointer;
+ }
+
+ .desktop-gps-status-card.offline .desktop-gps-locate{
+  border-color:rgba(239,68,68,.18);
+  color:#bd3737;
+ }
+
+ .desktop-gps-locate svg{
+  width:13px;
+  height:13px;
+  fill:currentColor;
+ }
+
+ .desktop-gps-locate:hover{
+  transform:translateY(-1px);
+  box-shadow:0 5px 13px rgba(15,23,42,.08);
+ }
+
+ html[data-theme="dark"] .desktop-gps-status-card{
+  border-color:rgba(74,222,128,.13);
+  background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(34,197,94,.025));
+ }
+
+ html[data-theme="dark"] .desktop-gps-status-card.offline{
+  border-color:rgba(248,113,113,.13);
+  background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(239,68,68,.02));
+ }
+
+ html[data-theme="dark"] .desktop-gps-status-copy strong{
+  color:#e5e7eb;
+ }
+
+ html[data-theme="dark"] .desktop-gps-locate{
+  background:#1b2438;
+ }
+}
+
+.map-back-to-cities{
+ width:100%;
+ min-height:35px;
+ margin-bottom:5px;
+ padding:0 10px;
+ border:1px solid #e4e9ef;
+ border-radius:10px;
+ background:#f8fafc;
+ color:#5b5ce2;
+ font-size:7.5px;
+ font-weight:850;
+ text-align:left;
+ cursor:pointer;
+}
+
+.map-car-row-v2{
+ display:grid!important;
+ grid-template-columns:11px minmax(0,1fr) 32px!important;
+ align-items:center!important;
+ width:100%;
+ padding:7px 6px!important;
+ border:0;
+ border-bottom:1px solid #edf1f5;
+ background:transparent;
+}
+
+.map-car-main{
+ display:grid;
+ min-width:0;
+ padding:0;
+ border:0;
+ background:transparent;
+ color:inherit;
+ text-align:left;
+ cursor:pointer;
+}
+
+.map-car-main strong,
+.map-car-main small{
+ display:block;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+}
+
+.map-car-main strong{
+ font-size:8.5px;
+}
+
+.map-car-main small{
+ margin-top:4px;
+ color:#8a95a6;
+ font-size:6.8px;
+}
+
+.map-car-locate{
+ display:grid;
+ place-items:center;
+ width:30px;
+ height:30px;
+ border:1px solid rgba(91,92,226,.18);
+ border-radius:9px;
+ background:rgba(91,92,226,.07);
+ color:#4f46e5;
+ font-size:14px;
+ cursor:pointer;
+}
+
+.map-car-locate:hover{
+ background:rgba(91,92,226,.13);
+}
+
+html[data-theme="dark"] .map-back-to-cities{
+ border-color:rgba(255,255,255,.08);
+ background:#182136;
+}
+
+html[data-theme="dark"] .map-car-row-v2{
+ border-color:rgba(255,255,255,.06);
+}

@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.9.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.9.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -312,17 +312,16 @@ function applyTheme(mode=localStorage.getItem(THEME_KEY)||"system"){
  updateDesktopThemeButton(normalized)
 }
 
-function setTheme(mode,showToast=false){
+function setTheme(mode){
  const normalized=["light","dark","system"].includes(mode)?mode:"system";
  localStorage.setItem(THEME_KEY,normalized);
- applyTheme(normalized);
- if(showToast)toast(`Тема: ${themeLabel(normalized)}`)
+ applyTheme(normalized)
 }
 
 function toggleTheme(){
  const current=localStorage.getItem(THEME_KEY)||document.documentElement.dataset.themeMode||"system";
  const next=current==="light"?"dark":current==="dark"?"system":"light";
- setTheme(next,true)
+ setTheme(next)
 }
 
 window.toggleTheme=toggleTheme;
@@ -386,7 +385,7 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
 $$("[data-theme-mode]").forEach(button=>{
- button.onclick=()=>setTheme(button.dataset.themeMode,true)
+ button.onclick=()=>setTheme(button.dataset.themeMode)
 });
 
 $("#openGpsSetup").onclick=openGpsSetup;
@@ -1650,7 +1649,7 @@ function desktopCommandKpis(){
  const repair=cars.filter(c=>c.status==="repair").length;
  const free=cars.filter(c=>c.status==="free").length;
  const attentionCount=cars.filter(attention).length;
- const month=financialData(currentMonth(),null);
+ const month=financialData(fleetPilotCurrentMonth()(),null);
  const week=weekPlanData();
  return[
   ["Прибыль месяца",money(month.finalProfit||0),"Фактический результат",(month.finalProfit||0)<0?"danger":"good"],
@@ -1709,7 +1708,7 @@ function renderDesktopBoard(){
  })
 }
 
-function safeDesktopCarProfit(carId,period=currentMonth()){
+function safeDesktopCarProfit(carId,period=fleetPilotCurrentMonth()()){
  try{return Number(financialData(period,carId)?.finalProfit||0)}catch(error){console.warn("FleetPilot table profit fallback",carId,error);return 0}
 }
 
@@ -1751,7 +1750,7 @@ function desktopTableRow(c,period){
 }
 function renderDesktopTable(){
  const root=$("#desktopFleetTableBody");if(!root)return;
- const cars=fleetCars(),period=currentMonth();
+ const cars=fleetCars(),period=fleetPilotCurrentMonth()();
  if(!cars.length){
   root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11"><div class="desktop-table-empty"><span>🚘</span><strong>В автопарке пока нет автомобилей</strong><small>Добавьте первый автомобиль, и он появится здесь автоматически.</small><button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button></div></td></tr>`;
   return
@@ -1950,6 +1949,34 @@ function gpsStatusForCar(c){
  const stamp=new Date(d.updatedAt).getTime();
  return{...d,online:d.online!==false&&Number.isFinite(stamp)&&Date.now()-stamp<15*60*1000}
 }
+function findCarOnGps(carId){
+ const c=typeof car==="function"?car(carId):(db?.cars||[]).find(x=>x.id===carId);
+ if(!c)return toast("Автомобиль не найден");
+
+ const gps=gpsStatusForCar(c);
+ if(!gps||!Number.isFinite(gps.latitude)||!Number.isFinite(gps.longitude)){
+  return toast("Для автомобиля нет GPS-координат")
+ }
+
+ setDesktopView("map");
+ fleetMapV2SelectedCity=`gps-${c.id}`;
+
+ requestAnimationFrame(()=>{
+  renderFleetMapV2({fit:false});
+  setTimeout(()=>{
+   const map=ensureFleetMapV2();
+   if(map){
+    map.flyTo([gps.latitude,gps.longitude],15,{duration:.65});
+   }
+
+   const row=fleetMapV2RowsCache.find(item=>item.key===`gps-${c.id}`);
+   if(row)renderFleetMapV2Panel(row)
+  },180)
+ })
+}
+window.findCarOnGps=findCarOnGps;
+
+
 function currentGpsFormConfig(){
  return{
   provider:$("#gpsProvider").value,
@@ -2188,16 +2215,18 @@ function renderFleetMapV2Panel(selectedRow=null){
   :`${fleetMapV2RowsCache.reduce((sum,row)=>sum+row.cars.length,0)} автомобилей`;
 
  if(selectedRow){
-  panel.innerHTML=selectedRow.cars.map(c=>{
+  panel.innerHTML=`<button type="button" class="map-back-to-cities" onclick="showAllFleetMapCities()">← Все города</button>`+
+  selectedRow.cars.map(c=>{
    const m=model(c);
-   return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')">
+   const gps=gpsStatusForCar(c);
+   return`<div class="map-car-row map-car-row-v2">
     <span class="map-car-status ${fleetMapV2CarLevel(c)}"></span>
-    <div>
-     <strong>${m.brand} ${m.model}</strong>
-     <small>${c.plate||"Без номера"} · ${statusText(c.status)} · ${money(safeDesktopCarProfit(c.id))}</small>
-    </div>
-    <b>›</b>
-   </button>`
+    <button type="button" class="map-car-main" onclick="openCar('${c.id}')">
+      <strong>${m.brand} ${m.model}</strong>
+      <small>${c.plate||"Без номера"} · ${statusText(c.status)}${gps?` · GPS ${gps.online?"online":"offline"}`:""}</small>
+    </button>
+    ${gps?`<button type="button" class="map-car-locate" onclick="findCarOnGps('${c.id}')" title="Найти на GPS">⌖</button>`:`<b>›</b>`}
+   </div>`
   }).join("")
  }else{
   panel.innerHTML=fleetMapV2RowsCache.length
@@ -2220,6 +2249,16 @@ function renderFleetMapV2Panel(selectedRow=null){
    :""
  }
 }
+
+
+function showAllFleetMapCities(){
+ fleetMapV2SelectedCity="";
+ renderFleetMapV2Panel(null);
+ const map=ensureFleetMapV2();
+ const bounds=fleetMapV2RowsCache.filter(row=>row.coords).map(row=>row.coords);
+ if(map&&bounds.length)map.fitBounds(bounds,{padding:[45,45],maxZoom:8})
+}
+window.showAllFleetMapCities=showAllFleetMapCities;
 
 function focusFleetMapV2City(cityKey){
  const map=ensureFleetMapV2();
@@ -2363,7 +2402,7 @@ function desktopInsightRows(){
  if(planned.totalPlannedCosts>0)rows.push({type:"money",text:`На этой неделе нужно подготовить ${money(planned.totalPlannedCosts)} на плановые расходы.`});
  const free=cars.filter(c=>c.status==="free");
  if(free.length)rows.push({type:"info",text:`Свободных автомобилей: ${free.length}. Их можно быстрее вывести на линию.`});
- const best=cars.map(c=>({c,profit:financialData(currentMonth(),c.id).finalProfit})).sort((a,b)=>b.profit-a.profit)[0];
+ const best=cars.map(c=>({c,profit:financialData(fleetPilotCurrentMonth()(),c.id).finalProfit})).sort((a,b)=>b.profit-a.profit)[0];
  if(best&&best.profit>0)rows.push({type:"good",text:`Лидер месяца: ${model(best.c).brand} ${model(best.c).model} — ${money(best.profit)}.`});
  return rows.slice(0,5)
 }
@@ -2611,7 +2650,28 @@ function renderFleet(){
       <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
       <span class="desktop-status ${c.status}">${statusText(c.status)}</span>
     </div>
-    ${(()=>{const gps=gpsStatusForCar(c);return gps?`<div class="desktop-gps-line"><span class="desktop-gps-badge ${gps.online?"online":"offline"}"><i></i>${gps.online?`GPS · ${Math.round(gps.speed||0)} км/ч`:"GPS offline"}</span></div>`:""})()}
+    ${(()=>{
+      const gps=gpsStatusForCar(c);
+      if(!gps)return"";
+      const updated=new Date(gps.updatedAt);
+      const updatedText=Number.isNaN(updated.getTime())?"Нет времени":updated.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+      return`<div class="desktop-gps-line">
+        <div class="desktop-gps-status-card ${gps.online?"online":"offline"}">
+          <span class="desktop-gps-status-icon">
+            <i></i>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg>
+          </span>
+          <span class="desktop-gps-status-copy">
+            <small>GPS ${gps.online?"ONLINE":"OFFLINE"}</small>
+            <strong>${gps.online?`${Math.round(gps.speed||0)} км/ч`:`Последний сигнал ${updatedText}`}</strong>
+          </span>
+          <button type="button" class="desktop-gps-locate" onclick="event.stopPropagation();findCarOnGps('${c.id}')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v3.1A7 7 0 0 1 18.9 11H22v2h-3.1A7 7 0 0 1 13 18.9V22h-2v-3.1A7 7 0 0 1 5.1 13H2v-2h3.1A7 7 0 0 1 11 5.1V2Zm1 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2.5A2.5 2.5 0 1 1 12 14a2.5 2.5 0 0 1 0-5Z"/></svg>
+            Найти
+          </button>
+        </div>
+      </div>`
+    })()}
     <div class="desktop-service-mini-grid">
       <button type="button" class="desktop-service-mini ${health.oilLeft<=0?"danger":health.oilLeft<=1500?"warning":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')">
         <span class="desktop-service-symbol"><svg viewBox="0 0 24 24"><path d="M4 9h10l2 3h3a2 2 0 0 1 2 2v2h-2v-1h-3.2l-2.3-3.5H8V15H4V9Zm1-4h7v2H5V5Zm-2 8h3v4H3v-4Zm15.5-6.5c.9 1.2 1.5 2.1 1.5 3a1.5 1.5 0 1 1-3 0c0-.9.6-1.8 1.5-3Z"/></svg></span>
