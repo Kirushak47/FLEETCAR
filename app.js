@@ -36,7 +36,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v6.1.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v6.1.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -1017,7 +1017,55 @@ function renderFleet(){
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
 </div>
-<div class="car-body"><div class="vehicle-vitals"><button type="button" class="vehicle-vital service-action-vital ${health.oilLeft<=0?"danger urgent":health.oilLeft<=500?"danger soon":health.oilLeft<=1500?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')"><span class="vital-icon">◉</span><div><small>Масло</small><strong>${health.oilLeft<=0?"ПРОСРОЧЕНО":km(health.oilLeft)}</strong><em>${health.oilLeft>0&&health.oilLeft<=1500?`Осталось ${km(health.oilLeft)}`:"Нажмите для замены"}</em></div><span class="vital-action">Заменить →</span></button><button type="button" class="vehicle-vital service-action-vital insurance-vital ${health.insuranceDays<0?"danger urgent":health.insuranceDays<=7?"danger soon":health.insuranceDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','insurance')"><span class="vital-icon">◇</span><div><small>Страховка</small><strong>${date(c.insurance)}</strong><em>${health.insuranceDays<0?"ПРОСРОЧЕНА":health.insuranceDays<=7?`Осталось ${health.insuranceDays} дн.`:health.insuranceDays+" дн."}</em></div><span class="vital-action">Продлить →</span></button><button type="button" class="vehicle-vital service-action-vital inspection-vital ${health.inspectionDays<0?"danger urgent":health.inspectionDays<=7?"danger soon":health.inspectionDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','inspection')"><span class="vital-icon">✓</span><div><small>Техосмотр</small><strong>${date(c.inspection)}</strong><em>${health.inspectionDays<0?"ПРОСРОЧЕН":health.inspectionDays<=7?`Осталось ${health.inspectionDays} дн.`:health.inspectionDays+" дн."}</em></div><span class="vital-action">Продлить →</span></button></div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);const primary=health.insuranceDays<=health.inspectionDays?"insurance":"inspection";return alerts.length?`<button type="button" class="vehicle-alert-banner actionable-alert ${alerts.some(x=>x.includes("просроч"))?"danger":"warning"}" onclick="event.stopPropagation();openQuickService('${c.id}','${primary}')"><span>!</span><strong>${alerts.join(" · ")}</strong><b>Обновить →</b></button>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
+<div class="car-body"><div class="vehicle-vitals premium-service-grid">
+<button type="button" class="vehicle-vital premium-service-card oil-card ${health.oilLeft<=0?"danger urgent":health.oilLeft<=500?"danger soon":health.oilLeft<=1500?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','oil')">
+  <div class="service-card-top">
+    <span class="premium-service-icon oil-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M4 9h10l2 3h3a2 2 0 0 1 2 2v2h-2v-1h-3.2l-2.3-3.5H8V15H4V9Zm1-4h7v2H5V5Zm-2 8h3v4H3v-4Zm15.5-6.5c.9 1.2 1.5 2.1 1.5 3a1.5 1.5 0 1 1-3 0c0-.9.6-1.8 1.5-3Z"/></svg>
+    </span>
+    <span class="service-state-dot"></span>
+  </div>
+  <div class="service-card-copy">
+    <small>Масло</small>
+    <strong>${health.oilLeft<=0?"Требует замены":km(health.oilLeft)}</strong>
+    <em>${health.oilLeft<=0?"Интервал превышен":health.oilLeft<=1500?`Осталось ${km(health.oilLeft)}`:"До замены"}</em>
+  </div>
+  <div class="service-progress"><i style="width:${Math.max(4,Math.min(100,(health.oilLeft/Math.max(1,c.oilInterval||10000))*100))}%"></i></div>
+  <span class="premium-service-action">Заменить <b>›</b></span>
+</button>
+
+<button type="button" class="vehicle-vital premium-service-card insurance-card ${health.insuranceDays<0?"danger urgent":health.insuranceDays<=7?"danger soon":health.insuranceDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','insurance')">
+  <div class="service-card-top">
+    <span class="premium-service-icon insurance-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 2 4.5 5.2V11c0 5 3.2 9.5 7.5 11 4.3-1.5 7.5-6 7.5-11V5.2L12 2Zm0 3 4.5 1.9V11c0 3.5-1.9 6.8-4.5 8.2C9.4 17.8 7.5 14.5 7.5 11V6.9L12 5Zm-1 3v3H8v2h3v3h2v-3h3v-2h-3V8h-2Z"/></svg>
+    </span>
+    <span class="service-state-dot"></span>
+  </div>
+  <div class="service-card-copy">
+    <small>Страховка</small>
+    <strong>${date(c.insurance)}</strong>
+    <em>${health.insuranceDays<0?"Просрочена":`Осталось ${health.insuranceDays} дн.`}</em>
+  </div>
+  <div class="service-progress"><i style="width:${Math.max(4,Math.min(100,(Math.max(0,health.insuranceDays)/365)*100))}%"></i></div>
+  <span class="premium-service-action">Продлить <b>›</b></span>
+</button>
+
+<button type="button" class="vehicle-vital premium-service-card inspection-card ${health.inspectionDays<0?"danger urgent":health.inspectionDays<=7?"danger soon":health.inspectionDays<=30?"warning soon":"good"}" onclick="event.stopPropagation();openQuickService('${c.id}','inspection')">
+  <div class="service-card-top">
+    <span class="premium-service-icon inspection-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2h3l1-2Zm1.2 2-.5 1H5v12h14V7h-4.7l-.5-1h-3.6Zm.3 8.2 5.1-5.1 1.4 1.4-6.5 6.5-3.4-3.4 1.4-1.4 2 2Z"/></svg>
+    </span>
+    <span class="service-state-dot"></span>
+  </div>
+  <div class="service-card-copy">
+    <small>Техосмотр</small>
+    <strong>${date(c.inspection)}</strong>
+    <em>${health.inspectionDays<0?"Просрочен":`Осталось ${health.inspectionDays} дн.`}</em>
+  </div>
+  <div class="service-progress"><i style="width:${Math.max(4,Math.min(100,(Math.max(0,health.inspectionDays)/365)*100))}%"></i></div>
+  <span class="premium-service-action">Продлить <b>›</b></span>
+</button>
+</div>${(()=>{const alerts=[];if(health.insuranceDays<0)alerts.push(`Страховка просрочена на ${Math.abs(health.insuranceDays)} дн.`);else if(health.insuranceDays<=30)alerts.push(`Страховка заканчивается через ${health.insuranceDays} дн.`);if(health.inspectionDays<0)alerts.push(`Техосмотр просрочен на ${Math.abs(health.inspectionDays)} дн.`);else if(health.inspectionDays<=30)alerts.push(`Техосмотр заканчивается через ${health.inspectionDays} дн.`);const primary=health.insuranceDays<=health.inspectionDays?"insurance":"inspection";return alerts.length?`<button type="button" class="vehicle-alert-banner actionable-alert ${alerts.some(x=>x.includes("просроч"))?"danger":"warning"}" onclick="event.stopPropagation();openQuickService('${c.id}','${primary}')"><span>!</span><strong>${alerts.join(" · ")}</strong><b>ОБНОВИТЬ <span>›</span></b></button>`:""})()}<div class="metrics no-photo-metrics compact-car-metrics">
 <div class="metric"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
 <div class="metric ${o<=0?"bad":o<=1000?"warn":""}"><small>До замены масла</small><strong>${o<=0?"Просрочено":km(o)}</strong></div>
 <div class="metric next-event-metric ${nextEvent&&nextEvent.days<=14?"warn":""}"><small>Ближайшее событие</small><strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет событий"}</strong></div>
