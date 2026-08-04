@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=710">
-  <link rel="stylesheet" href="styles.css?v=710">
+  <title>FleetPilot V7.2</title>
+  <link rel="manifest" href="manifest.webmanifest?v=720">
+  <link rel="stylesheet" href="styles.css?v=720">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -30,7 +30,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V7.2</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -47,27 +47,103 @@
           <button type="button" id="desktopAddCar" class="btn primary">+ Автомобиль</button>
         </div>
       </div>
-      <section class="desktop-office-dashboard" aria-label="Командный центр">
-        <div class="office-kpi-strip" id="officeKpiStrip"></div>
-        <div class="office-workspace">
-          <section class="office-board-panel">
-            <div class="office-panel-head"><div><span>Оперативное управление</span><h3>Fleet Board</h3></div><button type="button" id="toggleOfficeBoard" class="office-small-button">Свернуть</button></div>
-            <div id="officeFleetBoard" class="office-fleet-board"></div>
+
+      <section class="desktop-command-center" aria-label="FleetPilot Command Center">
+        <div class="desktop-view-switcher" role="tablist" aria-label="Вид автопарка">
+          <button type="button" class="active" data-fleet-view="list">☰ Список</button>
+          <button type="button" data-fleet-view="board">▦ Доска</button>
+          <button type="button" data-fleet-view="table">▤ Таблица</button>
+          <button type="button" data-fleet-view="map">⌖ Карта</button>
+        </div>
+
+        <div id="desktopCommandKpis" class="desktop-command-kpis"></div>
+
+        <div class="desktop-command-layout">
+          <section class="desktop-command-main">
+            <div id="desktopBoardView" class="desktop-command-view" data-command-view="board" hidden>
+              <div class="command-section-head">
+                <div><span>Оперативное управление</span><h3>Fleet Board</h3></div>
+                <small>Перетащите автомобиль в другую колонку</small>
+              </div>
+              <div id="desktopFleetBoard" class="desktop-fleet-board-v2"></div>
+            </div>
+
+            <div id="desktopTableView" class="desktop-command-view" data-command-view="table" hidden>
+              <div class="command-section-head">
+                <div><span>Большой автопарк</span><h3>Таблица автомобилей</h3></div>
+                <small>Подходит для 50–500 автомобилей</small>
+              </div>
+              <div class="desktop-table-scroll">
+                <table class="desktop-fleet-table">
+                  <thead><tr>
+                    <th><input id="selectAllDesktopCars" type="checkbox" aria-label="Выбрать все"></th>
+                    <th>Автомобиль</th><th>Город</th><th>Водитель</th><th>Статус</th>
+                    <th>Пробег</th><th>Масло</th><th>Страховка</th><th>ТО</th><th>Прибыль</th><th></th>
+                  </tr></thead>
+                  <tbody id="desktopFleetTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="desktopMapView" class="desktop-command-view" data-command-view="map" hidden>
+              <div class="command-section-head">
+                <div><span>География бизнеса</span><h3>Карта автопарка</h3></div>
+                <select id="desktopMapFilter">
+                  <option value="all">Все автомобили</option>
+                  <option value="active">На линии</option>
+                  <option value="repair">В ремонте</option>
+                  <option value="free">Свободные</option>
+                  <option value="attention">Требуют внимания</option>
+                </select>
+              </div>
+              <div class="fleet-map-layout">
+                <div class="poland-map-card">
+                  <svg id="polandFleetMap" viewBox="0 0 700 560" role="img" aria-label="Карта Польши">
+                    <path class="poland-shape" d="M136 90 210 62 286 73 348 48 431 74 510 67 571 116 613 180 592 242 623 310 584 377 521 402 483 468 402 489 333 520 263 492 194 503 139 456 101 394 79 325 98 259 73 194 102 142Z"/>
+                    <g id="polandCityMarkers"></g>
+                  </svg>
+                </div>
+                <aside class="map-city-panel">
+                  <div class="map-city-panel-head"><strong id="mapSelectedCity">Все города</strong><span id="mapSelectedCount">0 автомобилей</span></div>
+                  <div id="mapCityCars" class="map-city-cars"></div>
+                </aside>
+              </div>
+            </div>
           </section>
-          <aside class="office-events-panel">
-            <div class="office-panel-head"><div><span>Ближайшие события</span><h3>Сегодня и далее</h3></div><button type="button" id="openOfficeCalendar" class="office-small-button">Календарь</button></div>
-            <div id="officeEventsFeed" class="office-events-feed"></div>
+
+          <aside class="desktop-command-side">
+            <section class="command-side-card">
+              <div class="command-section-head compact">
+                <div><span>События</span><h3>Сегодня и далее</h3></div>
+                <button type="button" id="commandOpenCalendar">Открыть</button>
+              </div>
+              <div id="desktopEventFeed" class="desktop-event-feed"></div>
+            </section>
+
+            <section class="command-side-card">
+              <div class="command-section-head compact">
+                <div><span>FleetPilot AI</span><h3>Что важно сейчас</h3></div>
+              </div>
+              <div id="desktopAiInsights" class="desktop-ai-insights"></div>
+            </section>
           </aside>
         </div>
-        <div id="bulkActionBar" class="bulk-action-bar" hidden>
-          <strong><span id="bulkSelectedCount">0</span> выбрано</strong>
-          <select id="bulkStatusSelect"><option value="">Изменить статус…</option><option value="active">На линии</option><option value="repair">В ремонте</option><option value="free">Свободен</option></select>
-          <input id="bulkCityInput" placeholder="Изменить город">
-          <button type="button" id="applyBulkStatus" class="btn">Применить статус</button>
-          <button type="button" id="applyBulkCity" class="btn">Применить город</button>
-          <button type="button" id="clearBulkSelection" class="btn">Снять выбор</button>
+
+        <div id="desktopBulkBar" class="desktop-bulk-bar" hidden>
+          <strong><span id="desktopBulkCount">0</span> выбрано</strong>
+          <select id="desktopBulkStatus">
+            <option value="">Статус…</option>
+            <option value="active">На линии</option>
+            <option value="repair">В ремонте</option>
+            <option value="free">Свободен</option>
+          </select>
+          <input id="desktopBulkCity" placeholder="Новый город">
+          <button type="button" id="desktopApplyStatus">Применить статус</button>
+          <button type="button" id="desktopApplyCity">Применить город</button>
+          <button type="button" id="desktopClearSelection">Снять выбор</button>
         </div>
       </section>
+
       <div class="today-hero" data-dashboard-block="hero" data-mobile-dashboard="true">
         <div><span class="eyebrow">Сегодня</span><h2>Состояние автопарка</h2><p>Все важные события в одном месте</p></div>
         <div class="hero-actions">
@@ -579,5 +655,5 @@
 </dialog>
 
 <dialog id="depositDialog"><form id="depositForm" class="modal"><div class="modal-head"><div><span class="eyebrow">Кауция водителя</span><h2>Добавить платёж</h2></div><button type="button" data-close="depositDialog">✕</button></div><input id="depositId" type="hidden"><label>Автомобиль<select id="depositCarId"></select></label><label>Водитель<input id="depositTenant"></label><div class="grid2"><label>Сумма<input id="depositAmount" type="number" step="0.01" min="0" required></label><label>Дата<input id="depositDate" type="date" required></label></div><label>Комментарий<input id="depositNote"></label><button class="btn primary full">Сохранить платёж кауции</button></form></dialog><div id="toast" class="toast"></div>
-<script src="app.js?v=710"></script>
+<script src="app.js?v=720"></script>
 </body></html>

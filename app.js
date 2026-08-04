@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -318,11 +318,25 @@ $("#desktopThemeToggle").onclick=()=>toggleTheme();
 $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
-$("#toggleOfficeBoard").onclick=()=>document.querySelector(".office-board-panel").classList.toggle("collapsed");
-$("#openOfficeCalendar").onclick=()=>showPage("calendarPage");
-$("#applyBulkStatus").onclick=applyBulkStatus;$("#applyBulkCity").onclick=applyBulkCity;$("#clearBulkSelection").onclick=clearOfficeSelection;
-document.addEventListener("keydown",event=>{if(event.target&&["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="n"){event.preventDefault();openCarDialog()}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="f"){event.preventDefault();showPage("fleetPage");setTimeout(()=>$("#fleetSearch")?.focus(),30)}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="p"){event.preventDefault();if(requireFleetCar())openPaymentDialog()}if(event.key==="Escape"&&officeSelection.size)clearOfficeSelection()});
-window.addEventListener("resize",()=>{if(window.innerWidth>=1100)renderOfficeMode()});
+$$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
+$("#desktopMapFilter").onchange=()=>renderDesktopMap();
+$("#commandOpenCalendar").onclick=()=>showPage("calendarPage");
+$("#desktopApplyStatus").onclick=applyDesktopBulkStatus;
+$("#desktopApplyCity").onclick=applyDesktopBulkCity;
+$("#desktopClearSelection").onclick=clearDesktopSelection;
+$("#selectAllDesktopCars").onchange=e=>{
+ if(e.target.checked)fleetCars().forEach(c=>desktopSelection.add(c.id));else desktopSelection.clear();
+ syncDesktopSelection()
+};
+document.addEventListener("keydown",event=>{
+ if(event.target&&["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName))return;
+ if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="n"){event.preventDefault();openCarDialog()}
+ if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="f"){event.preventDefault();showPage("fleetPage");setTimeout(()=>$("#fleetSearch")?.focus(),30)}
+ if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="p"){event.preventDefault();if(requireFleetCar())openPaymentDialog()}
+ if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();$("#globalSearchButton").click()}
+ if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
+});
+window.addEventListener("resize",()=>{if(window.innerWidth>=1100)renderDesktopCommand()});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1010,33 +1024,205 @@ function cityLabel(){
 }
 
 
-const officeSelection=new Set();
-function officeStatusLabel(status){return{active:"На линии",repair:"В ремонте",free:"Доступны"}[status]||status}
-function officeKpiData(){
- const cars=fleetCars(),active=cars.filter(c=>c.status==="active").length,repair=cars.filter(c=>c.status==="repair").length,free=cars.filter(c=>c.status==="free").length,attentionCount=cars.filter(attention).length;
- const month=financialData(currentMonth(),null),week=weekPlanData();
+const DESKTOP_VIEW_KEY="fleetpilot.desktop.view.v1";
+const desktopSelection=new Set();
+const POLAND_CITY_POINTS={
+ "Warszawa":[423,274],"Kraków":[398,423],"Łódź":[344,304],"Wrocław":[244,360],
+ "Poznań":[216,253],"Gdańsk":[342,103],"Szczecin":[112,207],"Bydgoszcz":[280,197],
+ "Lublin":[516,341],"Katowice":[342,405],"Białystok":[540,212],"Gdynia":[331,91],
+ "Częstochowa":[351,361],"Radom":[438,330],"Toruń":[309,214],"Rzeszów":[486,433],
+ "Kielce":[416,377],"Olsztyn":[437,166],"Opole":[286,386],"Zielona Góra":[170,319],
+ "Warsaw":[423,274],"Cracow":[398,423],"Lodz":[344,304],"Wroclaw":[244,360],
+ "Poznan":[216,253],"Gdansk":[342,103]
+};
+
+function desktopView(){
+ return localStorage.getItem(DESKTOP_VIEW_KEY)||"list"
+}
+
+function setDesktopView(view){
+ localStorage.setItem(DESKTOP_VIEW_KEY,view);
+ document.documentElement.dataset.desktopFleetView=view;
+ $$("[data-fleet-view]").forEach(button=>button.classList.toggle("active",button.dataset.fleetView===view));
+ $$("[data-command-view]").forEach(panel=>panel.hidden=panel.dataset.commandView!==view);
+ const grid=$("#fleetGrid");
+ if(grid)grid.closest("[data-dashboard-block='cars']")?.classList.toggle("desktop-command-hidden",view!=="list");
+ if(view==="board")renderDesktopBoard();
+ if(view==="table")renderDesktopTable();
+ if(view==="map")renderDesktopMap();
+}
+
+function desktopCommandKpis(){
+ const cars=fleetCars();
+ const active=cars.filter(c=>c.status==="active").length;
+ const repair=cars.filter(c=>c.status==="repair").length;
+ const free=cars.filter(c=>c.status==="free").length;
+ const attentionCount=cars.filter(attention).length;
+ const month=financialData(currentMonth(),null);
+ const week=weekPlanData();
  return[
-  {label:"Прибыль месяца",value:money(month.finalProfit||0),hint:"Фактический результат",type:(month.finalProfit||0)<0?"danger":"good"},
-  {label:"План недели",value:money(week.plannedRevenue||0),hint:`Ожидаемо ${money(week.expectedProfit||0)}`,type:"primary"},
-  {label:"На линии",value:`${active} / ${cars.length}`,hint:`Доступны ${free}`,type:"good"},
-  {label:"В сервисе",value:String(repair),hint:`Требуют внимания ${attentionCount}`,type:repair||attentionCount?"warning":"good"}
+  ["Прибыль месяца",money(month.finalProfit||0),"Фактический результат",(month.finalProfit||0)<0?"danger":"good"],
+  ["План недели",money(week.plannedRevenue||0),`Ожидаемо ${money(week.expectedProfit||0)}`,"primary"],
+  ["На линии",`${active} / ${cars.length}`,`Свободно ${free}`,"good"],
+  ["Сервис и контроль",String(repair+attentionCount),`${repair} в ремонте · ${attentionCount} требуют внимания`,repair+attentionCount?"warning":"good"]
  ]
 }
-function renderOfficeKpis(){const root=$("#officeKpiStrip");if(root)root.innerHTML=officeKpiData().map(item=>`<article class="office-kpi-card ${item.type}"><small>${item.label}</small><strong>${item.value}</strong><span>${item.hint}</span></article>`).join("")}
-function renderOfficeBoard(){
- const root=$("#officeFleetBoard");if(!root)return;
- root.innerHTML=["active","repair","free"].map(status=>{const cars=fleetCars().filter(c=>c.status===status);return`<div class="office-board-column"><div class="office-board-title"><strong>${officeStatusLabel(status)}</strong><span>${cars.length}</span></div><div class="office-board-list" data-drop-status="${status}">${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="office-board-car health-${h.level}" draggable="true" data-drag-car="${c.id}"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}${c.city?` · ${c.city}`:""}</small></div><span>${h.items.length?h.items[0].value:"OK"}</span></article>`}).join("")||`<div class="office-board-empty">Нет автомобилей</div>`}</div></div>`}).join("");
- root.querySelectorAll("[data-drag-car]").forEach(card=>card.ondragstart=e=>e.dataTransfer.setData("text/plain",card.dataset.dragCar));
- root.querySelectorAll("[data-drop-status]").forEach(list=>{list.ondragover=e=>{e.preventDefault();list.classList.add("drag-over")};list.ondragleave=()=>list.classList.remove("drag-over");list.ondrop=e=>{e.preventDefault();list.classList.remove("drag-over");const c=car(e.dataTransfer.getData("text/plain"));if(!c)return;c.status=list.dataset.dropStatus;save();renderFleet();toast(`Статус: ${statusText(c.status)}`)}})
+
+function renderDesktopCommandKpis(){
+ const root=$("#desktopCommandKpis");if(!root)return;
+ root.innerHTML=desktopCommandKpis().map(([label,value,hint,type])=>`<article class="desktop-command-kpi ${type}"><small>${label}</small><strong>${value}</strong><span>${hint}</span></article>`).join("")
 }
-function renderOfficeEvents(){const root=$("#officeEventsFeed");if(!root)return;const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);root.innerHTML=events.length?events.map(e=>`<button type="button" class="office-event-item ${e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openCar('${e.carId}')"><span class="office-event-icon">${eventIcon(e.type)}</span><div><strong>${e.title}</strong><small>${e.car}</small></div><time>${e.days===0?"Сегодня":e.days===1?"Завтра":`${e.days} дн.`}</time></button>`).join(""):`<div class="office-empty-state">Ближайших событий нет</div>`}
-function renderOfficeMode(){if(window.innerWidth<1100)return;renderOfficeKpis();renderOfficeBoard();renderOfficeEvents();syncOfficeSelection()}
-function toggleOfficeSelection(id,checked){checked?officeSelection.add(id):officeSelection.delete(id);syncOfficeSelection()}
-function syncOfficeSelection(){$$(".office-car-checkbox").forEach(input=>input.checked=officeSelection.has(input.value));const bar=$("#bulkActionBar");if(!bar)return;bar.hidden=!officeSelection.size;$("#bulkSelectedCount").textContent=officeSelection.size}
-function clearOfficeSelection(){officeSelection.clear();syncOfficeSelection()}
-function applyBulkStatus(){const status=$("#bulkStatusSelect").value;if(!status||!officeSelection.size)return toast("Выберите статус");officeSelection.forEach(id=>{const c=car(id);if(c)c.status=status});save();clearOfficeSelection();renderFleet();toast("Статус обновлён")}
-function applyBulkCity(){const city=normalizedCity($("#bulkCityInput").value);if(!city||!officeSelection.size)return toast("Укажите город");officeSelection.forEach(id=>{const c=car(id);if(c)c.city=city});save();clearOfficeSelection();renderFleet();toast("Город обновлён")}
-window.toggleOfficeSelection=toggleOfficeSelection;
+
+function renderDesktopBoard(){
+ const root=$("#desktopFleetBoard");if(!root)return;
+ const statuses=["active","repair","free"];
+ root.innerHTML=statuses.map(status=>{
+  const cars=fleetCars().filter(c=>c.status===status);
+  return`<section class="desktop-board-column">
+    <div class="desktop-board-column-head"><strong>${statusText(status)}</strong><span>${cars.length}</span></div>
+    <div class="desktop-board-dropzone" data-board-drop="${status}">
+      ${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="desktop-board-car health-${h.level}" draggable="true" data-board-car="${c.id}" onclick="openCar('${c.id}')">
+        <div><strong>${m.brand} ${m.model}</strong><small>${c.plate}${c.city?` · ${c.city}`:""}</small></div>
+        <span>${h.items.length?h.items[0].value:"OK"}</span>
+      </article>`}).join("")||`<div class="desktop-board-empty">Нет автомобилей</div>`}
+    </div>
+  </section>`
+ }).join("");
+ root.querySelectorAll("[data-board-car]").forEach(card=>{
+  card.ondragstart=e=>{e.stopPropagation();e.dataTransfer.setData("text/plain",card.dataset.boardCar)}
+ });
+ root.querySelectorAll("[data-board-drop]").forEach(zone=>{
+  zone.ondragover=e=>{e.preventDefault();zone.classList.add("drag-over")};
+  zone.ondragleave=()=>zone.classList.remove("drag-over");
+  zone.ondrop=e=>{
+   e.preventDefault();zone.classList.remove("drag-over");
+   const c=car(e.dataTransfer.getData("text/plain"));if(!c)return;
+   c.status=zone.dataset.boardDrop;save();renderFleet();toast(`Статус: ${statusText(c.status)}`)
+  }
+ })
+}
+
+function renderDesktopTable(){
+ const root=$("#desktopFleetTableBody");if(!root)return;
+ const period=currentMonth();
+ root.innerHTML=fleetCars().map(c=>{
+  const m=model(c),h=healthDetails(c),profit=financialData(period,c.id).finalProfit;
+  return`<tr class="${h.level}">
+   <td><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"></td>
+   <td><button class="table-car-link" onclick="openCar('${c.id}')"><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></button></td>
+   <td>${c.city||"—"}</td><td>${c.tenant||"—"}</td>
+   <td><span class="table-status ${c.status}">${statusText(c.status)}</span></td>
+   <td>${km(c.mileage)}</td>
+   <td class="${h.oilLeft<=1500?"warn":""}">${h.oilLeft<=0?"Просрочено":km(h.oilLeft)}</td>
+   <td class="${h.insuranceDays<=30?"warn":""}">${h.insuranceDays<0?"Просрочена":`${h.insuranceDays} дн.`}</td>
+   <td class="${h.inspectionDays<=30?"warn":""}">${h.inspectionDays<0?"Просрочен":`${h.inspectionDays} дн.`}</td>
+   <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
+   <td><button class="table-open" onclick="openCar('${c.id}')">Открыть</button></td>
+  </tr>`
+ }).join("");
+ syncDesktopSelection()
+}
+
+function normalizeMapCity(city){
+ const raw=String(city||"").trim();
+ if(!raw)return"Без города";
+ return raw.split(",")[0].trim()
+}
+
+function cityMapData(){
+ const filter=$("#desktopMapFilter")?.value||"all";
+ const selected=fleetCars().filter(c=>{
+  if(filter==="all")return true;
+  if(filter==="attention")return attention(c);
+  return c.status===filter
+ });
+ const map=new Map();
+ selected.forEach(c=>{
+  const city=normalizeMapCity(c.city),row=map.get(city)||{city,cars:[],profit:0,attention:0};
+  row.cars.push(c);row.profit+=financialData(currentMonth(),c.id).finalProfit||0;if(attention(c))row.attention++;map.set(city,row)
+ });
+ return[...map.values()].sort((a,b)=>b.cars.length-a.cars.length)
+}
+
+function mapPointForCity(city,index){
+ if(POLAND_CITY_POINTS[city])return POLAND_CITY_POINTS[city];
+ const aliases=Object.keys(POLAND_CITY_POINTS).find(key=>key.toLowerCase()===city.toLowerCase());
+ if(aliases)return POLAND_CITY_POINTS[aliases];
+ const cols=4,row=Math.floor(index/cols),col=index%cols;
+ return[165+col*115,155+row*78]
+}
+
+function renderDesktopMap(selectedCity=""){
+ const markers=$("#polandCityMarkers"),panel=$("#mapCityCars");if(!markers||!panel)return;
+ const rows=cityMapData();
+ markers.innerHTML=rows.map((row,index)=>{
+  const [x,y]=mapPointForCity(row.city,index),level=row.attention?"warning":row.profit<0?"danger":"good";
+  return`<g class="map-marker ${level}" data-map-city="${row.city}" transform="translate(${x} ${y})" role="button" tabindex="0">
+    <circle r="${Math.min(27,15+row.cars.length*1.5)}"></circle><text text-anchor="middle" dy="4">${row.cars.length}</text>
+    <title>${row.city}: ${row.cars.length} авто · ${money(row.profit)}</title>
+  </g>`
+ }).join("");
+ markers.querySelectorAll("[data-map-city]").forEach(marker=>{
+  marker.onclick=()=>renderDesktopMap(marker.dataset.mapCity);
+  marker.onkeydown=e=>{if(e.key==="Enter")renderDesktopMap(marker.dataset.mapCity)}
+ });
+ const chosen=rows.find(r=>r.city===selectedCity)||rows[0];
+ $("#mapSelectedCity").textContent=chosen?.city||"Все города";
+ $("#mapSelectedCount").textContent=chosen?`${chosen.cars.length} автомобилей · ${money(chosen.profit)}`:"0 автомобилей";
+ panel.innerHTML=chosen?chosen.cars.map(c=>{const m=model(c);return`<button type="button" class="map-car-row" onclick="openCar('${c.id}')"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate} · ${statusText(c.status)}</small></div><span>${attention(c)?"⚠":"›"}</span></button>`}).join(""):`<div class="map-empty">Нет данных по городам</div>`
+}
+
+function renderDesktopEvents(){
+ const root=$("#desktopEventFeed");if(!root)return;
+ const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
+ root.innerHTML=events.length?events.map(e=>`<button type="button" class="desktop-event ${e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openCar('${e.carId}')">
+  <span>${eventIcon(e.type)}</span><div><strong>${e.title}</strong><small>${e.car}</small></div><time>${e.days===0?"Сегодня":e.days===1?"Завтра":`${e.days} дн.`}</time>
+ </button>`).join(""):`<div class="command-empty">Ближайших событий нет</div>`
+}
+
+function desktopInsightRows(){
+ const cars=fleetCars(),rows=[];
+ const attentionCars=cars.filter(attention);
+ if(attentionCars.length)rows.push({type:"warning",text:`${attentionCars.length} автомобилей требуют внимания.`});
+ const upcoming=allEvents().filter(e=>e.days>=0&&e.days<=7);
+ if(upcoming.length)rows.push({type:"info",text:`На ближайшие 7 дней запланировано ${upcoming.length} событий.`});
+ const planned=weekPlanData();
+ if(planned.totalPlannedCosts>0)rows.push({type:"money",text:`На этой неделе нужно подготовить ${money(planned.totalPlannedCosts)} на плановые расходы.`});
+ const free=cars.filter(c=>c.status==="free");
+ if(free.length)rows.push({type:"info",text:`Свободных автомобилей: ${free.length}. Их можно быстрее вывести на линию.`});
+ const best=cars.map(c=>({c,profit:financialData(currentMonth(),c.id).finalProfit})).sort((a,b)=>b.profit-a.profit)[0];
+ if(best&&best.profit>0)rows.push({type:"good",text:`Лидер месяца: ${model(best.c).brand} ${model(best.c).model} — ${money(best.profit)}.`});
+ return rows.slice(0,5)
+}
+
+function renderDesktopInsights(){
+ const root=$("#desktopAiInsights");if(!root)return;
+ root.innerHTML=desktopInsightRows().map(row=>`<article class="desktop-ai-row ${row.type}"><span></span><p>${row.text}</p></article>`).join("")||`<div class="command-empty">Сейчас всё стабильно.</div>`
+}
+
+function renderDesktopCommand(){
+ if(window.innerWidth<1100)return;
+ renderDesktopCommandKpis();renderDesktopEvents();renderDesktopInsights();setDesktopView(desktopView());syncDesktopSelection()
+}
+
+function toggleDesktopSelection(id,checked){
+ checked?desktopSelection.add(id):desktopSelection.delete(id);syncDesktopSelection()
+}
+function syncDesktopSelection(){
+ $$(".desktop-command-checkbox").forEach(input=>input.checked=desktopSelection.has(input.value));
+ const bar=$("#desktopBulkBar");if(!bar)return;
+ bar.hidden=!desktopSelection.size;$("#desktopBulkCount").textContent=desktopSelection.size
+}
+function clearDesktopSelection(){desktopSelection.clear();syncDesktopSelection()}
+function applyDesktopBulkStatus(){
+ const status=$("#desktopBulkStatus").value;if(!status||!desktopSelection.size)return toast("Выберите статус");
+ desktopSelection.forEach(id=>{const c=car(id);if(c)c.status=status});save();clearDesktopSelection();renderFleet();toast("Статусы обновлены")
+}
+function applyDesktopBulkCity(){
+ const city=normalizedCity($("#desktopBulkCity").value);if(!city||!desktopSelection.size)return toast("Укажите город");
+ desktopSelection.forEach(id=>{const c=car(id);if(c)c.city=city});save();clearDesktopSelection();renderFleet();toast("Город обновлён")
+}
+window.toggleDesktopSelection=toggleDesktopSelection;
 
 function renderFleet(){
  refreshCityControls();
@@ -1123,8 +1309,8 @@ function renderFleet(){
  <strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет запланированных событий"}</strong>
 </div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
-<div class="desktop-fleet-row health-${health.level}" data-office-car-id="${c.id}">
-<label class="desktop-row-select" onclick="event.stopPropagation()"><input type="checkbox" class="office-car-checkbox" value="${c.id}" onchange="toggleOfficeSelection('${c.id}',this.checked)"><span></span></label>
+<div class="desktop-fleet-row health-${health.level}" data-command-car="${c.id}">
+<label class="desktop-list-check" onclick="event.stopPropagation()"><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"><span></span></label>
   <span class="desktop-row-accent"></span>
   <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
     ${c.customPhoto?`<img class="desktop-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:`<div class="desktop-car-photo-placeholder">🚘</div>`}
@@ -1164,7 +1350,7 @@ function renderFleet(){
     <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button>
   </div>
 </div></div>`}).join("")||`<div class="card">Автомобили не найдены</div>`;;
- renderOfficeMode();
+ renderDesktopCommand();
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
 }
 function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
