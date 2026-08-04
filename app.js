@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.3.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -319,7 +319,11 @@ $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>setDesktopView(button.dataset.fleetView));
-$("#desktopMapFilter").onchange=()=>renderDesktopMap();
+$("#desktopMapFilter").onchange=()=>{
+ desktopMapSelectedCity="";
+ desktopMapHasInitialFit=false;
+ renderDesktopMap("",{preserveViewport:false,forceFit:true})
+};
 $("#commandOpenCalendar").onclick=()=>showPage("calendarPage");
 $("#desktopApplyStatus").onclick=applyDesktopBulkStatus;
 $("#desktopApplyCity").onclick=applyDesktopBulkCity;
@@ -336,7 +340,15 @@ document.addEventListener("keydown",event=>{
  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();$("#globalSearchButton").click()}
  if(event.key==="Escape"&&desktopSelection.size)clearDesktopSelection()
 });
-window.addEventListener("resize",()=>{if(window.innerWidth>=1100)renderDesktopCommand()});
+window.addEventListener("resize",()=>{if(window.innerWidth>=1100)scheduleDesktopLiveRefresh({preserveMapViewport:true})});
+window.addEventListener("load",()=>{
+ if(window.innerWidth>=1100){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   renderDesktopCommand();
+   setTimeout(()=>scheduleDesktopLiveRefresh({preserveMapViewport:true}),120)
+  }))
+ }
+});
 
 $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -1025,6 +1037,9 @@ function cityLabel(){
 
 
 const DESKTOP_VIEW_KEY="fleetpilot.desktop.view.v1";
+let desktopMapSelectedCity="";
+let desktopMapHasInitialFit=false;
+let desktopRefreshFrame=0;
 const desktopSelection=new Set();
 const POLAND_CITY_COORDS={
  "Warszawa":[52.2297,21.0122],"Warsaw":[52.2297,21.0122],
@@ -1051,6 +1066,47 @@ const POLAND_CITY_COORDS={
  "Jelenia Góra":[50.9044,15.7194],"Piotrków Trybunalski":[51.4052,19.7030]
 };
 
+
+function scheduleDesktopLiveRefresh(options={}){
+ if(window.innerWidth<1100)return;
+ cancelAnimationFrame(desktopRefreshFrame);
+ desktopRefreshFrame=requestAnimationFrame(()=>{
+  renderDesktopCommandKpis();
+  renderDesktopEvents();
+  renderDesktopInsights();
+
+  const view=desktopView();
+  if(view==="board")renderDesktopBoard();
+  if(view==="table")renderDesktopTable();
+  if(view==="map"){
+   renderDesktopMap(desktopMapSelectedCity,{
+    preserveViewport:options.preserveMapViewport!==false,
+    forceFit:Boolean(options.forceMapFit)
+   })
+  }
+
+  syncDesktopSelection();
+  requestAnimationFrame(()=>{
+   leafletFleetMap?.invalidateSize({pan:false});
+  })
+ })
+}
+
+function updateCarStatusLive(carId,status){
+ const c=car(carId);
+ if(!c||!["active","repair","free"].includes(status))return;
+ const previous=c.status;
+ if(previous===status)return;
+
+ c.status=status;
+ save();
+
+ // Update every desktop representation immediately.
+ renderFleet();
+ scheduleDesktopLiveRefresh({preserveMapViewport:true});
+ toast(`Статус: ${statusText(status)}`)
+}
+
 function desktopView(){
  return localStorage.getItem(DESKTOP_VIEW_KEY)||"list"
 }
@@ -1060,11 +1116,23 @@ function setDesktopView(view){
  document.documentElement.dataset.desktopFleetView=view;
  $$("[data-fleet-view]").forEach(button=>button.classList.toggle("active",button.dataset.fleetView===view));
  $$("[data-command-view]").forEach(panel=>panel.hidden=panel.dataset.commandView!==view);
+
  const grid=$("#fleetGrid");
  if(grid)grid.closest("[data-dashboard-block='cars']")?.classList.toggle("desktop-command-hidden",view!=="list");
- if(view==="board")renderDesktopBoard();
- if(view==="table")renderDesktopTable();
- if(view==="map"){renderDesktopMap();setTimeout(()=>leafletFleetMap?.invalidateSize(),120)}
+
+ requestAnimationFrame(()=>{
+  if(view==="board")renderDesktopBoard();
+  if(view==="table")renderDesktopTable();
+  if(view==="map"){
+   renderDesktopMap(desktopMapSelectedCity,{
+    preserveViewport:desktopMapHasInitialFit,
+    forceFit:!desktopMapHasInitialFit
+   });
+   requestAnimationFrame(()=>leafletFleetMap?.invalidateSize({pan:false}))
+  }
+  renderDesktopEvents();
+  renderDesktopInsights();
+ })
 }
 
 function desktopCommandKpis(){
@@ -1104,15 +1172,21 @@ function renderDesktopBoard(){
   </section>`
  }).join("");
  root.querySelectorAll("[data-board-car]").forEach(card=>{
-  card.ondragstart=e=>{e.stopPropagation();e.dataTransfer.setData("text/plain",card.dataset.boardCar)}
+  card.ondragstart=e=>{
+   e.stopPropagation();
+   card.classList.add("dragging");
+   e.dataTransfer.effectAllowed="move";
+   e.dataTransfer.setData("text/plain",card.dataset.boardCar)
+  };
+  card.ondragend=()=>card.classList.remove("dragging")
  });
  root.querySelectorAll("[data-board-drop]").forEach(zone=>{
   zone.ondragover=e=>{e.preventDefault();zone.classList.add("drag-over")};
   zone.ondragleave=()=>zone.classList.remove("drag-over");
   zone.ondrop=e=>{
    e.preventDefault();zone.classList.remove("drag-over");
-   const c=car(e.dataTransfer.getData("text/plain"));if(!c)return;
-   c.status=zone.dataset.boardDrop;save();renderFleet();toast(`Статус: ${statusText(c.status)}`)
+   const carId=e.dataTransfer.getData("text/plain");
+   updateCarStatusLive(carId,zone.dataset.boardDrop)
   }
  })
 }
@@ -1253,20 +1327,25 @@ function renderMapCityPanel(row){
 
 function focusLeafletCity(city){
  const map=ensureLeafletMap(),row=leafletLastRows.find(item=>item.city===city);
- if(!map||!row)return;
+ if(!row)return;
+ desktopMapSelectedCity=row.city;
  const coords=coordinatesForCity(row.city);
- if(coords)map.flyTo(coords,11,{duration:.7});
+ if(map&&coords)map.flyTo(coords,11,{duration:.55});
  renderMapCityPanel(row)
 }
 window.focusLeafletCity=focusLeafletCity;
 
-function renderDesktopMap(selectedCity=""){
+function renderDesktopMap(selectedCity=desktopMapSelectedCity,options={}){
  const map=ensureLeafletMap();
  const rows=cityMapData();
  leafletLastRows=rows;
 
+ const chosen=rows.find(row=>row.city===selectedCity)||null;
+ if(chosen)desktopMapSelectedCity=chosen.city;
+ else if(selectedCity)desktopMapSelectedCity="";
+
  if(!map){
-  renderMapCityPanel(rows.find(r=>r.city===selectedCity)||rows[0]||null);
+  renderMapCityPanel(chosen);
   return
  }
 
@@ -1278,7 +1357,12 @@ function renderDesktopMap(selectedCity=""){
   if(!coords)return;
 
   bounds.push(coords);
-  const marker=L.marker(coords,{icon:cityMarkerIcon(row),keyboard:true});
+  const marker=L.marker(coords,{
+   icon:cityMarkerIcon(row),
+   keyboard:true,
+   riseOnHover:true
+  });
+
   marker.bindPopup(`
     <div class="fleet-map-popup">
       <strong>${row.city}</strong>
@@ -1287,25 +1371,31 @@ function renderDesktopMap(selectedCity=""){
       ${row.attention?`<em>${row.attention} требуют внимания</em>`:""}
     </div>
   `);
-  marker.on("click",()=>renderMapCityPanel(row));
+
+  marker.on("click",()=>{
+   desktopMapSelectedCity=row.city;
+   renderMapCityPanel(row)
+  });
   marker.addTo(leafletCityLayer)
  });
 
- if(bounds.length){
-  if(selectedCity){
-   const row=rows.find(r=>r.city===selectedCity),coords=row&&coordinatesForCity(row.city);
-   if(coords)map.flyTo(coords,11,{duration:.6})
-  }else{
-   map.fitBounds(bounds,{padding:[45,45],maxZoom:8})
-  }
- }else{
-  map.setView([52.05,19.25],6)
+ const preserveViewport=options.preserveViewport!==false;
+ const forceFit=Boolean(options.forceFit);
+
+ if(bounds.length&&(forceFit||!desktopMapHasInitialFit||!preserveViewport)){
+  map.fitBounds(bounds,{padding:[42,42],maxZoom:8,animate:false});
+  desktopMapHasInitialFit=true
+ }else if(chosen&&forceFit){
+  const coords=coordinatesForCity(chosen.city);
+  if(coords)map.setView(coords,11,{animate:false})
+ }else if(!bounds.length&&!desktopMapHasInitialFit){
+  map.setView([52.05,19.25],6,{animate:false});
+  desktopMapHasInitialFit=true
  }
 
- renderMapCityPanel(rows.find(r=>r.city===selectedCity)||null);
- setTimeout(()=>map.invalidateSize(),80)
+ renderMapCityPanel(chosen);
+ requestAnimationFrame(()=>map.invalidateSize({pan:false}))
 }
-
 function renderDesktopEvents(){
  const root=$("#desktopEventFeed");if(!root)return;
  const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
@@ -1336,7 +1426,14 @@ function renderDesktopInsights(){
 
 function renderDesktopCommand(){
  if(window.innerWidth<1100)return;
- renderDesktopCommandKpis();renderDesktopEvents();renderDesktopInsights();setDesktopView(desktopView());syncDesktopSelection()
+ renderDesktopCommandKpis();
+ setDesktopView(desktopView());
+ requestAnimationFrame(()=>{
+  renderDesktopEvents();
+  renderDesktopInsights();
+  syncDesktopSelection();
+  leafletFleetMap?.invalidateSize({pan:false})
+ })
 }
 
 function toggleDesktopSelection(id,checked){
@@ -1349,12 +1446,22 @@ function syncDesktopSelection(){
 }
 function clearDesktopSelection(){desktopSelection.clear();syncDesktopSelection()}
 function applyDesktopBulkStatus(){
- const status=$("#desktopBulkStatus").value;if(!status||!desktopSelection.size)return toast("Выберите статус");
- desktopSelection.forEach(id=>{const c=car(id);if(c)c.status=status});save();clearDesktopSelection();renderFleet();toast("Статусы обновлены")
+ const status=$("#desktopBulkStatus").value;
+ if(!status||!desktopSelection.size)return toast("Выберите статус");
+ desktopSelection.forEach(id=>{const c=car(id);if(c)c.status=status});
+ save();clearDesktopSelection();renderFleet();
+ scheduleDesktopLiveRefresh({preserveMapViewport:true});
+ toast("Статусы обновлены")
 }
 function applyDesktopBulkCity(){
- const city=normalizedCity($("#desktopBulkCity").value);if(!city||!desktopSelection.size)return toast("Укажите город");
- desktopSelection.forEach(id=>{const c=car(id);if(c)c.city=city});save();clearDesktopSelection();renderFleet();toast("Город обновлён")
+ const city=normalizedCity($("#desktopBulkCity").value);
+ if(!city||!desktopSelection.size)return toast("Укажите город");
+ desktopSelection.forEach(id=>{const c=car(id);if(c)c.city=city});
+ save();clearDesktopSelection();
+ desktopMapHasInitialFit=false;
+ renderFleet();
+ scheduleDesktopLiveRefresh({preserveMapViewport:false,forceMapFit:true});
+ toast("Город обновлён")
 }
 window.toggleDesktopSelection=toggleDesktopSelection;
 
@@ -1479,6 +1586,92 @@ function renderFleet(){
     <strong>${nextEvent?nextEvent.title:"Автомобиль не требует внимания"}</strong>
     <span>${nextEvent?`${nextEvent.days} дн.`:"Все основные показатели в норме"}</span>
   </div>
+
+  ${(()=>{
+    const reminders=[];
+
+    if(health.insuranceDays<0){
+      reminders.push({
+        type:"insurance",
+        level:"danger",
+        icon:"🛡",
+        title:"Страховка просрочена",
+        detail:`на ${Math.abs(health.insuranceDays)} дн.`
+      });
+    }else if(health.insuranceDays<=30){
+      reminders.push({
+        type:"insurance",
+        level:health.insuranceDays<=7?"danger":"warning",
+        icon:"🛡",
+        title:"Страховка заканчивается",
+        detail:`через ${health.insuranceDays} дн.`
+      });
+    }
+
+    if(health.inspectionDays<0){
+      reminders.push({
+        type:"inspection",
+        level:"danger",
+        icon:"✓",
+        title:"Техосмотр просрочен",
+        detail:`на ${Math.abs(health.inspectionDays)} дн.`
+      });
+    }else if(health.inspectionDays<=30){
+      reminders.push({
+        type:"inspection",
+        level:health.inspectionDays<=7?"danger":"warning",
+        icon:"✓",
+        title:"Техосмотр заканчивается",
+        detail:`через ${health.inspectionDays} дн.`
+      });
+    }
+
+    if(health.oilLeft<=0){
+      reminders.push({
+        type:"oil",
+        level:"danger",
+        icon:"◉",
+        title:"Требуется замена масла",
+        detail:`превышение ${km(Math.abs(health.oilLeft))}`
+      });
+    }else if(serviceForecast&&serviceForecast.days<=30){
+      reminders.push({
+        type:"oil",
+        level:serviceForecast.days<=7?"danger":"warning",
+        icon:"◉",
+        title:"Замена масла",
+        detail:`примерно через ${serviceForecast.days} дн. · ${km(health.oilLeft)}`
+      });
+    }
+
+    const repairEvent=events.find(event=>event.type==="repair"&&event.days<=30);
+    if(repairEvent){
+      reminders.push({
+        type:"repair",
+        level:repairEvent.days<=7?"warning":"info",
+        icon:"🔧",
+        title:repairEvent.title,
+        detail:repairEvent.days===0?"сегодня":repairEvent.days===1?"завтра":`через ${repairEvent.days} дн.`
+      });
+    }
+
+    return reminders.length
+      ?`<div class="desktop-car-reminders">${reminders.slice(0,4).map(reminder=>`
+        <button type="button"
+          class="desktop-car-reminder ${reminder.level}"
+          onclick="event.stopPropagation();${reminder.type==="repair"?`openCar('${c.id}')`:`openQuickService('${c.id}','${reminder.type}')`}">
+          <span class="desktop-reminder-icon">${reminder.icon}</span>
+          <span class="desktop-reminder-copy">
+            <strong>${reminder.title}</strong>
+            <small>${reminder.detail}</small>
+          </span>
+          <b>›</b>
+        </button>`).join("")}</div>`
+      :`<div class="desktop-car-reminders clear">
+        <div class="desktop-car-reminder-ok"><span>✓</span><strong>Ближайших обязательных действий нет</strong></div>
+       </div>`;
+  })()}
+
   <div class="desktop-row-actions">
     <button class="btn primary desktop-open-btn" onclick="openCar('${c.id}')">Открыть →</button>
     <button class="desktop-more-btn" onclick="openCarQuickMenu('${c.id}',event)">⋮</button>
