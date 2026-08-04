@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.8.2","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.8.3","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -1778,11 +1778,12 @@ function coordinatesForCity(city){
 
 function fleetMapV2Cars(){
  const filter=$("#desktopMapFilter")?.value||"all";
- const cars=typeof fleetCars==="function"?fleetCars():[];
+ const source=Array.isArray(db?.cars)?db.cars:[];
+ const cars=source.filter(c=>!c.archived&&!c.deletedAt);
 
  return cars.filter(c=>{
   if(filter==="all")return true;
-  if(filter==="attention")return attention(c);
+  if(filter==="attention")return typeof attention==="function"?attention(c):false;
   return c.status===filter
  })
 }
@@ -1803,8 +1804,21 @@ function fleetMapV2Rows(){
   };
 
   row.cars.push(c);
-  row.profit+=safeDesktopCarProfit(c.id);
-  if(attention(c))row.attention++;
+
+  try{
+   row.profit+=typeof safeDesktopCarProfit==="function"
+    ?Number(safeDesktopCarProfit(c.id)||0)
+    :0
+  }catch(error){
+   console.warn("Fleet Map: profit calculation failed",c.id,error)
+  }
+
+  try{
+   if(typeof attention==="function"&&attention(c))row.attention++
+  }catch(error){
+   console.warn("Fleet Map: attention calculation failed",c.id,error)
+  }
+
   grouped.set(key,row)
  });
 
@@ -1961,16 +1975,27 @@ function focusFleetMapV2City(cityKey){
 window.focusFleetMapV2City=focusFleetMapV2City;
 
 function renderFleetMapV2(options={}){
- const map=ensureFleetMapV2();
- fleetMapV2RowsCache=fleetMapV2Rows();
+ const status=$("#leafletMapStatus");
 
- const selected=fleetMapV2RowsCache.find(row=>row.key===fleetMapV2SelectedCity)||null;
- renderFleetMapV2Panel(selected);
+ try{
+  const map=ensureFleetMapV2();
+  fleetMapV2RowsCache=fleetMapV2Rows();
 
- if(!map||!fleetMapV2Layer)return;
+  const selected=fleetMapV2RowsCache.find(row=>row.key===fleetMapV2SelectedCity)||null;
+  renderFleetMapV2Panel(selected);
 
- fleetMapV2Layer.clearLayers();
- const bounds=[];
+  if(!map||!fleetMapV2Layer){
+   if(status){
+    status.hidden=false;
+    status.textContent=typeof L==="undefined"
+     ?"Не загрузилась библиотека карты Leaflet."
+     :"Не удалось создать карту."
+   }
+   return
+  }
+
+  fleetMapV2Layer.clearLayers();
+  const bounds=[];
 
  fleetMapV2RowsCache.forEach(row=>{
   if(!row.coords)return;
@@ -2027,8 +2052,21 @@ function renderFleetMapV2(options={}){
  }
 
  [0,80,200,450].forEach(delay=>
-  setTimeout(()=>map.invalidateSize({pan:false}),delay)
- )
+   setTimeout(()=>map.invalidateSize({pan:false}),delay)
+  );
+
+  if(status&&fleetMapV2RowsCache.some(row=>row.coords)){
+   const unknown=fleetMapV2RowsCache.filter(row=>!row.coords&&row.city!=="Без города");
+   status.hidden=!unknown.length;
+   if(unknown.length)status.textContent=`Не удалось разместить: ${unknown.map(row=>row.city).join(", ")}`
+  }
+ }catch(error){
+  console.error("Fleet Map V2 render failed",error);
+  if(status){
+   status.hidden=false;
+   status.textContent=`Ошибка карты: ${error.message||"неизвестная ошибка"}`
+  }
+ }
 }
 
 function openFleetMapV2(){
