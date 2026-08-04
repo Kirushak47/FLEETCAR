@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V7.10.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=7101">
-  <link rel="stylesheet" href="styles.css?v=7101">
+  <title>FleetPilot V7.11</title>
+  <link rel="manifest" href="manifest.webmanifest?v=7110">
+  <link rel="stylesheet" href="styles.css?v=7110">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -31,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V7.10.1</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V7.11</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -78,7 +78,7 @@
 
           <article class="control-center-card gps-ready-card" data-control-window="gps">
             <div class="control-card-head"><div><span>Телематика</span><h3>GPS-ready</h3></div><button type="button" class="control-hide-button" onclick="hideControlWindow('gps')" title="Скрыть окно">×</button></div>
-            <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong>GPS не подключён</strong><small>Интерфейс готов к будущей интеграции с трекерами.</small></div></div>
+            <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong id="desktopGpsReadyStatus">GPS</strong><small>Следующее обновление через <b id="gpsSyncCountdown">—</b> сек.</small></div></div>
           </article>
         </section>
 
@@ -486,6 +486,27 @@
     </section>
 
 
+
+    <section id="mobileMapPage" class="page mobile-gps-map-page">
+      <div class="mobile-map-top">
+        <div><span class="eyebrow">GPS и география</span><h2>Карта автопарка</h2></div>
+        <button type="button" id="mobileMapShowAll" class="btn">Все авто</button>
+      </div>
+      <div class="mobile-gps-sync-card">
+        <span class="mobile-gps-sync-dot"></span>
+        <div><strong id="mobileGpsSyncStatus">GPS не подключён</strong><small id="mobileGpsSyncTime">Подключите GPS в настройках</small></div>
+        <div class="mobile-gps-countdown"><strong id="mobileGpsCountdown">—</strong><small>сек.</small></div>
+      </div>
+      <div class="mobile-map-shell">
+        <div id="mobileLeafletMap" class="mobile-leaflet-map" aria-label="Мобильная карта автопарка"></div>
+        <div id="mobileMapError" class="mobile-map-error" hidden></div>
+      </div>
+      <div class="mobile-map-panel">
+        <div class="mobile-map-panel-head"><strong id="mobileMapTitle">Все города</strong><small id="mobileMapCount">0 автомобилей</small></div>
+        <div id="mobileMapList" class="mobile-map-list"></div>
+      </div>
+    </section>
+
     <section id="searchPage" class="page">
       <div class="section-head"><div><span class="eyebrow">По всей базе</span><h2>Глобальный поиск</h2></div><button id="closeGlobalSearch" class="btn">Закрыть</button></div>
       <div class="card global-search-box"><input id="globalSearchInput" placeholder="Автомобиль, номер, арендатор, ремонт, документ…" autocomplete="off"><span id="globalSearchCount"></span></div>
@@ -503,6 +524,7 @@
     <button data-page="paymentsPage">💳<span>Аренда</span></button>
     <button data-page="expensesPage">💸<span>Расходы</span></button>
     <button data-page="calendarPage" data-feature="calendar">🗓️<span>Календарь</span></button>
+    <button data-page="mobileMapPage" class="mobile-map-nav-button">⌖<span>Карта</span></button>
     <button data-page="morePage">•••<span>Ещё</span></button>
   </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
 </div>
@@ -784,5 +806,5 @@
 <div class="gps-setup-actions"><button type="button" id="saveGpsMapping" class="btn primary">Сохранить сопоставление</button></div>
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="app.js?v=7101"></script>
+<script src="app.js?v=7110"></script>
 </body></html>

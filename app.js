@@ -54,7 +54,7 @@ function readJsonStorage(key){
 }
 function findLegacyDatabase(){
  const preferred=[
-  "fleetpilot.v7.10.1","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
+  "fleetpilot.v7.11","fleetpilot.v3.6","fleetpilot.v3.5","fleetpilot.v3.4",
   "fleetpilot.v3.3","fleetpilot.v3.2","fleetpilot.v3.1","fleetpilot.v3",
   "fleetpilot.v2.3","fleetpilot.v2.2","fleetpilot.v2.1","fleetpilot.v2",
   "fleetpilot.v1"
@@ -388,6 +388,7 @@ $$("[data-theme-mode]").forEach(button=>{
  button.onclick=()=>setTheme(button.dataset.themeMode)
 });
 
+$("#mobileMapShowAll").onclick=showAllMobileMapCities;
 $("#openGpsSetup").onclick=openGpsSetup;
 $("#closeGpsSetup").onclick=()=>$("#gpsSetupDialog").close();
 $("#startGpsDemo").onclick=startGpsDemo;
@@ -457,7 +458,7 @@ window.addEventListener("load",()=>{
  }
 });
 
-$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="searchPage")renderGlobalSearch()}
+$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",mobileMapPage:"Карта",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="mobileMapPage"){renderMobileGpsMap({fit:true});updateGpsCountdownUi()}if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
 
 
@@ -1649,7 +1650,7 @@ function desktopCommandKpis(){
  const repair=cars.filter(c=>c.status==="repair").length;
  const free=cars.filter(c=>c.status==="free").length;
  const attentionCount=cars.filter(attention).length;
- const month=financialData(fleetPilotCurrentMonth()(),null);
+ const month=financialData(fleetPilotCurrentMonth(),null);
  const week=weekPlanData();
  return[
   ["Прибыль месяца",money(month.finalProfit||0),"Фактический результат",(month.finalProfit||0)<0?"danger":"good"],
@@ -1708,7 +1709,7 @@ function renderDesktopBoard(){
  })
 }
 
-function safeDesktopCarProfit(carId,period=fleetPilotCurrentMonth()()){
+function safeDesktopCarProfit(carId,period=fleetPilotCurrentMonth()){
  try{return Number(financialData(period,carId)?.finalProfit||0)}catch(error){console.warn("FleetPilot table profit fallback",carId,error);return 0}
 }
 
@@ -1750,12 +1751,38 @@ function desktopTableRow(c,period){
 }
 function renderDesktopTable(){
  const root=$("#desktopFleetTableBody");if(!root)return;
- const cars=fleetCars(),period=fleetPilotCurrentMonth()();
+ const cars=(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt);
+ const period=fleetPilotCurrentMonth();
+
  if(!cars.length){
-  root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11"><div class="desktop-table-empty"><span>🚘</span><strong>В автопарке пока нет автомобилей</strong><small>Добавьте первый автомобиль, и он появится здесь автоматически.</small><button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button></div></td></tr>`;
+  root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11"><div class="desktop-table-empty">
+   <span>🚘</span><strong>В автопарке пока нет автомобилей</strong>
+   <small>Добавьте первый автомобиль, и он появится здесь автоматически.</small>
+   <button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button>
+  </div></td></tr>`;
   return
  }
- root.innerHTML=cars.map(c=>desktopTableRow(c,period)).join("");
+
+ root.innerHTML=cars.map(c=>{
+  const m=model(c),health=safeDesktopHealth(c),gps=gpsStatusForCar(c);
+  const profit=safeDesktopCarProfit(c.id);
+  return`<tr>
+   <td><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"></td>
+   <td><button class="desktop-table-car-link" onclick="openCar('${c.id}')">
+    <span class="desktop-table-car-photo">${c.customPhoto?`<img src="${c.customPhoto}" alt="">`:"🚘"}</span>
+    <span><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"}</small></span>
+   </button></td>
+   <td>${c.city||"Без города"}</td>
+   <td>${c.tenant||"Без водителя"}</td>
+   <td><span class="desktop-table-status ${c.status}">${statusText(c.status)}</span></td>
+   <td>${Number(c.mileage||0).toLocaleString("ru-RU")} км</td>
+   <td>${health.oilLeft<=0?"Просрочено":`${Math.round(health.oilLeft).toLocaleString("ru-RU")} км`}</td>
+   <td>${c.insurance?desktopDocumentDate(c.insurance):"—"}</td>
+   <td>${c.inspection?desktopDocumentDate(c.inspection):"—"}</td>
+   <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
+   <td>${gps?`<button class="desktop-table-find-gps ${gps.online?"online":"offline"}" onclick="findCarOnGps('${c.id}')">${gps.online?"⌖ Найти":"Последняя точка"}</button>`:`<button class="desktop-table-open" onclick="openCar('${c.id}')">Открыть →</button>`}</td>
+  </tr>`
+ }).join("");
  syncDesktopSelection()
 }
 
@@ -1785,6 +1812,96 @@ function readGpsConfig(){return gpsRead(GPS_CONFIG_KEY,null)}
 function readGpsDevices(){return gpsRead(GPS_DEVICES_KEY,[])}
 function readGpsMapping(){return gpsRead(GPS_MAPPING_KEY,{})}
 
+
+
+const GPS_SYNC_INTERVAL_MS=30000;
+let gpsAutoSyncTimer=null;
+let gpsCountdownTimer=null;
+let gpsNextSyncAt=0;
+let gpsSyncBusy=false;
+
+function gpsConnectionActive(){
+ return Boolean(readGpsConfig())
+}
+
+function gpsSecondsToNextSync(){
+ if(!gpsConnectionActive()||!gpsNextSyncAt)return null;
+ return Math.max(0,Math.ceil((gpsNextSyncAt-Date.now())/1000))
+}
+
+function updateGpsCountdownUi(){
+ const seconds=gpsSecondsToNextSync();
+ const config=readGpsConfig();
+ const devices=readGpsDevices();
+ const online=devices.filter(device=>{
+  const stamp=new Date(device.updatedAt).getTime();
+  return device.online!==false&&Number.isFinite(stamp)&&Date.now()-stamp<15*60*1000
+ }).length;
+
+ const desktop=$("#gpsSyncCountdown");
+ const mobile=$("#mobileGpsCountdown");
+ const status=$("#mobileGpsSyncStatus");
+ const time=$("#mobileGpsSyncTime");
+
+ if(desktop)desktop.textContent=seconds===null?"—":seconds;
+ if(mobile)mobile.textContent=seconds===null?"—":seconds;
+
+ if(status)status.textContent=config?`${config.providerLabel||"GPS"} · ${online}/${devices.length} online`:"GPS не подключён";
+ if(time){
+  if(!config)time.textContent="Подключите GPS в настройках";
+  else if(gpsSyncBusy)time.textContent="Синхронизация координат…";
+  else time.textContent=`Следующее обновление через ${seconds??0} сек.`
+ }
+}
+
+async function performAutomaticGpsSync(){
+ if(gpsSyncBusy||!gpsConnectionActive())return;
+ gpsSyncBusy=true;
+ updateGpsCountdownUi();
+
+ try{
+  if(gpsDemoEnabled())updateGpsDemoDevices();
+  else await fetchGpsDevices();
+
+  renderGpsConnectionSummary();
+  if(typeof renderFleet==="function")renderFleet();
+  if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:false});
+  if(typeof renderMobileGpsMap==="function")renderMobileGpsMap({fit:false})
+ }catch(error){
+  console.error("GPS auto sync failed",error);
+  const mobileError=$("#mobileMapError");
+  if(mobileError){mobileError.hidden=false;mobileError.textContent=`GPS: ${error.message}`}
+ }finally{
+  gpsSyncBusy=false;
+  gpsNextSyncAt=Date.now()+GPS_SYNC_INTERVAL_MS;
+  updateGpsCountdownUi()
+ }
+}
+
+function startUniversalGpsSync(){
+ clearInterval(gpsAutoSyncTimer);
+ clearInterval(gpsCountdownTimer);
+
+ if(!gpsConnectionActive()){
+  gpsNextSyncAt=0;
+  updateGpsCountdownUi();
+  return
+ }
+
+ gpsNextSyncAt=Date.now()+GPS_SYNC_INTERVAL_MS;
+ gpsAutoSyncTimer=setInterval(performAutomaticGpsSync,GPS_SYNC_INTERVAL_MS);
+ gpsCountdownTimer=setInterval(updateGpsCountdownUi,1000);
+ updateGpsCountdownUi()
+}
+
+function stopUniversalGpsSync(){
+ clearInterval(gpsAutoSyncTimer);
+ clearInterval(gpsCountdownTimer);
+ gpsAutoSyncTimer=null;
+ gpsCountdownTimer=null;
+ gpsNextSyncAt=0;
+ updateGpsCountdownUi()
+}
 
 function gpsDemoEnabled(){
  return localStorage.getItem(GPS_DEMO_KEY)==="1"
@@ -1867,14 +1984,11 @@ function updateGpsDemoDevices(){
 }
 
 function startGpsDemoMovement(){
- clearInterval(gpsDemoTimer);
- if(!gpsDemoEnabled())return;
- gpsDemoTimer=setInterval(updateGpsDemoDevices,30000)
+ startUniversalGpsSync()
 }
 
 function stopGpsDemoMovement(){
- clearInterval(gpsDemoTimer);
- gpsDemoTimer=null
+ stopUniversalGpsSync()
 }
 
 function autoMapDemoDevices(devices){
@@ -1910,7 +2024,7 @@ function startGpsDemo(){
  gpsWrite(GPS_DEVICES_KEY,devices);
  localStorage.setItem(GPS_DEMO_KEY,"1");
  autoMapDemoDevices(devices);
- startGpsDemoMovement();
+ startUniversalGpsSync();
 
  $("#gpsSetupDialog")?.close();
  renderGpsConnectionSummary();
@@ -1980,29 +2094,32 @@ function gpsStatusForCar(c){
  return{...d,online:d.online!==false&&Number.isFinite(stamp)&&Date.now()-stamp<15*60*1000}
 }
 function findCarOnGps(carId){
- const c=typeof car==="function"?car(carId):(db?.cars||[]).find(x=>x.id===carId);
+ const c=(db?.cars||[]).find(x=>x.id===carId);
  if(!c)return toast("Автомобиль не найден");
-
  const gps=gpsStatusForCar(c);
- if(!gps||!Number.isFinite(gps.latitude)||!Number.isFinite(gps.longitude)){
-  return toast("Для автомобиля нет GPS-координат")
+ if(!gps||!Number.isFinite(gps.latitude)||!Number.isFinite(gps.longitude))return toast("Для автомобиля нет GPS-координат");
+
+ if(window.innerWidth<1100){
+  showPage("mobileMapPage");
+  requestAnimationFrame(()=>{
+   renderMobileGpsMap({fit:false});
+   setTimeout(()=>{
+    const map=ensureMobileFleetMap();
+    if(map)map.flyTo([gps.latitude,gps.longitude],16,{duration:.65})
+   },180)
+  })
+ }else{
+  setDesktopView("map");
+  requestAnimationFrame(()=>{
+   renderFleetMapV2({fit:false});
+   setTimeout(()=>{
+    const map=ensureFleetMapV2();
+    if(map)map.flyTo([gps.latitude,gps.longitude],15,{duration:.65});
+    const row=fleetMapV2RowsCache.find(item=>item.cars.some(car=>car.id===c.id));
+    if(row){fleetMapV2SelectedCity=row.key;renderFleetMapV2Panel(row)}
+   },180)
+  })
  }
-
- setDesktopView("map");
- fleetMapV2SelectedCity=`gps-${c.id}`;
-
- requestAnimationFrame(()=>{
-  renderFleetMapV2({fit:false});
-  setTimeout(()=>{
-   const map=ensureFleetMapV2();
-   if(map){
-    map.flyTo([gps.latitude,gps.longitude],15,{duration:.65});
-   }
-
-   const row=fleetMapV2RowsCache.find(item=>item.key===`gps-${c.id}`);
-   if(row)renderFleetMapV2Panel(row)
-  },180)
- })
 }
 window.findCarOnGps=findCarOnGps;
 
@@ -2070,7 +2187,7 @@ async function syncGpsNow(){
 }
 function disconnectGps(){
  if(!confirm("Отключить GPS?"))return;
- stopGpsDemoMovement();[GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY,GPS_DEMO_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
+ stopUniversalGpsSync();[GPS_CONFIG_KEY,GPS_DEVICES_KEY,GPS_MAPPING_KEY,GPS_DEMO_KEY].forEach(k=>localStorage.removeItem(k));renderGpsConnectionSummary();renderFleet();if(typeof renderFleetMapV2==="function")renderFleetMapV2({fit:true});toast("GPS отключён")
 }
 window.openGpsSetup=openGpsSetup;window.openGpsMapping=openGpsMapping;window.syncGpsNow=syncGpsNow;window.disconnectGps=disconnectGps;
 
@@ -2289,6 +2406,102 @@ function renderFleetMapV2Panel(selectedRow=null){
  if(status){status.hidden=!unknown.length;status.textContent=unknown.length?`Не удалось разместить: ${unknown.map(r=>r.city).join(", ")}`:""}
 }
 
+
+let mobileFleetMap=null;
+let mobileFleetLayer=null;
+let mobileSelectedCity="";
+
+function ensureMobileFleetMap(){
+ const container=$("#mobileLeafletMap");
+ if(!container||typeof L==="undefined")return null;
+ if(mobileFleetMap)return mobileFleetMap;
+
+ mobileFleetMap=L.map(container,{zoomControl:true,attributionControl:true}).setView([52.05,19.25],6);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19,minZoom:4,attribution:"&copy; OpenStreetMap"
+ }).addTo(mobileFleetMap);
+ mobileFleetLayer=L.layerGroup().addTo(mobileFleetMap);
+ [50,180,400].forEach(delay=>setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),delay));
+ return mobileFleetMap
+}
+
+function mobileMapRows(){
+ return fleetMapV2Rows()
+}
+
+function renderMobileMapList(selected=null){
+ const root=$("#mobileMapList"),title=$("#mobileMapTitle"),count=$("#mobileMapCount");
+ if(!root||!title||!count)return;
+ const rows=mobileMapRows();
+
+ if(selected){
+  title.textContent=selected.city;
+  count.textContent=`${selected.cars.length} автомобилей`;
+  const gpsRows=selected.cars.map(c=>({c,gps:gpsStatusForCar(c)}));
+  const on=gpsRows.filter(x=>x.gps?.online).length;
+  root.innerHTML=`<button class="mobile-map-back" onclick="showAllMobileMapCities()">← Все города</button>
+   <div class="mobile-city-summary"><strong>${selected.city}</strong><span>${on} online · ${gpsRows.length-on} offline</span></div>`+
+   gpsRows.map(({c,gps})=>{
+    const m=model(c);
+    return`<div class="mobile-map-car">
+     <span class="mobile-map-car-dot ${gps?.online?"online":gps?"offline":""}"></span>
+     <button class="mobile-map-car-main" onclick="openCar('${c.id}')"><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"}${gps?` · ${gps.online?`${Math.round(gps.speed||0)} км/ч`:"offline"}`:""}</small></button>
+     ${gps?`<button class="mobile-map-find" onclick="findCarOnGps('${c.id}')">Найти</button>`:""}
+    </div>`
+   }).join("")
+ }else{
+  title.textContent="Все города";
+  count.textContent=`${rows.reduce((sum,row)=>sum+row.cars.length,0)} автомобилей`;
+  root.innerHTML=rows.map(row=>{
+   const gps=row.cars.map(c=>gpsStatusForCar(c)).filter(Boolean);
+   const online=gps.filter(x=>x.online).length;
+   return`<button class="mobile-map-city" onclick="focusMobileMapCity('${row.key.replace(/'/g,"\\'")}')">
+    <span class="map-city-dot ${fleetMapV2CityLevel(row)}"></span>
+    <span><strong>${row.city}</strong><small>${row.cars.length} авто · ${online} online</small></span><b>›</b>
+   </button>`
+  }).join("")||`<div class="map-empty">Автомобилей пока нет</div>`
+ }
+}
+
+function renderMobileGpsMap(options={}){
+ const map=ensureMobileFleetMap();if(!map||!mobileFleetLayer)return;
+ const rows=mobileMapRows();
+ const selected=rows.find(row=>row.key===mobileSelectedCity)||null;
+ renderMobileMapList(selected);
+ mobileFleetLayer.clearLayers();
+ const bounds=[];
+
+ rows.forEach(row=>{
+  row.cars.forEach((c,index)=>{
+   const point=gpsPositionForCar(c)||fleetMapV2OffsetPoint(row.coords,index,row.cars.length);
+   if(!point)return;
+   bounds.push(point);
+   const marker=L.marker(point,{icon:fleetMapV2CarIcon(c)});
+   const m=model(c),gps=gpsStatusForCar(c);
+   marker.bindPopup(`<div class="fleet-car-popup"><strong>${m.brand} ${m.model}</strong><span>${c.plate||""}</span><span>${gps?.online?`${Math.round(gps.speed||0)} км/ч`:"GPS offline"}</span><button onclick="openCar('${c.id}')">Открыть →</button></div>`);
+   marker.addTo(mobileFleetLayer)
+  })
+ });
+
+ if(options.fit!==false&&bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:12});
+ setTimeout(()=>map.invalidateSize({pan:false}),80)
+}
+
+function focusMobileMapCity(key){
+ const row=mobileMapRows().find(x=>x.key===key);if(!row)return;
+ mobileSelectedCity=key;renderMobileMapList(row);
+ const map=ensureMobileFleetMap();
+ const points=row.cars.map(c=>gpsPositionForCar(c)).filter(Boolean);
+ if(points.length>1)map.fitBounds(points,{padding:[40,40],maxZoom:13});
+ else if(points.length===1)map.flyTo(points[0],14,{duration:.5});
+ else if(row.coords)map.flyTo(row.coords,11,{duration:.5})
+}
+function showAllMobileMapCities(){
+ mobileSelectedCity="";renderMobileMapList(null);renderMobileGpsMap({fit:true})
+}
+window.focusMobileMapCity=focusMobileMapCity;
+window.showAllMobileMapCities=showAllMobileMapCities;
+
 function showAllFleetMapCities(){
  fleetMapV2SelectedCity="";
  renderFleetMapV2Panel(null);
@@ -2432,6 +2645,7 @@ function stableFleetTableCars(){
 
 function stableFleetTableRoot(){
  return(
+  $("#desktopFleetTableBody")||
   $("#desktopFleetTable")||
   $("#fleetTableBody")||
   $("#largeFleetTable")||
@@ -2524,7 +2738,7 @@ function desktopInsightRows(){
  if(planned.totalPlannedCosts>0)rows.push({type:"money",text:`На этой неделе нужно подготовить ${money(planned.totalPlannedCosts)} на плановые расходы.`});
  const free=cars.filter(c=>c.status==="free");
  if(free.length)rows.push({type:"info",text:`Свободных автомобилей: ${free.length}. Их можно быстрее вывести на линию.`});
- const best=cars.map(c=>({c,profit:financialData(fleetPilotCurrentMonth()(),c.id).finalProfit})).sort((a,b)=>b.profit-a.profit)[0];
+ const best=cars.map(c=>({c,profit:financialData(fleetPilotCurrentMonth(),c.id).finalProfit})).sort((a,b)=>b.profit-a.profit)[0];
  if(best&&best.profit>0)rows.push({type:"good",text:`Лидер месяца: ${model(best.c).brand} ${model(best.c).model} — ${money(best.profit)}.`});
  return rows.slice(0,5)
 }
@@ -2729,6 +2943,17 @@ function renderFleet(){
     <small>Прибыль за месяц</small>
   </div>
  </div>
+ ${(()=>{
+   const gps=gpsStatusForCar(c);
+   if(!gps)return"";
+   const signal=new Date(gps.updatedAt);
+   const signalText=Number.isNaN(signal.getTime())?"—":signal.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+   return`<div class="mobile-card-gps ${gps.online?"online":"offline"}">
+    <span class="mobile-card-gps-icon"><i></i>⌖</span>
+    <span class="mobile-card-gps-copy"><small>GPS ${gps.online?"ONLINE":"OFFLINE"}</small><strong>${gps.online?`${Math.round(gps.speed||0)} км/ч`:`Сигнал ${signalText}`}</strong></span>
+    <button type="button" onclick="event.stopPropagation();findCarOnGps('${c.id}')">Найти</button>
+   </div>`
+ })()}
 </div>
 <div class="car-heading no-photo-heading">
  <div class="section-label">Состояние автомобиля</div>
@@ -3418,3 +3643,12 @@ if(typeof originalRenderFleetForStableTable==="function"){
   return result
  }
 }
+
+document.addEventListener("DOMContentLoaded",()=>{
+ startUniversalGpsSync();
+ updateGpsCountdownUi()
+});
+window.addEventListener("pageshow",()=>{
+ startUniversalGpsSync();
+ updateGpsCountdownUi()
+});
