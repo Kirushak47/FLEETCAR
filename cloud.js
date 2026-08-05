@@ -26,9 +26,15 @@ function message(id,text,type=""){
 }
 function friendly(error){
  const t=String(error?.message||error||"Неизвестная ошибка");
- if(t.toLowerCase().includes("email not confirmed"))return"Сначала подтвердите email через письмо.";
- if(t.toLowerCase().includes("invalid login credentials"))return"Неверный email или пароль.";
- if(t.includes("fleet_states"))return"Облачная база ещё не настроена владельцем.";
+ const l=t.toLowerCase();
+ if(l.includes("email not confirmed"))return"Сначала подтвердите email через письмо.";
+ if(l.includes("invalid login credentials"))return"Неверный email или пароль.";
+ if(l.includes("workspace membership required"))return"Аккаунт не подключён к автопарку. Выйдите и войдите снова.";
+ if(l.includes("workspace write permission denied"))return"У вашей роли нет права изменять общую базу автопарка.";
+ if(l.includes("could not find the function")||l.includes("schema cache"))return"Обновите схему Supabase: выполните SQL-файл синхронизации и перезагрузите страницу.";
+ if(l.includes("row-level security")||l.includes("permission denied"))return"Supabase заблокировал синхронизацию политикой доступа. Выполните SQL-файл исправления.";
+ if(l.includes("duplicate key")||l.includes("unique constraint")||l.includes("on conflict"))return"Конфликт старой облачной записи. Выполните SQL-файл исправления синхронизации.";
+ if(t.includes("fleet_states"))return"Облачная база ещё не настроена.";
  return t
 }
 function init(){
@@ -311,9 +317,13 @@ async function refreshSession(){
 }
 async function fetchRow(){
  if(!session)throw new Error("Сначала войдите");
- if(!membership?.workspace_id)throw new Error("Сначала создайте автопарк");
- const {data,error}=await client.from(TABLE).select("payload,updated_at,device_name").eq("workspace_id",membership.workspace_id).maybeSingle();
- if(error)throw error;return data
+ if(!membership?.workspace_id)throw new Error("Workspace membership required");
+
+ const {data,error}=await client.rpc("load_workspace_fleet_state");
+ if(error)throw error;
+
+ const row=Array.isArray(data)?data[0]||null:data||null;
+ return row
 }
 function stats(p){return{cars:p?.cars?.length||0,repairs:p?.repairs?.length||0,payments:p?.payments?.length||0,expenses:p?.expenses?.length||0}}
 function openBackupDb(){
@@ -339,17 +349,39 @@ function removeOldQuotaBackups(){
  Object.keys(localStorage).filter(k=>k.startsWith("fleetpilot.cloud.prepull.")).forEach(k=>localStorage.removeItem(k))
 }
 async function pushNow({silent=false}={}){
- if(syncing||!session)return false;syncing=true;setStatus("Синхронизация…",null,"syncing");
+ if(syncing||!session)return false;
+ syncing=true;
+ setStatus("Синхронизация…",null,"syncing");
+
  try{
+  if(!membership?.workspace_id)throw new Error("Workspace membership required");
+  if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("Workspace write permission denied");
+
   const payload=window.getFleetPilotDatabase?.();
+  if(!payload||typeof payload!=="object")throw new Error("Локальная база недоступна");
+
   const now=new Date().toISOString();
-  if(!membership?.workspace_id)throw new Error("Сначала создайте автопарк");
-  if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("У вашей роли нет права изменять общую базу автопарка");
-  const {error}=await client.from(TABLE).upsert({workspace_id:membership.workspace_id,user_id:session.user.id,payload,updated_at:now,device_name:navigator.userAgent.slice(0,120)},{onConflict:"workspace_id"});
-  if(error)throw error;setStatus("Синхронизировано",now,"online");
-  if(!silent)window.toast?.("Синхронизировано");return true
- }catch(e){message("#cloudAuthMessage",friendly(e),"error");setStatus("Ошибка синхронизации",null,"error");return false}
- finally{syncing=false}
+  const {data,error}=await client.rpc("save_workspace_fleet_state",{
+   state_payload:payload,
+   state_device_name:navigator.userAgent.slice(0,120)
+  });
+
+  if(error)throw error;
+
+  const savedAt=(Array.isArray(data)?data[0]?.updated_at:data?.updated_at)||now;
+  setStatus("Синхронизировано",savedAt,"online");
+  message("#cloudAuthMessage","");
+  if(!silent)window.toast?.("Облачная база обновлена");
+  return true
+ }catch(e){
+  console.error("FleetPilot workspace sync failed",e);
+  message("#cloudAuthMessage",friendly(e),"error");
+  setStatus("Ошибка синхронизации",null,"error");
+  if(!silent)window.toast?.(friendly(e));
+  return false
+ }finally{
+  syncing=false
+ }
 }
 async function pullNow({ask=true}={}){
  if(syncing||!session)return false;syncing=true;setStatus("Загрузка из облака…",null,"syncing");
@@ -367,14 +399,28 @@ async function pullNow({ask=true}={}){
 }
 function schedulePush(){clearTimeout(pushTimer);if(session&&!isDemo())pushTimer=setTimeout(()=>pushNow({silent:true}),PUSH_DELAY)}
 async function firstSync(){
- const row=await fetchRow();
- if(!row){
-  const s=stats(window.getFleetPilotDatabase?.());
-  if(s.cars&&confirm(`Загрузить текущий автопарк в облако?\n\nАвтомобили: ${s.cars}`))await pushNow();
-  else await pullNow({ask:false}).catch(()=>{});
-  return
+ try{
+  const row=await fetchRow();
+
+  if(!row?.payload){
+   const local=window.getFleetPilotDatabase?.();
+   const s=stats(local);
+
+   if(["owner","coordinator"].includes(enterpriseRole())&&s.cars){
+    const upload=confirm(`В облаке пока нет базы. Загрузить текущий автопарк?\n\nАвтомобили: ${s.cars}`);
+    if(upload)await pushNow();
+   }else{
+    setStatus("Облако готово",null,"online")
+   }
+   return
+  }
+
+  await pullNow({ask:false})
+ }catch(error){
+  console.error("FleetPilot first sync failed",error);
+  message("#cloudAuthMessage",friendly(error),"error");
+  setStatus("Ошибка синхронизации",null,"error")
  }
- await pullNow({ask:false})
 }
 async function signIn(){
  if(!client)return message("#cloudAuthMessage","Облако не настроено владельцем","error");

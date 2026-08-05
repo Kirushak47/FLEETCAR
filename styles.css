@@ -6650,3 +6650,9 @@ html[data-theme="dark"] .workspace-create-form select{border-color:rgba(255,255,
  .workspace-pending-invite button{grid-column:1/-1;width:100%}
  .platform-project-row{grid-template-columns:1fr!important}
 }
+
+
+/* FleetPilot V10.1.2 — workspace sync status */
+.cloud-message.error{
+  white-space:pre-wrap;
+}
