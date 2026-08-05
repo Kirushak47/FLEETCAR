@@ -3184,6 +3184,7 @@ function renderOwnerDashboard(){
  if(!root)return;
 
  const owner=fleetPilotIsOwner();
+ document.body.classList.toggle("owner-dashboard-active",owner);
  root.hidden=!owner;
  const settingsButton=$("#ownerDashboardSettingsButton");
  if(settingsButton)settingsButton.hidden=!owner;

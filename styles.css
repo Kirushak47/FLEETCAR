@@ -6496,3 +6496,26 @@ html[data-theme="dark"] .owner-gps-metrics>div{
     grid-template-columns:1fr 1fr 1fr;
   }
 }
+
+
+/* FleetPilot V9.3 — remove duplicated owner KPI blocks */
+body.owner-dashboard-active .legacy-fleet-kpis{
+  display:none!important;
+}
+
+/* Additional targeted fallback for known old desktop summary areas */
+body.owner-dashboard-active .desktop-command-center .desktop-command-stats,
+body.owner-dashboard-active .desktop-command-center .fleet-kpi-grid,
+body.owner-dashboard-active .desktop-command-center .desktop-kpi-grid,
+body.owner-dashboard-active .desktop-command-center .summary-cards,
+body.owner-dashboard-active .desktop-command-center .stats-grid{
+  display:none!important;
+}
+
+/* Keep mode tabs and actual fleet views visible */
+body.owner-dashboard-active .desktop-view-switcher,
+body.owner-dashboard-active .desktop-fleet-view-tabs,
+body.owner-dashboard-active [data-fleet-view],
+body.owner-dashboard-active .desktop-command-view{
+  display:revert;
+}
