@@ -7,7 +7,7 @@ const DEMO_KEY="fleetpilot.demo.active.v1";
 const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
 const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const PUSH_DELAY=1800;
-let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,syncing=false,started=false;
+let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,syncing=false,started=false,authResolved=false,workspaceResolved=false;
 
 const $=s=>document.querySelector(s);
 const cfg=()=>window.FLEETPILOT_CLOUD_CONFIG||{};
@@ -163,21 +163,34 @@ async function platformOverview(){
 function setWorkspaceGate(){
  const gate=$("#workspaceGate");
  if(!gate)return;
- const show=Boolean(session&&!membership&&!isDemo());
+
+ // Do not show onboarding while the existing session and workspace
+ // membership are still being restored from Supabase.
+ const show=Boolean(
+  authResolved &&
+  workspaceResolved &&
+  session &&
+  !membership &&
+  !isDemo()
+ );
+
  gate.hidden=!show;
  document.documentElement.classList.toggle("workspace-locked",show)
 }
 async function renderWorkspaceOnboarding(){
  setWorkspaceGate();
- if(!session||membership)return;
+ if(!authResolved||!workspaceResolved||!session||membership)return;
+
  const invite=await getPendingWorkspaceInvite();
  const box=$("#workspacePendingInvite");
  if(!box)return;
+
  box.hidden=!invite;
  box.dataset.inviteId=invite?.invite_id||"";
+
  if(invite){
   const roleLabels={owner:"Владелец",coordinator:"Координатор",accountant:"Бухгалтер",mechanic:"Механик",driver:"Водитель"};
-  $("#workspacePendingInviteText").textContent=`${invite.workspace_name} · ${roleLabels[invite.role]||invite.role}${invite.city?` · ${invite.city}`:""}`;
+  $("#workspacePendingInviteText").textContent=`${invite.workspace_name} · ${roleLabels[invite.role]||invite.role}${invite.city?` · ${invite.city}`:""}`
  }
 }
 function enterpriseRole(){
@@ -278,6 +291,23 @@ function renderSummary(){
   root.innerHTML=`<span class="cloud-state-dot local"></span><div><strong>Вход не выполнен</strong><small>Войдите или откройте демо-режим</small></div><button type="button" class="btn primary" onclick="FleetPilotCloud.showLogin()">Войти</button>`
  }
 }
+async function loadSessionContext(nextSession){
+ session=nextSession||null;
+ profile=null;
+ workspace=null;
+ membership=null;
+ platformAdmin=false;
+ workspaceResolved=false;
+
+ if(session){
+  localStorage.removeItem(DEMO_KEY);
+  await loadProfile();
+  await loadWorkspace();
+  await loadPlatformAdmin()
+ }
+
+ workspaceResolved=true
+}
 function render(){
  const logged=$("#profileLoggedInView"),guest=$("#profileGuestView"),demo=$("#profileDemoView"),admin=$("#cloudAdminSection");
 
@@ -302,17 +332,35 @@ function render(){
  const saved=parse(STATUS_KEY,{});
  if($("#cloudSyncStatus"))$("#cloudSyncStatus").textContent=saved.text||"Облако подключено";
  if($("#cloudLastSync"))$("#cloudLastSync").textContent=saved.lastSync?dateTime(saved.lastSync):"Ещё не синхронизировано";
- renderAvatar();renderSummary();setGate();renderWorkspaceOnboarding()
+ renderAvatar();renderSummary();setGate();
+ if(workspaceResolved)renderWorkspaceOnboarding();
+ window.dispatchEvent(new CustomEvent("fleetpilot:access-ready",{
+  detail:{
+   role:enterpriseRole(),
+   membership,
+   workspace,
+   platformAdmin:isPlatformAdmin()
+  }
+ }))
 }
 function setStatus(text,lastSync=null,state="online"){
  store(STATUS_KEY,{text,lastSync,state});render()
 }
 async function refreshSession(){
  if(!client)init();
- if(!client){session=null;profile=null;workspace=null;membership=null;platformAdmin=false;render();return}
+ authResolved=false;
+ workspaceResolved=false;
+
+ if(!client){
+  await loadSessionContext(null);
+  authResolved=true;
+  render();
+  return
+ }
+
  const {data}=await client.auth.getSession();
- session=data?.session||null;
- if(session){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace();await loadPlatformAdmin()}
+ await loadSessionContext(data?.session||null);
+ authResolved=true;
  render()
 }
 async function fetchRow(){
@@ -429,8 +477,11 @@ async function signIn(){
  message("#cloudAuthMessage","Выполняется вход…");
  const {data,error}=await client.auth.signInWithPassword({email,password});
  if(error)return message("#cloudAuthMessage",friendly(error),"error");
- session=data.session;localStorage.removeItem(DEMO_KEY);localStorage.removeItem(PENDING_EMAIL_KEY);
- await loadProfile();await loadWorkspace();await loadPlatformAdmin();render();message("#cloudAuthMessage","");
+ localStorage.removeItem(PENDING_EMAIL_KEY);
+ authResolved=false;workspaceResolved=false;
+ await loadSessionContext(data.session);
+ authResolved=true;
+ render();message("#cloudAuthMessage","");
  await firstSync()
 }
 async function signUp(){
@@ -438,7 +489,13 @@ async function signUp(){
  if(!email||!password)return message("#cloudRegisterMessage","Введите email и пароль","error");
  const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:cfg().redirectUrl}});
  if(error)return message("#cloudRegisterMessage",friendly(error),"error");
- if(data.session){session=data.session;await loadProfile();await loadWorkspace();await loadPlatformAdmin();render();await firstSync()}
+ if(data.session){
+  authResolved=false;workspaceResolved=false;
+  await loadSessionContext(data.session);
+  authResolved=true;
+  render();
+  await firstSync()
+ }
  else{
   store(PENDING_EMAIL_KEY,email);
   if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=email;
@@ -596,19 +653,45 @@ function bind(){
 
 }
 async function start(){
- if(started)return;started=true;removeOldQuotaBackups();bind();init();
+ if(started)return;
+ started=true;
+ authResolved=false;
+ workspaceResolved=false;
+
+ removeOldQuotaBackups();
+ bind();
+ init();
+
  if(new URLSearchParams(location.search).get("email-confirmed")==="1"){
-  localStorage.removeItem(PENDING_EMAIL_KEY);showAuth("login");
+  localStorage.removeItem(PENDING_EMAIL_KEY);
+  showAuth("login");
   setTimeout(()=>message("#cloudAuthMessage","Email подтверждён. Теперь войдите.","success"),100)
  }
+
  if(client){
-  const {data}=await client.auth.getSession();session=data?.session||null;
-  if(session){localStorage.removeItem(DEMO_KEY);await loadProfile()}
-  client.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace();await loadPlatformAdmin()}else{profile=null;workspace=null;membership=null;platformAdmin=false}render()})
+  const {data}=await client.auth.getSession();
+  await loadSessionContext(data?.session||null);
+  authResolved=true;
+  render();
+
+  client.auth.onAuthStateChange(async(_,nextSession)=>{
+   authResolved=false;
+   workspaceResolved=false;
+   await loadSessionContext(nextSession);
+   authResolved=true;
+   render()
+  })
+ }else{
+  await loadSessionContext(null);
+  authResolved=true;
+  render()
  }
+
  const pending=parse(PENDING_EMAIL_KEY,"");
- if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
- render()
+ if(!session&&!isDemo()&&pending){
+  if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;
+  showAuth("confirm")
+ }
 }
 
 async function getRolePermissions(){
@@ -617,8 +700,12 @@ async function getRolePermissions(){
  if(error)throw error;
  const result={};
  for(const row of data||[]){
-  if(!result[row.role])result[row.role]={};
-  result[row.role][row.permission]=Boolean(row.allowed)
+  const roleName=row.permission_role||row.role;
+  const permissionName=row.permission_name||row.permission;
+  const allowedValue=row.permission_allowed??row.allowed;
+  if(!roleName||!permissionName)continue;
+  if(!result[roleName])result[roleName]={};
+  result[roleName][permissionName]=Boolean(allowedValue)
  }
  return result
 }

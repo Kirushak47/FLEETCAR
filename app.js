@@ -375,7 +375,7 @@ const ENTERPRISE_ROLE_ACCESS={
  user:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","morePage","mobileMapPage","searchPage","carPage"]
 };
 function enterpriseCurrentRole(){
- return window.FleetPilotCloud?.role||"user"
+ return window.FleetPilotCloud?.role||document.body.dataset.enterpriseRole||"user"
 }
 function enterpriseCanOpen(pageId){
  if(window.FleetPilotCloud?.session&&!window.FleetPilotCloud?.membership)return false;
@@ -397,6 +397,7 @@ function applyPlatformAdminUI(){
 
 function applyEnterpriseAccess(){
  applyPlatformAdminUI();
+ if(!window.FleetPilotCloud)return;
  const role=enterpriseCurrentRole();
  $$("[data-desktop-page]").forEach(button=>{
   const page=button.dataset.desktopPage;
@@ -408,6 +409,13 @@ function applyEnterpriseAccess(){
  });
  document.body.dataset.enterpriseRole=role
 }
+window.applyEnterpriseAccess=applyEnterpriseAccess;
+window.addEventListener("fleetpilot:access-ready",()=>{
+ applyEnterpriseAccess();
+ const activePage=document.querySelector(".page.active")?.id;
+ if(activePage&&!enterpriseCanOpen(activePage))showPage("dashboardPage")
+});
+
 function enterpriseMessage(text,type=""){
  const el=$("#enterpriseMessage");if(!el)return;
  el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`

@@ -6704,3 +6704,8 @@ html[data-theme="dark"] .company-role-summary>div,html[data-theme="dark"] .compa
 html[data-theme="dark"] .workspace-settings-grid input,html[data-theme="dark"] .workspace-settings-grid select{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
 @media(max-width:850px){.company-overview-grid,.role-permissions-grid,.workspace-settings-grid{grid-template-columns:1fr}.role-permissions-layout{grid-template-columns:1fr}.role-permission-tabs{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.company-hero,.company-section-head{display:grid}.company-hero .btn,.company-section-head .btn{width:100%}.role-permission-tabs{grid-template-columns:1fr 1fr}.company-tabs{margin-inline:-4px}}
+
+
+/* FleetPilot V10.3.1 — startup stability */
+#workspaceGate[hidden]{display:none!important}
+html:not(.workspace-locked) #workspaceGate{display:none!important}
