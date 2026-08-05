@@ -7041,3 +7041,150 @@ html[data-theme="dark"] body.driver-only-ui .driver-bottom-nav button.active{
   left:0;
  }
 }
+
+
+/* FleetPilot V10.6.2 — service alerts on vehicle cards */
+.fleet-nav-alert-host{position:relative}
+.fleet-nav-alert-badge{
+ display:grid;
+ place-items:center;
+ min-width:18px;
+ height:18px;
+ padding:0 5px;
+ margin-left:auto;
+ border-radius:999px;
+ background:#ef4444;
+ color:#fff;
+ font-size:8px;
+ font-weight:900;
+ box-shadow:0 0 0 3px rgba(239,68,68,.14);
+}
+.fleet-service-alert-strip{
+ margin-bottom:12px;
+}
+.fleet-service-alert-strip>button{
+ width:100%;
+ display:grid;
+ grid-template-columns:auto 1fr auto;
+ align-items:center;
+ gap:12px;
+ padding:12px 14px;
+ border:1px solid #fde68a;
+ border-radius:15px;
+ background:linear-gradient(135deg,#fffbeb,#fff7ed);
+ text-align:left;
+ cursor:pointer;
+}
+.fleet-service-strip-icon{
+ display:grid;
+ place-items:center;
+ width:38px;
+ height:38px;
+ border-radius:12px;
+ background:#f59e0b;
+ color:#fff;
+ font-size:18px;
+}
+.fleet-service-alert-strip strong,
+.fleet-service-alert-strip small{
+ display:block;
+}
+.fleet-service-alert-strip small{
+ margin-top:3px;
+ color:#92400e;
+}
+.fleet-service-alert-strip b{
+ color:#92400e;
+ font-size:9px;
+}
+.car-service-alert-icon{
+ position:relative;
+ display:grid;
+ place-items:center;
+ width:34px;
+ height:34px;
+ padding:0;
+ border:1px solid rgba(255,255,255,.45);
+ border-radius:11px;
+ background:#f59e0b;
+ color:#fff;
+ cursor:pointer;
+ box-shadow:0 6px 18px rgba(245,158,11,.3);
+ animation:serviceAlertPulse 2s ease-in-out infinite;
+}
+.car-service-alert-icon.critical{
+ background:#ef4444;
+ box-shadow:0 6px 18px rgba(239,68,68,.38);
+}
+.car-service-alert-icon.normal{
+ background:#3b82f6;
+ box-shadow:0 6px 18px rgba(59,130,246,.3);
+}
+.car-service-alert-icon span{
+ font-size:15px;
+}
+.car-service-alert-icon b{
+ position:absolute;
+ top:-6px;
+ right:-6px;
+ display:grid;
+ place-items:center;
+ min-width:17px;
+ height:17px;
+ padding:0 4px;
+ border:2px solid #fff;
+ border-radius:999px;
+ background:#111827;
+ color:#fff;
+ font-size:7px;
+}
+.desktop-board-car{
+ position:relative;
+}
+.desktop-board-car>.car-service-alert-icon{
+ position:absolute;
+ top:7px;
+ right:7px;
+ width:29px;
+ height:29px;
+ z-index:3;
+}
+.workspace-request-filter{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+ padding:10px 12px;
+ margin-bottom:9px;
+ border:1px solid #c7d2fe;
+ border-radius:13px;
+ background:#eef2ff;
+ color:#3730a3;
+ font-size:9px;
+ font-weight:800;
+}
+@keyframes serviceAlertPulse{
+ 0%,100%{transform:scale(1)}
+ 50%{transform:scale(1.06)}
+}
+html[data-theme="dark"] .fleet-service-alert-strip>button{
+ border-color:#78350f;
+ background:linear-gradient(135deg,#292014,#211a13);
+ color:#fff;
+}
+html[data-theme="dark"] .workspace-request-filter{
+ border-color:#3730a3;
+ background:#1e1b4b;
+ color:#c7d2fe;
+}
+@media(max-width:700px){
+ .fleet-service-alert-strip>button{
+  grid-template-columns:auto 1fr;
+ }
+ .fleet-service-alert-strip b{
+  grid-column:1/-1;
+ }
+ .workspace-request-filter{
+  display:grid;
+ }
+}

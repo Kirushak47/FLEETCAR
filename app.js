@@ -434,7 +434,8 @@ window.addEventListener("fleetpilot:access-ready",()=>{
   renderDriverPortal();
   renderDriverProfile()
  }else{
-  document.body.classList.remove("driver-only-ui")
+  document.body.classList.remove("driver-only-ui");
+  if(["owner","coordinator","mechanic"].includes(role))loadFleetServiceAlerts({rerender:false})
  }
 });
 
@@ -822,6 +823,110 @@ async function openDriverRepairDialog(){
  driverRepairMessage("");
  $("#driverRepairDialog").showModal()
 }
+
+let workspaceRepairAlerts=[];
+let selectedWorkspaceRepairCarId=null;
+window.selectedWorkspaceRepairCarId=selectedWorkspaceRepairCarId;
+
+function activeWorkspaceRepairAlerts(){
+ return workspaceRepairAlerts.filter(row=>!["done","rejected"].includes(row.status))
+}
+function repairAlertsForCar(carId){
+ return activeWorkspaceRepairAlerts().filter(row=>String(row.car_id)===String(carId))
+}
+function repairAlertLevel(rows){
+ if(rows.some(row=>row.urgency==="critical"))return"critical";
+ if(rows.some(row=>row.urgency==="service"))return"service";
+ return"normal"
+}
+function renderFleetServiceAlertIndicators(){
+ const active=activeWorkspaceRepairAlerts();
+ const affectedCars=new Set(active.map(row=>String(row.car_id)));
+ const total=active.length;
+
+ for(const id of ["desktopFleetServiceAlertBadge","mobileFleetServiceAlertBadge"]){
+  const badge=$("#"+id);
+  if(!badge)continue;
+  badge.hidden=!total;
+  badge.textContent=String(total)
+ }
+
+ const strip=$("#fleetServiceAlertStrip");
+ if(strip){
+  strip.hidden=!total;
+  strip.innerHTML=total?`
+   <button type="button" onclick="openAllFleetServiceAlerts()">
+    <span class="fleet-service-strip-icon">🔧</span>
+    <div><strong>${total} ${total===1?"заявка":"заявок"} от водителей</strong>
+    <small>Автомобилей с активными заявками: ${affectedCars.size}</small></div>
+    <b>Открыть сервис →</b>
+   </button>`:""
+ }
+
+ document.querySelectorAll("[data-car-service-alert]").forEach(node=>node.remove());
+
+ for(const carId of affectedCars){
+  const rows=repairAlertsForCar(carId);
+  const level=repairAlertLevel(rows);
+  const targets=[
+   ...document.querySelectorAll(`[data-fleet-car-id="${CSS.escape(carId)}"] .hero-card-controls`),
+   ...document.querySelectorAll(`[data-board-car="${CSS.escape(carId)}"]`)
+  ];
+
+  targets.forEach(target=>{
+   if(target.querySelector(`[data-car-service-alert="${CSS.escape(carId)}"]`))return;
+   const button=document.createElement("button");
+   button.type="button";
+   button.className=`car-service-alert-icon ${level}`;
+   button.dataset.carServiceAlert=carId;
+   button.title=level==="critical"
+    ?`Срочная заявка водителя (${rows.length})`
+    :`Активная заявка водителя (${rows.length})`;
+   button.setAttribute("aria-label",button.title);
+   button.innerHTML=`<span>🔧</span><b>${rows.length}</b>`;
+   button.onclick=event=>{
+    event.stopPropagation();
+    openFleetServiceAlert(carId)
+   };
+
+   if(target.matches(".hero-card-controls"))target.prepend(button);
+   else target.append(button)
+  })
+ }
+}
+async function loadFleetServiceAlerts({rerender=false}={}){
+ if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
+ try{
+  workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  if(rerender&&typeof renderFleet==="function")renderFleet();
+  requestAnimationFrame(renderFleetServiceAlertIndicators);
+  return workspaceRepairAlerts
+ }catch(error){
+  console.warn("Fleet service alerts failed",error);
+  return[]
+ }
+}
+function openFleetServiceAlert(carId){
+ selectedWorkspaceRepairCarId=String(carId);
+ showPage("repairsPage");
+ setTimeout(()=>{
+  renderWorkspaceRepairRequests();
+  document.querySelector("#workspaceRepairRequestsList")?.scrollIntoView({behavior:"smooth",block:"start"})
+ },50)
+}
+function openAllFleetServiceAlerts(){
+ selectedWorkspaceRepairCarId=null;
+ showPage("repairsPage");
+ setTimeout(()=>renderWorkspaceRepairRequests(),50)
+}
+window.openFleetServiceAlert=openFleetServiceAlert;
+function clearWorkspaceRepairCarFilter(){
+ selectedWorkspaceRepairCarId=null;
+ renderWorkspaceRepairRequests()
+}
+window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
+window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
+
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
@@ -830,11 +935,22 @@ async function renderWorkspaceRepairRequests(){
  }
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
-  const rows=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  root.innerHTML=rows.map(row=>{
+  workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  const allRows=workspaceRepairAlerts;
+  const rows=selectedWorkspaceRepairCarId
+   ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
+   :allRows;
+
+  const filterBar=selectedWorkspaceRepairCarId?`
+   <div class="workspace-request-filter">
+    <span>Показаны заявки выбранного автомобиля</span>
+    <button type="button" class="btn" onclick="clearWorkspaceRepairCarFilter()">Показать все</button>
+   </div>`:"";
+
+  root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);
    const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
-   return `<article class="workspace-request-row urgency-${row.urgency}">
+   return `<article class="workspace-request-row urgency-${row.urgency}" data-workspace-request-car="${row.car_id}">
     <div>
      <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category} · ${carName}</strong>
      <span>${row.description}</span>
@@ -844,15 +960,18 @@ async function renderWorkspaceRepairRequests(){
      ${Object.entries(DRIVER_REPAIR_STATUS_LABELS).map(([value,label])=>`<option value="${value}" ${value===row.status?"selected":""}>${label}</option>`).join("")}
     </select>
    </article>`
-  }).join("")||'<div class="driver-empty-state">Новых заявок нет.</div>';
+  }).join("")||'<div class="driver-empty-state">Активных заявок для автомобиля нет.</div>');
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
    try{
     await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");
     toast("Статус заявки обновлён");
-    renderWorkspaceRepairRequests()
+    await renderWorkspaceRepairRequests();
+    await loadFleetServiceAlerts({rerender:true})
    }catch(error){toast(error.message||String(error))}
-  })
+  });
+
+  requestAnimationFrame(renderFleetServiceAlertIndicators)
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
 async function loadWorkspaceDriverAssignments(){
@@ -878,7 +997,7 @@ function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="repairsPage")renderWorkspaceRepairRequests();
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -4023,7 +4142,7 @@ function renderFleet(){
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" style="--card-index:${list.indexOf(c)}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
 <div class="no-photo-hero ${c.status} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
