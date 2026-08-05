@@ -197,7 +197,7 @@ function effectiveVisible(settings=uxSettings()){
  return settings.visible
 }
 
-const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage","documentsPage"]);
+const SIMPLE_ALLOWED_PAGES=new Set(["dashboardPage","fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage","documentsPage"]);
 const SIMPLE_ALLOWED_TABS=new Set(["info","finance","documents","damages"]);
 
 function currentUiMode(){return uxSettings().mode==="simple"?"simple":"advanced"}
@@ -358,12 +358,12 @@ if(window.matchMedia){
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 function showPage(id){
- if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
+ if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
-$("#closeGlobalSearch").onclick=()=>showPage("fleetPage");$("#globalSearchInput").oninput=renderGlobalSearch;
+$("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
 ["activitySearch","activityTypeFilter","activityPeriodFilter"].forEach(id=>{
  const element=$("#"+id);
@@ -390,6 +390,10 @@ $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);render
 
 
 
+
+const dashboardOpenFleet=$("#dashboardOpenFleet");
+if(dashboardOpenFleet)dashboardOpenFleet.onclick=()=>showPage("fleetPage");
+$$('[data-dashboard-go]').forEach(button=>button.onclick=()=>showPage(button.dataset.dashboardGo));
 
 const ownerSettingsButton=$("#ownerDashboardSettingsButton");
 if(ownerSettingsButton)ownerSettingsButton.onclick=openOwnerDashboardSettings;
@@ -531,7 +535,7 @@ window.addEventListener("load",()=>{
  }
 });
 
-$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",mobileMapPage:"Карта",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="mobileMapPage"){
+$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={dashboardPage:"Главная",fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",mobileMapPage:"Карта",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage";if(id==="dashboardPage")renderOwnerDashboard();if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="mobileMapPage"){
  renderMobileGpsMap({fit:true});
  updateGpsCountdownUi();
  requestAnimationFrame(()=>{
@@ -3184,7 +3188,6 @@ function renderOwnerDashboard(){
  if(!root)return;
 
  const owner=fleetPilotIsOwner();
- document.body.classList.toggle("owner-dashboard-active",owner);
  root.hidden=!owner;
  const settingsButton=$("#ownerDashboardSettingsButton");
  if(settingsButton)settingsButton.hidden=!owner;
@@ -3295,10 +3298,8 @@ function openOwnerDashboardSettings(){
 window.hideOwnerDashboardWidget=hideOwnerDashboardWidget;
 
 function renderFleet(){
- renderOwnerDashboard();
  refreshCityControls();
  applyUxSettings();
- renderOwnerDashboard();
  renderFleetIntelligence();
  renderWeekPlan();
  const period="month",monthText="текущий месяц";

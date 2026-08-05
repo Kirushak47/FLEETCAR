@@ -6519,3 +6519,19 @@ body.owner-dashboard-active [data-fleet-view],
 body.owner-dashboard-active .desktop-command-view{
   display:revert;
 }
+
+/* FleetPilot V9.4 — separate Dashboard and Fleet */
+#dashboardPage{max-width:1500px;margin:0 auto}
+#dashboardPage .owner-dashboard{display:grid;margin-bottom:16px}
+#dashboardPage .dashboard-quick-actions{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px}
+#dashboardPage .dashboard-quick-actions h3{margin:4px 0 0}
+.dashboard-quick-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.dashboard-quick-buttons button{padding:10px 13px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#334155;font-weight:850;cursor:pointer}
+#fleetPage .desktop-fleet-page-head{margin-bottom:14px}
+html[data-theme="dark"] #dashboardPage .dashboard-quick-actions,
+html[data-theme="dark"] .dashboard-quick-buttons button{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+@media(max-width:1099px){
+ #dashboardPage .dashboard-quick-actions{display:grid}
+ .dashboard-quick-buttons{display:grid;grid-template-columns:1fr 1fr}
+ #dashboardPage .owner-dashboard-kpis{grid-template-columns:1fr 1fr}
+}
