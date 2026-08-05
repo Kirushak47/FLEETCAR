@@ -518,26 +518,39 @@ async function backupCurrent(){
 function removeOldQuotaBackups(){
  Object.keys(localStorage).filter(k=>k.startsWith("fleetpilot.cloud.prepull.")).forEach(k=>localStorage.removeItem(k))
 }
-async function pushNow({silent=false}={}){
+async function pushNow({silent=false,force=false}={}){
  if(syncing||!session)return false;
  syncing=true;
  setStatus("Синхронизация…",null,"syncing");
-
  try{
   if(!membership?.workspace_id)throw new Error("Workspace membership required");
   if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("Workspace write permission denied");
-
   const payload=window.getFleetPilotDatabase?.();
   if(!payload||typeof payload!=="object")throw new Error("Локальная база недоступна");
+
+  const localCars=Array.isArray(payload.cars)?payload.cars.length:0;
+  const remoteRow=await fetchRow().catch(()=>null);
+  const remoteCars=Array.isArray(remoteRow?.payload?.cars)?remoteRow.payload.cars.length:0;
+
+  if(!force&&localCars===0&&remoteCars>0){
+   await applyRemoteFleetState(remoteRow,{reload:true});
+   throw new Error(`Пустая база заблокирована. В облаке найдено автомобилей: ${remoteCars}`)
+  }
+
+  if(!force&&remoteCars>localCars&&localCars>0){
+   const approved=confirm(`В облаке ${remoteCars} автомобилей, а на устройстве ${localCars}.\n\nЗаменить облачную базу локальной?`);
+   if(!approved){
+    await applyRemoteFleetState(remoteRow,{reload:true});
+    return false
+   }
+  }
 
   const now=new Date().toISOString();
   const {data,error}=await client.rpc("save_workspace_fleet_state",{
    state_payload:payload,
    state_device_name:deviceName()
   });
-
   if(error)throw error;
-
   const savedAt=(Array.isArray(data)?data[0]?.updated_at:data?.updated_at)||now;
   setStatus("Все изменения сохранены",savedAt,"online");
   message("#cloudAuthMessage","");
@@ -549,9 +562,7 @@ async function pushNow({silent=false}={}){
   setStatus("Ошибка синхронизации",null,"error");
   if(!silent)window.toast?.(friendly(e));
   return false
- }finally{
-  syncing=false
- }
+ }finally{syncing=false}
 }
 async function pullNow({ask=true,row=null,reload=true}={}){
  if(syncing||!session)return false;
@@ -1047,6 +1058,27 @@ async function assignDriverVehicle(driverUserId,carId){
  });
  if(error)throw error
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function getCloudFleetVersions(){
+ if(!client||!membership)return[];
+ if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("Недостаточно прав");
+ const {data,error}=await client.rpc("get_workspace_fleet_versions");
+ if(error)throw error;
+ return data||[]
+}
+async function restoreCloudFleetVersion(versionId){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("Недостаточно прав");
+ const {data,error}=await client.rpc("restore_workspace_fleet_version",{version_id_value:versionId});
+ if(error)throw error;
+ const restored=Array.isArray(data)?data[0]||null:data||null;
+ if(restored?.payload){
+  window.replaceFleetPilotDatabase(restored.payload);
+  setStatus("Восстановлена облачная версия",restored.updated_at||new Date().toISOString(),"online");
+  location.reload()
+ }
+ return restored
+}
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

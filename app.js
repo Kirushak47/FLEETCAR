@@ -1216,18 +1216,32 @@ async function importBackupFile(file){
  if(file.size>35*1024*1024)throw new Error("Файл слишком большой");
  const parsed=JSON.parse(await file.text());
  const imported=validateImportedBackup(parsed);
- if(!confirm(`Восстановить ${imported.cars.length} автомобилей? Текущие данные будут заменены.`))return;
+ const importedCars=Array.isArray(imported.cars)?imported.cars.length:0;
+
+ if(!confirm(`Восстановить резервную копию?\n\nАвтомобили: ${importedCars}\nЭкспорт: ${parsed?.exportedAt?new Date(parsed.exportedAt).toLocaleString("ru-RU"):"дата не указана"}\n\nТекущие локальные данные будут заменены.`))return;
+
  await writeAutoBackup(new Date().toISOString());
- db=structuredClone(imported);
- db.settings=db.settings||structuredClone(seed.settings);
- db.cars.forEach(c=>{
+ const normalized=structuredClone(imported);
+ normalized.settings=normalized.settings||structuredClone(seed.settings);
+ for(const key of ["cars","repairs","payments","expenses","documents","deposits","timeline","damages","activity"]){
+  if(!Array.isArray(normalized[key]))normalized[key]=[]
+ }
+ normalized.cars.forEach(c=>{
   if(c.inFleet===undefined)c.inFleet=true;
   if(c.modelKey==="skoda-octavia")c.modelKey="skoda-octavia-3"
  });
+
+ db=normalized;
  save();
  await writeAutoBackup();
- applyTheme();applyUxSettings();applyAdaptiveMode();showPage("fleetPage");setTimeout(()=>writeAutoBackup(),700);
- toast("Данные восстановлены")
+ applyTheme();applyUxSettings();applyAdaptiveMode();
+ showPage("fleetPage");
+ toast(`Восстановлено автомобилей: ${importedCars}`);
+
+ setTimeout(async()=>{
+  const uploaded=await window.FleetPilotCloud?.pushNow?.({silent:false,force:true});
+  if(uploaded)toast("Резервная копия загружена в облако")
+ },700)
 }
 async function restoreLatestAutoBackup(){
  try{
@@ -4565,7 +4579,29 @@ $("#damageViewerImage").ondblclick=()=>zoomDamageViewer(damageViewerState.scale>
 $("#damageViewer").onclick=e=>{if(e.target===$("#damageViewer"))$("#damageViewer").close()};
 document.addEventListener("keydown",e=>{if(!$("#damageViewer").open)return;if(e.key==="ArrowLeft")moveDamageViewer(-1);if(e.key==="ArrowRight")moveDamageViewer(1);if(e.key==="Escape")$("#damageViewer").close();if(e.key==="+")zoomDamageViewer(.25);if(e.key==="-")zoomDamageViewer(-.25)});
 
+
+async function renderCloudVersions(){
+ const root=$("#cloudVersionsList");if(!root)return;
+ root.innerHTML='<div class="driver-empty-state">Загрузка облачных версий…</div>';
+ try{
+  const versions=await window.FleetPilotCloud.getCloudFleetVersions();
+  root.innerHTML=versions.map(version=>`
+   <article class="cloud-version-row">
+    <div>
+     <strong>${new Date(version.created_at).toLocaleString("ru-RU")}</strong>
+     <span>${version.cars_count} авто · ${version.records_count} записей</span>
+     <small>${version.actor_email||"FleetPilot"} · ${version.device_name||"устройство не указано"}</small>
+    </div>
+    <button type="button" class="btn" data-cloud-version="${version.id}">Восстановить</button>
+   </article>`).join("")||'<div class="driver-empty-state">Облачных версий пока нет.</div>';
+  $$("[data-cloud-version]").forEach(button=>button.onclick=async()=>{
+   if(!confirm("Восстановить выбранную облачную версию?"))return;
+   await window.FleetPilotCloud.restoreCloudFleetVersion(button.dataset.cloudVersion)
+  })
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
 $("#exportBackup").onclick=downloadBackup;
+if($("#refreshCloudVersions"))$("#refreshCloudVersions").onclick=renderCloudVersions;
 $("#importBackup").onchange=async e=>{
  const file=e.target.files?.[0];
  try{
