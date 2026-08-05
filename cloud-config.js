@@ -1,13 +1,3 @@
-/*
- FleetPilot Cloud public configuration.
-
- 1. Paste your Supabase Publishable Key below.
- 2. Paste the email that must receive the owner role.
- 3. Upload this file to GitHub together with the rest of FleetPilot.
-
- Publishable Key is designed for browser use.
- NEVER put sb_secret_ or service_role keys here.
-*/
 window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
   url: "https://tbpfasumklpdqwnlfncd.supabase.co",
   publishableKey: "sb_publishable_Y8lMZQN7Fc7V2HAixaZZrA_w-7STzMh",

@@ -126,6 +126,19 @@ function save(){
  }
 }
 window.getFleetPilotDatabase=()=>structuredClone(db);
+window.createFleetPilotEmptyDatabase=()=>({
+ settings:structuredClone(seed.settings),
+ cars:[],repairs:[],payments:[],expenses:[],documents:[],
+ deposits:[],timeline:[],damages:[],activity:[]
+});
+window.createFleetPilotDemoDatabase=()=>structuredClone(seed);
+window.clearFleetPilotLocalDatabase=()=>{
+ const empty=window.createFleetPilotEmptyDatabase();
+ localStorage.setItem(DATA_KEY,JSON.stringify(empty));
+ localStorage.setItem(META_KEY,JSON.stringify({lastSaved:new Date().toISOString(),source:"logout"}));
+ return empty
+};
+
 window.getFleetPilotMeta=()=>readJsonStorage(META_KEY)||{};
 window.replaceFleetPilotDatabase=payload=>{
  if(!isFleetDatabase(payload))throw new Error("Некорректная облачная база");

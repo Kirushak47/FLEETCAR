@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot Cloud V1 Cloud Beta</title>
-  <link rel="manifest" href="manifest.webmanifest?v=9000">
-  <link rel="stylesheet" href="styles.css?v=9000">
+  <title>FleetPilot Cloud V2</title>
+  <link rel="manifest" href="manifest.webmanifest?v=9200">
+  <link rel="stylesheet" href="styles.css?v=9200">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -31,8 +31,15 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot Cloud V1 Cloud Beta</span><h1 id="pageTitle">Автопарк</h1></div>
-    <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
+    <div><span class="eyebrow">FleetPilot Cloud V2</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div class="topbar-actions">
+  <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
+  <button id="headerAdd" class="round">＋</button>
+  <button type="button" id="profileAvatarButton" class="profile-avatar-button" aria-label="Профиль" title="Профиль">
+    <span id="profileAvatarImage" class="profile-avatar-image">FP</span>
+    <span id="profileOnlineDot" class="profile-online-dot"></span>
+  </button>
+</div>
   </header>
 
   <main>
@@ -465,14 +472,18 @@
   </div>
   <div id="activityLog" class="activity-journal-list"></div>
 </div>
-      <div class="card cloud-settings-card">
+      <div class="card account-settings-card">
   <div class="section-head">
-    <div><span class="eyebrow">FleetPilot Cloud</span><h3>Синхронизация устройств</h3><p>Один автопарк на телефоне, компьютере и других устройствах.</p></div>
-    <button type="button" id="openCloudDialog" class="btn primary">Войти</button>
+    <div>
+      <span class="eyebrow">Аккаунт</span>
+      <h3>Профиль FleetPilot</h3>
+      <p>Управление аккаунтом, облаком и выходом из приложения.</p>
+    </div>
+    <button type="button" id="openCloudDialog" class="btn primary">Открыть профиль</button>
   </div>
-  <div id="cloudConnectionSummary" class="cloud-connection-summary">
+  <div id="cloudConnectionSummary" class="account-summary-card">
     <span class="cloud-state-dot local"></span>
-    <div><strong>Облако готово</strong><small>Войдите, чтобы синхронизировать устройства</small></div>
+    <div><strong>Вход не выполнен</strong><small>Войдите или откройте демо-режим</small></div>
   </div>
 </div>
 <div class="card gps-settings-card">
@@ -791,91 +802,124 @@
     <iframe id="vehicleReportFrame" class="vehicle-report-frame" title="Отчёт по автомобилю"></iframe>
   </div>
 </dialog>
-<dialog id="cloudDialog" class="cloud-dialog">
-<form method="dialog" id="cloudForm" class="cloud-shell">
-  <div class="cloud-head">
-    <div>
-      <span class="eyebrow">FleetPilot Cloud</span>
-      <h2>Ваш облачный автопарк</h2>
-      <p>Войдите с любого телефона или компьютера — ваши данные загрузятся автоматически.</p>
-    </div>
-    <button type="button" id="closeCloudDialog" class="dialog-close">×</button>
-  </div>
+<dialog id="cloudDialog" class="profile-dialog">
+  <div class="profile-dialog-shell">
+    <button type="button" id="closeCloudDialog" class="dialog-close profile-dialog-close">×</button>
 
-  <div class="cloud-body">
-    <section class="cloud-auth-section">
-      <h3>Вход в аккаунт</h3>
-      <label><span>Email</span><input id="cloudEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
-      <label><span>Пароль</span><input id="cloudPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Минимум 6 символов"></label>
-
-      <div class="cloud-auth-actions">
-        <button type="button" id="cloudSignIn" class="btn primary">Войти</button>
-        <button type="button" id="cloudSignUp" class="btn">Создать аккаунт</button>
+    <section id="profileLoggedInView" class="profile-logged-view" hidden>
+      <div class="profile-hero">
+        <label class="profile-photo-wrap" title="Изменить фото">
+          <span id="profileLargeAvatar" class="profile-large-avatar">FP</span>
+          <input id="profilePhotoInput" type="file" accept="image/*" hidden>
+          <span class="profile-photo-edit">✎</span>
+        </label>
+        <h2 id="profileDisplayName">FleetPilot User</h2>
+        <p id="cloudUserEmail"></p>
+        <span id="cloudUserRole" class="cloud-role-badge">Пользователь</span>
       </div>
 
-      <button type="button" id="cloudResetPassword" class="cloud-text-button">Забыли пароль?</button>
+      <div class="profile-status-card">
+        <div><span class="profile-status-icon">☁</span><div><small>Облачная синхронизация</small><strong id="cloudSyncStatus">Ожидание</strong></div></div>
+        <span id="cloudLastSync">—</span>
+      </div>
+
+      <div class="profile-menu-list">
+        <button type="button" id="cloudPushNow"><span>↻</span><div><strong>Синхронизировать сейчас</strong><small>Загрузить изменения этого устройства</small></div><b>›</b></button>
+        <button type="button" id="cloudPullNow"><span>↓</span><div><strong>Скачать из облака</strong><small>Получить последнюю облачную версию</small></div><b>›</b></button>
+        <button type="button" id="profileOpenSettings"><span>⚙</span><div><strong>Настройки</strong><small>Тема, интерфейс и параметры приложения</small></div><b>›</b></button>
+        <button type="button" id="cloudResetPassword"><span>⌁</span><div><strong>Изменить пароль</strong><small>Получить письмо для смены пароля</small></div><b>›</b></button>
+      </div>
+
+      <section id="cloudAdminSection" class="profile-admin-card" hidden>
+        <div class="profile-admin-title">
+          <div><span class="eyebrow">Владелец проекта</span><h3>Администрирование</h3></div>
+          <button type="button" id="openSupabaseDashboard" class="profile-mini-button">Supabase ↗</button>
+        </div>
+        <div id="cloudAdminMessage" class="cloud-message" hidden></div>
+        <div class="profile-admin-kpis">
+          <div><small>Пользователей</small><strong id="adminUsersCount">—</strong></div>
+          <div><small>Автомобилей</small><strong id="adminCarsCount">—</strong></div>
+          <div><small>Сегодня</small><strong id="adminTodayCount">—</strong></div>
+        </div>
+        <button type="button" id="refreshCloudAdmin" class="profile-admin-open">Показать пользователей</button>
+        <div id="cloudAdminUsers" class="cloud-admin-users" hidden></div>
+      </section>
+
+      <button type="button" id="cloudSignOut" class="profile-signout-button">Выйти из аккаунта</button>
+    </section>
+
+    <section id="profileGuestView" class="profile-guest-view">
+      <div class="profile-guest-logo">F</div>
+      <span class="eyebrow">FleetPilot Cloud</span>
+      <h2>Добро пожаловать</h2>
+      <p>Войдите, чтобы получить свой автопарк на любом устройстве.</p>
+      <button type="button" id="profileGoToLogin" class="btn primary profile-wide-button">Войти</button>
+      <button type="button" id="profileGoToRegister" class="btn profile-wide-button">Создать аккаунт</button>
+      <button type="button" id="profileStartDemo" class="profile-demo-button">Попробовать демо-версию</button>
+    </section>
+
+    <section id="profileDemoView" class="profile-demo-view" hidden>
+      <div class="profile-hero">
+        <span class="profile-large-avatar demo">D</span>
+        <h2>Демо-режим</h2>
+        <p>Тестовые данные не синхронизируются с облаком.</p>
+        <span class="cloud-role-badge">Демо</span>
+      </div>
+      <div class="profile-menu-list">
+        <button type="button" id="demoGoToLogin"><span>⇥</span><div><strong>Войти в аккаунт</strong><small>Открыть настоящий автопарк</small></div><b>›</b></button>
+        <button type="button" id="demoReset"><span>↺</span><div><strong>Сбросить демо</strong><small>Вернуть исходные тестовые данные</small></div><b>›</b></button>
+      </div>
+      <button type="button" id="demoExit" class="profile-signout-button">Выйти из демо</button>
+    </section>
+  </div>
+</dialog>
+
+<div id="authGate" class="auth-gate" hidden>
+  <div class="auth-gate-card">
+    <div class="auth-brand">
+      <span class="auth-brand-logo">F</span>
+      <div><strong>FleetPilot</strong><small>Cloud Fleet Management</small></div>
+    </div>
+
+    <section id="authWelcomeView" class="auth-view">
+      <span class="eyebrow">Ваш автопарк в облаке</span>
+      <h1>Добро пожаловать</h1>
+      <p>Автомобили, расходы, ремонты и документы синхронизируются между телефоном и компьютером.</p>
+      <div class="auth-main-actions">
+        <button type="button" id="authShowLogin" class="btn primary">Войти</button>
+        <button type="button" id="authShowRegister" class="btn">Создать аккаунт</button>
+      </div>
+      <button type="button" id="authStartDemo" class="auth-demo-button">Попробовать демо</button>
+    </section>
+
+    <section id="authLoginView" class="auth-view" hidden>
+      <button type="button" class="auth-back" data-auth-back>← Назад</button>
+      <h2>Вход в FleetPilot</h2>
+      <label><span>Email</span><input id="cloudEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label><span>Пароль</span><input id="cloudPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Минимум 6 символов"></label>
+      <button type="button" id="cloudSignIn" class="btn primary auth-submit">Войти</button>
+      <button type="button" id="cloudResetPasswordGuest" class="cloud-text-button">Забыли пароль?</button>
       <div id="cloudAuthMessage" class="cloud-message" hidden></div>
     </section>
 
-    <section id="cloudEmailConfirmSection" class="cloud-confirm-section" hidden>
-      <div class="cloud-confirm-icon">✉</div>
-      <div>
-        <h3>Подтвердите email</h3>
-        <p>Мы отправили письмо на <strong id="cloudPendingEmail"></strong>. Откройте почту и нажмите ссылку подтверждения, затем вернитесь в FleetPilot и войдите.</p>
-      </div>
-      <div class="cloud-auth-actions">
-        <button type="button" id="cloudResendEmail" class="btn">Отправить письмо повторно</button>
-        <button type="button" id="cloudBackToLogin" class="btn primary">Вернуться ко входу</button>
-      </div>
+    <section id="authRegisterView" class="auth-view" hidden>
+      <button type="button" class="auth-back" data-auth-back>← Назад</button>
+      <h2>Создать аккаунт</h2>
+      <label><span>Email</span><input id="cloudRegisterEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label><span>Пароль</span><input id="cloudRegisterPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Минимум 6 символов"></label>
+      <button type="button" id="cloudSignUp" class="btn primary auth-submit">Создать аккаунт</button>
+      <div id="cloudRegisterMessage" class="cloud-message" hidden></div>
     </section>
 
-    <section id="cloudAccountSection" class="cloud-account-section" hidden>
-      <div class="cloud-user-row">
-        <div>
-          <small>Выполнен вход</small>
-          <strong id="cloudUserEmail"></strong>
-          <span id="cloudUserRole" class="cloud-role-badge">Пользователь</span>
-        </div>
-        <button type="button" id="cloudSignOut" class="btn">Выйти</button>
-      </div>
-
-      <div class="cloud-sync-grid">
-        <div><small>Статус</small><strong id="cloudSyncStatus">Ожидание</strong></div>
-        <div><small>Последняя синхронизация</small><strong id="cloudLastSync">—</strong></div>
-      </div>
-
-      <div class="cloud-auth-actions">
-        <button type="button" id="cloudPushNow" class="btn">Загрузить это устройство</button>
-        <button type="button" id="cloudPullNow" class="btn primary">Скачать из облака</button>
-      </div>
-      <p class="cloud-warning">«Скачать из облака» заменяет локальную базу на этом устройстве. Перед заменой создаётся локальная резервная копия.</p>
-    </section>
-
-    <section id="cloudAdminSection" class="cloud-admin-section" hidden>
-      <div class="cloud-admin-head">
-        <div>
-          <span class="eyebrow">Только владелец</span>
-          <h3>FleetPilot Admin</h3>
-          <p>Управление облачной системой и пользователями.</p>
-        </div>
-        <button type="button" id="openSupabaseDashboard" class="btn">Открыть Supabase</button>
-      </div>
-
-      <div class="cloud-admin-kpis">
-        <div><small>Пользователей</small><strong id="adminUsersCount">0</strong></div>
-        <div><small>Автомобилей</small><strong id="adminCarsCount">0</strong></div>
-        <div><small>Синхронизировались сегодня</small><strong id="adminTodayCount">0</strong></div>
-      </div>
-
-      <div class="cloud-admin-actions">
-        <button type="button" id="refreshCloudAdmin" class="btn primary">Обновить список</button>
-      </div>
-      <div id="cloudAdminMessage" class="cloud-message" hidden></div>
-      <div id="cloudAdminUsers" class="cloud-admin-users"></div>
+    <section id="authConfirmView" class="auth-view auth-confirm-view" hidden>
+      <div class="auth-mail-icon">✉</div>
+      <h2>Подтвердите email</h2>
+      <p>Мы отправили письмо на <strong id="cloudPendingEmail"></strong>. Нажмите ссылку в письме, затем вернитесь в FleetPilot.</p>
+      <button type="button" id="cloudResendEmail" class="btn">Отправить повторно</button>
+      <button type="button" id="cloudBackToLogin" class="btn primary">Вернуться ко входу</button>
     </section>
   </div>
-</form>
-</dialog>
+</div>
 <dialog id="gpsSetupDialog" class="gps-setup-dialog">
 <form method="dialog" id="gpsSetupForm" class="gps-setup-shell">
 <div class="gps-setup-head"><div><span class="eyebrow">Подключение GPS</span><h2>Подключить GPS</h2><p>Введите данные системы, которой вы уже пользуетесь.</p></div><button type="button" id="closeGpsSetup" class="dialog-close">×</button></div>
@@ -902,7 +946,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=9000"></script>
-<script src="cloud.js?v=9000"></script>
-<script src="app.js?v=9000"></script>
+<script src="cloud-config.js?v=9200"></script>
+<script src="cloud.js?v=9200"></script>
+<script src="app.js?v=9200"></script>
 </body></html>
