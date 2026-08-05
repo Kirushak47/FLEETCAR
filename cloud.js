@@ -7,7 +7,7 @@ const DEMO_KEY="fleetpilot.demo.active.v1";
 const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
 const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const PUSH_DELAY=1800;
-let client=null,session=null,profile=null,workspace=null,membership=null,pushTimer=null,syncing=false,started=false;
+let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,syncing=false,started=false;
 
 const $=s=>document.querySelector(s);
 const cfg=()=>window.FLEETPILOT_CLOUD_CONFIG||{};
@@ -95,6 +95,28 @@ async function loadWorkspace(){
  workspace=member?.workspaces||null;
  return membership
 }
+async function loadPlatformAdmin(){
+ platformAdmin=false;
+ if(!session||!client)return false;
+
+ const {data,error}=await client
+  .from("platform_admins")
+  .select("user_id")
+  .eq("user_id",session.user.id)
+  .maybeSingle();
+
+ if(error){
+  console.error("platform admin load",error);
+  return false
+ }
+
+ platformAdmin=Boolean(data);
+ return platformAdmin
+}
+function isPlatformAdmin(){
+ return platformAdmin===true
+}
+
 function enterpriseRole(){
  return membership?.role||profile?.role||"user"
 }
@@ -192,7 +214,7 @@ function render(){
 
  if(session){
   if(logged)logged.hidden=false;
-  if(admin)admin.hidden=!owner()
+  if(admin)admin.hidden=!isPlatformAdmin()
  }else if(isDemo()){
   if(demo)demo.hidden=false
  }else{
@@ -213,10 +235,10 @@ function setStatus(text,lastSync=null,state="online"){
 }
 async function refreshSession(){
  if(!client)init();
- if(!client){session=null;profile=null;workspace=null;membership=null;render();return}
+ if(!client){session=null;profile=null;workspace=null;membership=null;platformAdmin=false;render();return}
  const {data}=await client.auth.getSession();
  session=data?.session||null;
- if(session){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace()}
+ if(session){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace();await loadPlatformAdmin()}
  render()
 }
 async function fetchRow(){
@@ -291,7 +313,7 @@ async function signIn(){
  const {data,error}=await client.auth.signInWithPassword({email,password});
  if(error)return message("#cloudAuthMessage",friendly(error),"error");
  session=data.session;localStorage.removeItem(DEMO_KEY);localStorage.removeItem(PENDING_EMAIL_KEY);
- await loadProfile();await loadWorkspace();render();message("#cloudAuthMessage","");
+ await loadProfile();await loadWorkspace();await loadPlatformAdmin();render();message("#cloudAuthMessage","");
  await firstSync()
 }
 async function signUp(){
@@ -299,7 +321,7 @@ async function signUp(){
  if(!email||!password)return message("#cloudRegisterMessage","Введите email и пароль","error");
  const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:cfg().redirectUrl}});
  if(error)return message("#cloudRegisterMessage",friendly(error),"error");
- if(data.session){session=data.session;await loadProfile();await loadWorkspace();render();await firstSync()}
+ if(data.session){session=data.session;await loadProfile();await loadWorkspace();await loadPlatformAdmin();render();await firstSync()}
  else{
   store(PENDING_EMAIL_KEY,email);
   if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=email;
@@ -364,7 +386,7 @@ function savePhoto(file){
  reader.readAsDataURL(file)
 }
 async function refreshAdmin(){
- if(!owner())return;
+ if(!isPlatformAdmin())return;
  message("#cloudAdminMessage","Загрузка…");
  const [{data:profiles,error:pErr},{data:states,error:sErr}]=await Promise.all([
   client.from(PROFILE_TABLE).select("user_id,email,role,created_at").order("created_at",{ascending:false}),
@@ -425,12 +447,12 @@ async function start(){
  if(client){
   const {data}=await client.auth.getSession();session=data?.session||null;
   if(session){localStorage.removeItem(DEMO_KEY);await loadProfile()}
-  client.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace()}else{profile=null;workspace=null;membership=null}render()})
+  client.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace();await loadPlatformAdmin()}else{profile=null;workspace=null;membership=null;platformAdmin=false}render()})
  }
  const pending=parse(PENDING_EMAIL_KEY,"");
  if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
  render()
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isOwner(){return owner()}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

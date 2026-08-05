@@ -381,7 +381,21 @@ function enterpriseCanOpen(pageId){
  const role=enterpriseCurrentRole();
  return(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId)
 }
+
+function applyPlatformAdminUI(){
+ const isAdmin=Boolean(window.FleetPilotCloud?.isPlatformAdmin);
+ const adminSection=$("#cloudAdminSection");
+ if(adminSection)adminSection.hidden=!isAdmin;
+
+ const supabaseButton=$("#openSupabaseDashboard");
+ if(supabaseButton)supabaseButton.hidden=!isAdmin;
+
+ document.body.classList.toggle("platform-admin",isAdmin);
+ document.body.classList.toggle("workspace-owner",Boolean(window.FleetPilotCloud?.isWorkspaceOwner));
+}
+
 function applyEnterpriseAccess(){
+ applyPlatformAdminUI();
  const role=enterpriseCurrentRole();
  $$("[data-desktop-page]").forEach(button=>{
   const page=button.dataset.desktopPage;
@@ -446,8 +460,8 @@ async function renderEnterprisePage(){
      <strong>${enterpriseMemberEmail(member)}</strong>
      <small>${member.city||"Все города"} · добавлен ${new Date(member.created_at).toLocaleDateString("ru-RU")}</small>
     </div>
-    <select data-enterprise-role="${member.user_id}" ${canManage?"":"disabled"}>${enterpriseRoleOptions(member.role)}</select>
-    <input data-enterprise-city="${member.user_id}" value="${member.city||""}" placeholder="Город" ${canManage?"":"disabled"}>
+    <select data-enterprise-role="${member.user_id}" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>${enterpriseRoleOptions(member.role)}</select>
+    <input data-enterprise-city="${member.user_id}" value="${member.city||""}" placeholder="Город" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>
     <span class="enterprise-status ${member.status}">${member.status==="active"?"Активен":"Отключён"}</span>
     ${canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id?`<button type="button" class="enterprise-member-toggle" data-enterprise-toggle="${member.user_id}" data-status="${member.status}">${member.status==="active"?"Отключить":"Включить"}</button>`:""}
    </article>`).join("")||`<div class="owner-empty">Участники не найдены.</div>`;

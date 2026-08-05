@@ -6563,3 +6563,31 @@ html[data-theme="dark"] .enterprise-kpis article,html[data-theme="dark"] .enterp
 html[data-theme="dark"] .enterprise-member-card select,html[data-theme="dark"] .enterprise-member-card input,html[data-theme="dark"] .enterprise-toolbar input,html[data-theme="dark"] .enterprise-toolbar select,html[data-theme="dark"] .enterprise-invite-row{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
 @media(max-width:1050px){.enterprise-member-card{grid-template-columns:42px minmax(160px,1fr) 150px}.enterprise-member-card>*:nth-child(n+4){grid-column:2/-1}.enterprise-kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.enterprise-page-head{display:grid}.enterprise-toolbar{grid-template-columns:1fr}.enterprise-kpis{grid-template-columns:1fr 1fr}.enterprise-member-card{grid-template-columns:42px 1fr}.enterprise-member-card>*:nth-child(n+3){grid-column:1/-1}.enterprise-invite-row{grid-template-columns:1fr}.enterprise-invite-row>span{justify-self:start}}
+
+
+/* FleetPilot V10.0.1 — platform admin separation */
+#cloudAdminSection[hidden],
+body:not(.platform-admin) #cloudAdminSection,
+body:not(.platform-admin) #openSupabaseDashboard{
+  display:none!important;
+}
+
+body.workspace-owner:not(.platform-admin) .profile-admin-card{
+  display:none!important;
+}
+
+.enterprise-page-head .eyebrow::after{
+  content:"";
+}
+
+.platform-admin-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 9px;
+  border-radius:999px;
+  background:#111827;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}

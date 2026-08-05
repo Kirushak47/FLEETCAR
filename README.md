@@ -1,25 +1,17 @@
-# FleetPilot V10 Enterprise — Foundation
+# FleetPilot V10.0.1 — Multi-Tenant Security
 
-Перед загрузкой:
 1. Supabase → SQL Editor → New query.
-2. Выполнить целиком `supabase_v10_enterprise.sql`.
-3. Загрузить все файлы на GitHub.
-4. Открыть:
-   https://kirushak47.github.io/FLEETCAR/?v=100000
+2. Run `supabase_v10_0_1_platform_admin.sql`.
+3. Upload all files to GitHub.
+4. Open:
+   https://kirushak47.github.io/FLEETCAR/?v=100010
 
-Добавлено:
-- Workspace компании;
-- раздел «Компания»;
-- роли Owner / Coordinator / Accountant / Mechanic / Driver;
-- приглашения по email;
-- автоматическое присоединение после регистрации;
-- город/зона ответственности;
-- включение и отключение участников;
-- скрытие недоступных разделов по роли;
-- RLS-политики для Workspace и участников.
-
-Следующий релиз:
-- Driver Portal;
-- задания;
-- фотоконтроль;
-- онлайн-протокол.
+Fixed:
+- workspace owner no longer sees platform administration;
+- Supabase button is visible only to platform admin;
+- workspace owner sees only their own fleet and team;
+- platform-admin status is stored separately in `platform_admins`;
+- ordinary owners cannot see other projects;
+- own role/status fields are disabled in the team screen;
+- added SQL safety against changing your own role/status;
+- terminology updated from generic company/CRM wording to fleet/workspace wording.
