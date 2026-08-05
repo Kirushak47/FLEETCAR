@@ -5622,3 +5622,94 @@ html[data-theme="dark"] .mobile-gps-sync-card,html[data-theme="dark"] .mobile-ma
   display:block!important;
  }
 }
+
+/* FleetPilot V8.0.2 — dark calendar cards fix */
+html[data-theme="dark"] #calendarPage,
+html[data-theme="dark"] .calendar-page,
+html[data-theme="dark"] .calendar-shell{
+  color:#e5e7eb;
+}
+
+html[data-theme="dark"] .calendar-list,
+html[data-theme="dark"] .calendar-events,
+html[data-theme="dark"] .calendar-timeline{
+  background:transparent;
+}
+
+html[data-theme="dark"] .calendar-event,
+html[data-theme="dark"] .calendar-event-row,
+html[data-theme="dark"] .calendar-item,
+html[data-theme="dark"] .event-card,
+html[data-theme="dark"] .calendar-card{
+  border-color:rgba(255,255,255,.08)!important;
+  background:#151d31!important;
+  color:#e5e7eb!important;
+  box-shadow:0 10px 28px rgba(2,6,23,.18)!important;
+}
+
+html[data-theme="dark"] .calendar-event.warning,
+html[data-theme="dark"] .calendar-event-row.warning,
+html[data-theme="dark"] .calendar-item.warning,
+html[data-theme="dark"] .event-card.warning,
+html[data-theme="dark"] .calendar-card.warning{
+  border-color:rgba(245,158,11,.28)!important;
+  background:linear-gradient(180deg,rgba(245,158,11,.11),rgba(245,158,11,.05))!important;
+}
+
+html[data-theme="dark"] .calendar-event.danger,
+html[data-theme="dark"] .calendar-event-row.danger,
+html[data-theme="dark"] .calendar-item.danger,
+html[data-theme="dark"] .event-card.danger,
+html[data-theme="dark"] .calendar-card.danger{
+  border-color:rgba(239,68,68,.28)!important;
+  background:linear-gradient(180deg,rgba(239,68,68,.12),rgba(239,68,68,.05))!important;
+}
+
+html[data-theme="dark"] .calendar-event strong,
+html[data-theme="dark"] .calendar-event-row strong,
+html[data-theme="dark"] .calendar-item strong,
+html[data-theme="dark"] .event-card strong,
+html[data-theme="dark"] .calendar-card strong{
+  color:#f8fafc!important;
+}
+
+html[data-theme="dark"] .calendar-event small,
+html[data-theme="dark"] .calendar-event-row small,
+html[data-theme="dark"] .calendar-item small,
+html[data-theme="dark"] .event-card small,
+html[data-theme="dark"] .calendar-card small,
+html[data-theme="dark"] .calendar-event p,
+html[data-theme="dark"] .calendar-event-row p,
+html[data-theme="dark"] .calendar-item p,
+html[data-theme="dark"] .event-card p,
+html[data-theme="dark"] .calendar-card p{
+  color:#94a3b8!important;
+}
+
+html[data-theme="dark"] .calendar-event time,
+html[data-theme="dark"] .calendar-event-row time,
+html[data-theme="dark"] .calendar-item time,
+html[data-theme="dark"] .event-card time,
+html[data-theme="dark"] .calendar-card time{
+  color:#cbd5e1!important;
+}
+
+html[data-theme="dark"] #calendarPage .summary-card,
+html[data-theme="dark"] #calendarPage .calendar-kpi,
+html[data-theme="dark"] #calendarPage .stat-card{
+  border-color:rgba(255,255,255,.08)!important;
+  background:#151d31!important;
+  color:#f8fafc!important;
+}
+
+html[data-theme="dark"] #calendarPage select,
+html[data-theme="dark"] #calendarPage input,
+html[data-theme="dark"] #calendarPage button{
+  border-color:rgba(255,255,255,.09);
+}
+
+html[data-theme="dark"] #calendarPage select,
+html[data-theme="dark"] #calendarPage input{
+  background:#111827;
+  color:#f8fafc;
+}

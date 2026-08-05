@@ -1,5 +1,5 @@
-const C="fleetpilot-v8-0-1";
-const A=["./","./index.html","./styles.css?v=8001","./app.js?v=8001","./manifest.webmanifest?v=8001"];
+const C="fleetpilot-v8-0-2";
+const A=["./","./index.html","./styles.css?v=8002","./app.js?v=8002","./manifest.webmanifest?v=8002"];
 self.addEventListener("install",event=>event.waitUntil(
  caches.open(C).then(cache=>cache.addAll(A)).then(()=>self.skipWaiting())
 ));
