@@ -5905,3 +5905,20 @@ html[data-theme="dark"] .profile-status-card,html[data-theme="dark"] .account-su
 html[data-theme="dark"] .auth-gate{background:radial-gradient(circle at top,#172554,#0f172a 45%,#020617)}
 html[data-theme="dark"] .auth-view input{border-color:rgba(255,255,255,.09);background:#111827;color:#fff}
 @media(max-width:600px){.profile-dialog-shell{padding:17px}.auth-gate-card{padding:21px}.auth-main-actions{grid-template-columns:1fr}.profile-admin-kpis{grid-template-columns:1fr}.topbar-actions{gap:7px}}
+
+
+/* FleetPilot Cloud V2.1 — strict state visibility */
+[hidden]{
+  display:none!important;
+}
+
+.auth-view[hidden],
+.profile-logged-view[hidden],
+.profile-guest-view[hidden],
+.profile-demo-view[hidden],
+.profile-admin-card[hidden],
+.cloud-admin-users[hidden],
+.cloud-message[hidden],
+.auth-gate[hidden]{
+  display:none!important;
+}

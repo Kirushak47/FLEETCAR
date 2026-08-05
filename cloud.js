@@ -38,11 +38,27 @@ function init(){
  return client
 }
 function showAuth(view="welcome"){
- ["#authWelcomeView","#authLoginView","#authRegisterView","#authConfirmView"].forEach(s=>{
-  const el=$(s);if(el)el.hidden=true
+ const screens=["#authWelcomeView","#authLoginView","#authRegisterView","#authConfirmView"];
+ screens.forEach(selector=>{
+  const el=$(selector);
+  if(el){
+   el.hidden=true;
+   el.setAttribute("aria-hidden","true")
+  }
  });
- const map={welcome:"#authWelcomeView",login:"#authLoginView",register:"#authRegisterView",confirm:"#authConfirmView"};
- const target=$(map[view]||map.welcome);if(target)target.hidden=false
+
+ const map={
+  welcome:"#authWelcomeView",
+  login:"#authLoginView",
+  register:"#authRegisterView",
+  confirm:"#authConfirmView"
+ };
+
+ const target=$(map[view]||map.welcome);
+ if(target){
+  target.hidden=false;
+  target.setAttribute("aria-hidden","false")
+ }
 }
 function setGate(){
  const gate=$("#authGate");
@@ -87,10 +103,20 @@ function renderSummary(){
 }
 function render(){
  const logged=$("#profileLoggedInView"),guest=$("#profileGuestView"),demo=$("#profileDemoView"),admin=$("#cloudAdminSection");
- if(logged)logged.hidden=!session;
- if(guest)guest.hidden=Boolean(session)||isDemo();
- if(demo)demo.hidden=!isDemo()||Boolean(session);
- if(admin)admin.hidden=!owner();
+
+ if(logged)logged.hidden=true;
+ if(guest)guest.hidden=true;
+ if(demo)demo.hidden=true;
+ if(admin)admin.hidden=true;
+
+ if(session){
+  if(logged)logged.hidden=false;
+  if(admin)admin.hidden=!owner()
+ }else if(isDemo()){
+  if(demo)demo.hidden=false
+ }else{
+  if(guest)guest.hidden=false
+ }
  if($("#cloudUserEmail"))$("#cloudUserEmail").textContent=session?.user?.email||"";
  if($("#cloudUserRole")){
   $("#cloudUserRole").textContent=owner()?"Владелец":"Пользователь";
