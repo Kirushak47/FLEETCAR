@@ -371,7 +371,7 @@ const ENTERPRISE_ROLE_ACCESS={
  coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","companyPage","mobileMapPage","searchPage","carPage"],
  accountant:["dashboardPage","paymentsPage","expensesPage","analyticsPage","documentsPage","calendarPage","searchPage"],
  mechanic:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","searchPage","carPage"],
- driver:["dashboardPage","documentsPage","calendarPage","searchPage","carPage"],
+ driver:["driverPortalPage","documentsPage","calendarPage","searchPage","carPage"],
  user:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","morePage","mobileMapPage","searchPage","carPage"]
 };
 function enterpriseCurrentRole(){
@@ -593,6 +593,7 @@ async function renderEnterprisePage(){
     <select data-enterprise-role="${member.user_id}" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>${enterpriseRoleOptions(member.role)}</select>
     <input data-enterprise-city="${member.user_id}" value="${member.city||""}" placeholder="Город" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>
     <span class="enterprise-status ${member.status}">${member.status==="active"?"Активен":"Отключён"}</span>
+    ${driverAssignmentControl(member)}
     ${canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id?`<button type="button" class="enterprise-member-toggle" data-enterprise-toggle="${member.user_id}" data-status="${member.status}">${member.status==="active"?"Отключить":"Включить"}</button>`:""}
    </article>`).join("")||`<div class="owner-empty">Участники не найдены.</div>`;
 
@@ -621,6 +622,13 @@ async function renderEnterprisePage(){
    await window.FleetPilotCloud.enterpriseCancelInvite(button.dataset.cancelInvite);
    renderEnterprisePage()
   });
+  $$("[data-driver-assignment]").forEach(select=>select.onchange=async()=>{
+   try{
+    await window.FleetPilotCloud.assignDriverVehicle(select.dataset.driverAssignment,select.value||null);
+    workspaceDriverAssignments[select.dataset.driverAssignment]=select.value||null;
+    toast(select.value?"Автомобиль назначен":"Назначение снято")
+   }catch(error){toast(error.message||String(error))}
+  });
   enterpriseMessage("")
  }catch(error){
   console.error(error);
@@ -629,6 +637,186 @@ async function renderEnterprisePage(){
 }
 window.renderEnterprisePage=renderEnterprisePage;
 
+
+const DRIVER_REPAIR_CATEGORY_LABELS={
+ engine:"Двигатель",suspension:"Ходовая",brakes:"Тормоза",electric:"Электрика",
+ body:"Кузов",tires:"Шины и колёса",climate:"Климат",other:"Другое"
+};
+const DRIVER_REPAIR_URGENCY_LABELS={
+ normal:"Можно ехать",service:"Нужен сервис",critical:"Движение опасно"
+};
+const DRIVER_REPAIR_STATUS_LABELS={
+ new:"Новая",accepted:"Принята",scheduled:"Назначен сервис",
+ repair:"В ремонте",done:"Готово",rejected:"Отклонена"
+};
+let driverPortalContext=null;
+let workspaceDriverAssignments={};
+
+function driverPortalMessage(text,type=""){
+ const el=$("#driverPortalMessage");if(!el)return;
+ el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`
+}
+function driverRepairMessage(text,type=""){
+ const el=$("#driverRepairMessage");if(!el)return;
+ el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`
+}
+function driverAssignedCar(){
+ const carId=driverPortalContext?.car_id;
+ return carId?car(carId):null
+}
+function renderDriverVehicleCard(){
+ const root=$("#driverVehicleCard");if(!root)return;
+ const assigned=driverPortalContext;
+ const assignedCar=driverAssignedCar();
+
+ if(!assigned?.car_id){
+  root.innerHTML=`<div class="driver-empty-state">
+   <strong>Автомобиль ещё не назначен</strong>
+   <span>Владелец или координатор должен назначить автомобиль в разделе «Компания → Команда».</span>
+  </div>`;
+  return
+ }
+
+ const snapshot=assigned.vehicle_snapshot||{};
+ const displayCar=assignedCar||snapshot;
+ const brand=assignedCar?model(assignedCar).brand:(snapshot.brand||"Автомобиль");
+ const modelName=assignedCar?model(assignedCar).model:(snapshot.model||"");
+ const plate=displayCar.plate||"—";
+ const mileage=Number(displayCar.mileage||assigned.mileage||0);
+
+ root.innerHTML=`
+  <div class="driver-vehicle-main">
+   <div class="driver-vehicle-icon">🚗</div>
+   <div>
+    <span class="eyebrow">Назначенный автомобиль</span>
+    <h3>${brand} ${modelName}</h3>
+    <p>${plate} · ${displayCar.vin||"VIN не указан"}</p>
+   </div>
+   <span class="driver-vehicle-status">${statusText(displayCar.status||"active")}</span>
+  </div>
+  <div class="driver-vehicle-stats">
+   <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
+   <div><small>Назначен</small><strong>${assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
+   <div><small>Следующее ТО</small><strong>${assignedCar?km(Math.max(0,oil(assignedCar))):"—"}</strong></div>
+   <div><small>Город</small><strong>${displayCar.city||window.FleetPilotCloud?.membership?.city||"—"}</strong></div>
+  </div>`
+}
+function renderDriverDocuments(){
+ const root=$("#driverDocumentsList");if(!root)return;
+ const assignedCar=driverAssignedCar();
+ const docs=(db.documents||[]).filter(doc=>!doc.carId||doc.carId===assignedCar?.id).slice(0,8);
+ root.innerHTML=docs.map(doc=>`
+  <article class="driver-list-row">
+   <div><strong>${doc.name||documentTypeText(doc.type)||"Документ"}</strong>
+   <small>${doc.date?date(doc.date):doc.expiry?`до ${date(doc.expiry)}`:"Доступен"}</small></div>
+  </article>`).join("")||'<div class="driver-empty-state">Документов пока нет.</div>'
+}
+async function renderDriverRepairRequests(){
+ const root=$("#driverRepairRequestsList");if(!root)return;
+ root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
+ try{
+  const rows=await window.FleetPilotCloud.getMyDriverRepairRequests();
+  root.innerHTML=rows.map(row=>`
+   <article class="driver-request-row urgency-${row.urgency}">
+    <div class="driver-request-main">
+     <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category}</strong>
+     <span>${row.description}</span>
+     <small>${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small>
+     ${row.manager_comment?`<em>Комментарий: ${row.manager_comment}</em>`:""}
+    </div>
+    <div class="driver-request-badges">
+     <span class="urgency">${DRIVER_REPAIR_URGENCY_LABELS[row.urgency]||row.urgency}</span>
+     <span class="status">${DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status}</span>
+    </div>
+   </article>`).join("")||'<div class="driver-empty-state">Заявок пока нет.</div>'
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
+async function renderDriverNotifications(){
+ const root=$("#driverNotificationsList");if(!root)return;
+ try{
+  const rows=await window.FleetPilotCloud.getMyWorkspaceNotifications();
+  root.innerHTML=rows.map(row=>`
+   <article class="driver-notification-row ${row.read_at?"read":""}">
+    <span>${row.type==="repair"?"🔧":"🔔"}</span>
+    <div><strong>${row.title}</strong><small>${row.message||""}</small>
+    <em>${new Date(row.created_at).toLocaleString("ru-RU")}</em></div>
+   </article>`).join("")||'<div class="driver-empty-state">Новых уведомлений нет.</div>'
+ }catch(error){root.innerHTML='<div class="driver-empty-state">Не удалось загрузить уведомления.</div>'}
+}
+async function renderDriverPortal(){
+ if(enterpriseCurrentRole()!=="driver")return;
+ driverPortalMessage("Загрузка…");
+ try{
+  driverPortalContext=await window.FleetPilotCloud.getDriverPortalContext();
+  renderDriverVehicleCard();
+  renderDriverDocuments();
+  await Promise.all([renderDriverRepairRequests(),renderDriverNotifications()]);
+  driverPortalMessage("")
+ }catch(error){
+  driverPortalMessage(error.message||String(error),"error")
+ }
+}
+async function openDriverRepairDialog(){
+ if(!driverPortalContext)await renderDriverPortal();
+ const assignedCar=driverAssignedCar();
+ if(!driverPortalContext?.car_id){
+  toast("Сначала нужно назначить автомобиль");
+  return
+ }
+ $("#driverRepairMileage").value=assignedCar?.mileage||driverPortalContext?.mileage||0;
+ const brand=assignedCar?model(assignedCar).brand:(driverPortalContext?.vehicle_snapshot?.brand||"");
+ const modelName=assignedCar?model(assignedCar).model:(driverPortalContext?.vehicle_snapshot?.model||"");
+ $("#driverRepairVehicleSummary").innerHTML=`<strong>${brand} ${modelName}</strong><span>${assignedCar?.plate||driverPortalContext?.vehicle_snapshot?.plate||"—"}</span>`;
+ driverRepairMessage("");
+ $("#driverRepairDialog").showModal()
+}
+async function renderWorkspaceRepairRequests(){
+ const root=$("#workspaceRepairRequestsList");if(!root)return;
+ if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
+  root.innerHTML="";
+  return
+ }
+ root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
+ try{
+  const rows=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  root.innerHTML=rows.map(row=>{
+   const localCar=car(row.car_id);
+   const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
+   return `<article class="workspace-request-row urgency-${row.urgency}">
+    <div>
+     <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category} · ${carName}</strong>
+     <span>${row.description}</span>
+     <small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small>
+    </div>
+    <select data-request-status="${row.id}">
+     ${Object.entries(DRIVER_REPAIR_STATUS_LABELS).map(([value,label])=>`<option value="${value}" ${value===row.status?"selected":""}>${label}</option>`).join("")}
+    </select>
+   </article>`
+  }).join("")||'<div class="driver-empty-state">Новых заявок нет.</div>';
+
+  $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
+   try{
+    await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");
+    toast("Статус заявки обновлён");
+    renderWorkspaceRepairRequests()
+   }catch(error){toast(error.message||String(error))}
+  })
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
+async function loadWorkspaceDriverAssignments(){
+ try{
+  const rows=await window.FleetPilotCloud.getDriverAssignments();
+  workspaceDriverAssignments=Object.fromEntries(rows.map(row=>[row.driver_user_id,row.car_id]))
+ }catch{workspaceDriverAssignments={}}
+}
+function driverAssignmentControl(member){
+ if(member.role!=="driver")return"";
+ const selected=workspaceDriverAssignments[member.user_id]||"";
+ return `<select data-driver-assignment="${member.user_id}">
+  <option value="">Без автомобиля</option>
+  ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
+ </select>`
+}
 function showPage(id){
  applyEnterpriseAccess();
  if(!enterpriseCanOpen(id)){
@@ -638,7 +826,7 @@ function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){renderEnterprisePage();loadRolePermissions();}
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage")renderDriverPortal();if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -736,6 +924,33 @@ if(workspaceSettingsForm)workspaceSettingsForm.onsubmit=async event=>{
 };
 const refreshActivityLog=$("#refreshActivityLog");
 if(refreshActivityLog)refreshActivityLog.onclick=renderCompanyActivity;
+
+
+const openDriverRepairRequest=$("#openDriverRepairRequest");
+if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
+const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
+if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
+const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
+if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;
+const driverRepairForm=$("#driverRepairForm");
+if(driverRepairForm)driverRepairForm.onsubmit=async event=>{
+ event.preventDefault();
+ driverRepairMessage("Отправляем заявку…");
+ try{
+  await window.FleetPilotCloud.submitDriverRepairRequest({
+   category:$("#driverRepairCategory").value,
+   urgency:$("#driverRepairUrgency").value,
+   mileage:$("#driverRepairMileage").value,
+   description:$("#driverRepairDescription").value,
+   dashboardWarning:$("#driverRepairDashboardWarning").checked
+  });
+  $("#driverRepairDialog").close();
+  driverRepairForm.reset();
+  toast("Заявка отправлена");
+  await renderDriverRepairRequests();
+  await renderDriverNotifications()
+ }catch(error){driverRepairMessage(error.message||String(error),"error")}
+};
 
 const openInviteMember=$("#openInviteMember");
 if(openInviteMember)openInviteMember.onclick=()=>{

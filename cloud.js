@@ -752,6 +752,68 @@ async function logWorkspaceActivity(action,entityType=null,entityId=null,details
   details_value:details
  }).catch(()=>{})
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function getDriverPortalContext(){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ const {data,error}=await client.rpc("get_driver_portal_context");
+ if(error)throw error;
+ return Array.isArray(data)?data[0]||null:data||null
+}
+async function submitDriverRepairRequest(request){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(enterpriseRole()!=="driver")throw new Error("Заявку может отправить только водитель");
+
+ const {data,error}=await client.rpc("submit_driver_repair_request",{
+  request_category:String(request.category||"other"),
+  request_urgency:String(request.urgency||"normal"),
+  request_description:String(request.description||"").trim(),
+  request_mileage:Number(request.mileage||0),
+  dashboard_warning_value:Boolean(request.dashboardWarning)
+ });
+ if(error)throw error;
+ return data
+}
+async function getMyDriverRepairRequests(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_my_driver_repair_requests");
+ if(error)throw error;
+ return data||[]
+}
+async function getWorkspaceDriverRepairRequests(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_workspace_driver_repair_requests");
+ if(error)throw error;
+ return data||[]
+}
+async function updateDriverRepairRequest(requestId,status,comment=""){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ const {error}=await client.rpc("update_driver_repair_request",{
+  request_id_value:requestId,
+  request_status_value:status,
+  manager_comment_value:String(comment||"").trim()||null
+ });
+ if(error)throw error
+}
+async function getMyWorkspaceNotifications(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_my_workspace_notifications");
+ if(error)throw error;
+ return data||[]
+}
+async function getDriverAssignments(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_workspace_driver_assignments");
+ if(error)throw error;
+ return data||[]
+}
+async function assignDriverVehicle(driverUserId,carId){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ const {error}=await client.rpc("assign_driver_vehicle",{
+  driver_user_id_value:driverUserId,
+  car_id_value:carId||null
+ });
+ if(error)throw error
+}
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

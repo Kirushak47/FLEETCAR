@@ -6709,3 +6709,43 @@ html[data-theme="dark"] .workspace-settings-grid input,html[data-theme="dark"] .
 /* FleetPilot V10.3.1 — startup stability */
 #workspaceGate[hidden]{display:none!important}
 html:not(.workspace-locked) #workspaceGate{display:none!important}
+
+
+/* FleetPilot V10.5 — Driver Portal Stage 1 */
+.driver-portal-page{max-width:1160px;margin:0 auto}
+.driver-portal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.driver-portal-head h2{margin:5px 0}.driver-portal-head p{margin:0;color:#64748b}
+.driver-vehicle-card,.driver-portal-card,.driver-service-inbox{border:1px solid #e5e7eb;border-radius:20px;background:#fff;box-shadow:0 12px 34px rgba(15,23,42,.06)}
+.driver-vehicle-card{padding:18px;margin-bottom:14px}
+.driver-vehicle-main{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:13px}
+.driver-vehicle-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;background:#eef2ff;font-size:25px}
+.driver-vehicle-main h3{margin:4px 0;font-size:21px}.driver-vehicle-main p{margin:0;color:#64748b}
+.driver-vehicle-status{padding:7px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#15803d;font-size:9px;font-weight:900}
+.driver-vehicle-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.driver-vehicle-stats>div{padding:12px;border-radius:13px;background:#f8fafc}
+.driver-vehicle-stats small,.driver-vehicle-stats strong{display:block}.driver-vehicle-stats small{color:#64748b;font-size:8px}.driver-vehicle-stats strong{margin-top:5px}
+.driver-portal-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.driver-portal-card{padding:16px}.driver-portal-card-wide{grid-column:1/-1}
+.driver-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.driver-card-head h3{margin:4px 0}
+.driver-simple-list,.driver-request-list,.driver-notifications-list,.workspace-request-list{display:grid;gap:8px}
+.driver-list-row,.driver-request-row,.driver-notification-row,.workspace-request-row{padding:12px;border:1px solid #edf0f4;border-radius:13px;background:#f8fafc}
+.driver-list-row strong,.driver-list-row small{display:block}.driver-list-row small{margin-top:4px;color:#64748b}
+.driver-request-row,.workspace-request-row{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px}
+.driver-request-main strong,.driver-request-main span,.driver-request-main small,.driver-request-main em{display:block}
+.driver-request-main span{margin-top:4px}.driver-request-main small{margin-top:6px;color:#64748b}.driver-request-main em{margin-top:7px;color:#4f46e5;font-style:normal}
+.driver-request-badges{display:grid;gap:6px;justify-items:end}.driver-request-badges span{padding:6px 8px;border-radius:999px;font-size:8px;font-weight:900}
+.driver-request-badges .status{background:#e2e8f0;color:#334155}.driver-request-badges .urgency{background:#fef3c7;color:#92400e}
+.urgency-critical{border-color:#fecaca!important;background:#fff7f7!important}.urgency-critical .urgency{background:#fee2e2!important;color:#b91c1c!important}
+.driver-notification-row{display:grid;grid-template-columns:32px 1fr;gap:10px}.driver-notification-row>span{font-size:20px}.driver-notification-row strong,.driver-notification-row small,.driver-notification-row em{display:block}.driver-notification-row small{margin-top:3px}.driver-notification-row em{margin-top:5px;color:#94a3b8;font-size:8px;font-style:normal}
+.driver-empty-state{display:grid;gap:5px;padding:18px;text-align:center;color:#64748b}.driver-empty-state strong{color:#0f172a}
+.driver-repair-vehicle-summary{display:flex;justify-content:space-between;padding:11px;border-radius:12px;background:#f8fafc}
+.driver-repair-dialog textarea{resize:vertical;padding:12px;border:1px solid #dbe2ec;border-radius:12px;font:inherit}
+.driver-check-row{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center}
+.driver-service-inbox{padding:16px;margin-bottom:15px}
+.workspace-request-row>div strong,.workspace-request-row>div span,.workspace-request-row>div small{display:block}.workspace-request-row>div span{margin-top:4px}.workspace-request-row>div small{margin-top:6px;color:#64748b}
+.workspace-request-row select{padding:9px;border:1px solid #dbe2ec;border-radius:10px;background:#fff}
+.enterprise-member-card [data-driver-assignment]{grid-column:2/-1}
+html[data-theme="dark"] .driver-vehicle-card,html[data-theme="dark"] .driver-portal-card,html[data-theme="dark"] .driver-service-inbox{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .driver-vehicle-stats>div,html[data-theme="dark"] .driver-list-row,html[data-theme="dark"] .driver-request-row,html[data-theme="dark"] .driver-notification-row,html[data-theme="dark"] .workspace-request-row,html[data-theme="dark"] .driver-repair-vehicle-summary{border-color:rgba(255,255,255,.07);background:#151d31}
+@media(max-width:760px){.driver-portal-head{display:grid}.driver-portal-head .btn{width:100%}.driver-portal-grid{grid-template-columns:1fr}.driver-portal-card-wide{grid-column:auto}.driver-vehicle-stats{grid-template-columns:1fr 1fr}.driver-request-row,.workspace-request-row{grid-template-columns:1fr}.driver-request-badges{justify-items:start}.driver-vehicle-main{grid-template-columns:48px 1fr}.driver-vehicle-status{grid-column:1/-1;justify-self:start}}
