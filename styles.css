@@ -5574,3 +5574,28 @@ html[data-theme="dark"] .mobile-gps-sync-card,html[data-theme="dark"] .mobile-ma
 [data-gps-car-id]{
  contain:layout paint;
 }
+
+/* FleetPilot V7.11.3 — table and simple map fix */
+@media(max-width:1099px){
+ #mobileMapPage.page.active{
+  display:block!important;
+ }
+
+ html[data-interface-mode="simple"] .bottom-nav [data-page="mobileMapPage"],
+ html[data-ui-mode="simple"] .bottom-nav [data-page="mobileMapPage"],
+ body.simple-mode .bottom-nav [data-page="mobileMapPage"],
+ .bottom-nav [data-page="mobileMapPage"]{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+ }
+}
+
+.desktop-table-empty-row td{
+ padding:0!important;
+}
+
+.desktop-table-empty{
+ min-height:220px;
+}

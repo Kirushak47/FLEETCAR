@@ -426,7 +426,7 @@ window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
  const view=button.dataset.fleetView;
  setDesktopView(view);
- if(view==="map")openFleetMapV2();if(view==="table")requestAnimationFrame(renderStableFleetTable)
+ if(view==="map")openFleetMapV2();if(view==="table")requestAnimationFrame(renderDesktopTable)
 });
 $("#desktopMapFilter").onchange=()=>{
  fleetMapV2SelectedCity="";
@@ -1750,26 +1750,34 @@ function desktopTableRow(c,period){
  }
 }
 function renderDesktopTable(){
- const root=$("#desktopFleetTableBody");if(!root)return;
- const cars=(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt);
- const period=fleetPilotCurrentMonth();
+ const root=$("#desktopFleetTableBody");
+ if(!root)return;
+
+ const cars=(Array.isArray(db?.cars)?db.cars:[])
+  .filter(c=>!c.archived&&!c.deletedAt);
 
  if(!cars.length){
-  root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11"><div class="desktop-table-empty">
-   <span>🚘</span><strong>В автопарке пока нет автомобилей</strong>
-   <small>Добавьте первый автомобиль, и он появится здесь автоматически.</small>
-   <button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button>
-  </div></td></tr>`;
+  root.innerHTML=`<tr class="desktop-table-empty-row"><td colspan="11">
+   <div class="desktop-table-empty">
+    <span>🚘</span>
+    <strong>В автопарке пока нет автомобилей</strong>
+    <small>Добавьте первый автомобиль — он сразу появится в таблице.</small>
+    <button type="button" onclick="openCarDialog()">+ Добавить автомобиль</button>
+   </div>
+  </td></tr>`;
   return
  }
 
  root.innerHTML=cars.map(c=>{
-  const m=model(c),health=safeDesktopHealth(c),gps=gpsStatusForCar(c);
+  const m=model(c);
+  const health=safeDesktopHealth(c);
+  const gps=gpsStatusForCar(c);
   const profit=safeDesktopCarProfit(c.id);
-  return`<tr>
+
+  return`<tr data-table-car-id="${c.id}">
    <td><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"></td>
-   <td><button class="desktop-table-car-link" onclick="openCar('${c.id}')">
-    <span class="desktop-table-car-photo">${c.customPhoto?`<img src="${c.customPhoto}" alt="">`:"🚘"}</span>
+   <td><button type="button" class="desktop-table-car-link" onclick="openCar('${c.id}')">
+    <span class="desktop-table-car-photo">${c.customPhoto?`<img src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:"🚘"}</span>
     <span><strong>${m.brand} ${m.model}</strong><small>${c.plate||"Без номера"}</small></span>
    </button></td>
    <td>${c.city||"Без города"}</td>
@@ -1780,13 +1788,15 @@ function renderDesktopTable(){
    <td>${c.insurance?desktopDocumentDate(c.insurance):"—"}</td>
    <td>${c.inspection?desktopDocumentDate(c.inspection):"—"}</td>
    <td class="${profit<0?"negative":"positive"}">${money(profit)}</td>
-   <td>${gps?`<button class="desktop-table-find-gps ${gps.online?"online":"offline"}" onclick="findCarOnGps('${c.id}')">${gps.online?"⌖ Найти":"Последняя точка"}</button>`:`<button class="desktop-table-open" onclick="openCar('${c.id}')">Открыть →</button>`}</td>
+   <td>${gps
+    ?`<button type="button" class="desktop-table-find-gps ${gps.online?"online":"offline"}" onclick="findCarOnGps('${c.id}')">${gps.online?"⌖ Найти":"Последняя точка"}</button>`
+    :`<button type="button" class="desktop-table-open" onclick="openCar('${c.id}')">Открыть →</button>`}
+   </td>
   </tr>`
  }).join("");
+
  syncDesktopSelection()
 }
-
-
 
 /* =========================================================
    Fleet Map V2
@@ -2170,6 +2180,7 @@ function findCarOnGps(carId){
  if(!gps||!Number.isFinite(gps.latitude)||!Number.isFinite(gps.longitude))return toast("Для автомобиля нет GPS-координат");
 
  if(window.innerWidth<1100){
+  ensureMobileMapAvailable();
   showPage("mobileMapPage");
   requestAnimationFrame(()=>{
    renderMobileGpsMap({fit:false});
@@ -2487,6 +2498,38 @@ function renderFleetMapV2Panel(selectedRow=null){
 }
 
 
+
+function ensureMobileMapAvailable(){
+ const page=$("#mobileMapPage");
+ const button=document.querySelector(".bottom-nav [data-page='mobileMapPage']");
+
+ if(page){
+  page.hidden=false;
+  page.removeAttribute("aria-hidden");
+  page.style.removeProperty("display")
+ }
+
+ if(button){
+  button.hidden=false;
+  button.disabled=false;
+  button.removeAttribute("aria-hidden");
+  button.style.removeProperty("display");
+  button.style.removeProperty("visibility");
+  button.style.removeProperty("opacity");
+  button.style.removeProperty("pointer-events")
+ }
+}
+
+function openMobileFleetMap(){
+ ensureMobileMapAvailable();
+ showPage("mobileMapPage");
+ requestAnimationFrame(()=>{
+  renderMobileGpsMap({fit:true});
+  setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),160)
+ })
+}
+window.openMobileFleetMap=openMobileFleetMap;
+
 let mobileFleetMap=null;
 let mobileFleetLayer=null;
 let mobileSelectedCity="";
@@ -2733,7 +2776,7 @@ function stableFleetTableRoot(){
  )
 }
 
-function renderStableFleetTable(){
+function renderDesktopTable(){
  const root=stableFleetTableRoot();
  if(!root)return;
 
@@ -3724,7 +3767,7 @@ const originalRenderFleetForStableTable=window.renderFleet;
 if(typeof originalRenderFleetForStableTable==="function"){
  window.renderFleet=function(...args){
   const result=originalRenderFleetForStableTable.apply(this,args);
-  requestAnimationFrame(renderStableFleetTable);
+  requestAnimationFrame(renderDesktopTable);
   return result
  }
 }
@@ -3740,4 +3783,18 @@ window.addEventListener("pageshow",()=>{
 
 document.addEventListener("DOMContentLoaded",()=>{
  requestAnimationFrame(updateGpsBadgesOnly)
+});
+
+document.addEventListener("click",event=>{
+ const button=event.target.closest(".bottom-nav [data-page='mobileMapPage']");
+ if(!button)return;
+ event.preventDefault();
+ event.stopImmediatePropagation();
+ openMobileFleetMap()
+},true);
+
+document.addEventListener("DOMContentLoaded",ensureMobileMapAvailable);
+window.addEventListener("pageshow",ensureMobileMapAvailable);
+window.addEventListener("resize",()=>{
+ if(window.innerWidth<1100)ensureMobileMapAvailable()
 });
