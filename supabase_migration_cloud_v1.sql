@@ -1,6 +1,6 @@
 -- FleetPilot Cloud V1 migration
 -- Use this if fleet_states already exists.
--- Replace PASTE_OWNER_EMAIL_HERE before running.
+-- Replace Balyshevy@gmail.com before running.
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
