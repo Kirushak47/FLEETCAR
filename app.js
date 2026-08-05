@@ -878,7 +878,7 @@ function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage")renderDriverPortal();if(id==="driverProfilePage")renderDriverProfile();if(id==="repairsPage")renderWorkspaceRepairRequests();
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -978,6 +978,60 @@ const refreshActivityLog=$("#refreshActivityLog");
 if(refreshActivityLog)refreshActivityLog.onclick=renderCompanyActivity;
 
 
+
+
+function setDriverBottomNavActive(name){
+ $$("[data-driver-nav]").forEach(button=>button.classList.toggle("active",button.dataset.driverNav===name))
+}
+function openDriverSection(name){
+ if(name==="repair"){
+  openDriverRepairDialog();
+  return
+ }
+ if(name==="profile"){
+  showPage("driverProfilePage");
+  setDriverBottomNavActive("profile");
+  return
+ }
+
+ showPage("driverPortalPage");
+ setDriverBottomNavActive(name);
+ requestAnimationFrame(()=>{
+  const target=document.querySelector(`[data-driver-anchor="${name}"]`);
+  target?.scrollIntoView({behavior:"smooth",block:"start"})
+ })
+}
+$$("[data-driver-nav]").forEach(button=>button.onclick=()=>openDriverSection(button.dataset.driverNav));
+
+const changePasswordForm=$("#changePasswordForm");
+if(changePasswordForm)changePasswordForm.onsubmit=async event=>{
+ event.preventDefault();
+ const password=$("#directNewPassword").value;
+ const repeat=$("#directNewPasswordRepeat").value;
+ const messageEl=$("#directPasswordMessage");
+
+ const setMessage=(text,type="")=>{
+  messageEl.hidden=!text;
+  messageEl.textContent=text;
+  messageEl.className=`cloud-message ${type}`
+ };
+
+ if(password.length<8)return setMessage("Пароль должен содержать минимум 8 символов.","error");
+ if(password!==repeat)return setMessage("Пароли не совпадают.","error");
+
+ setMessage("Сохраняем новый пароль…");
+ try{
+  await window.FleetPilotCloud.changePasswordDirect(password);
+  setMessage("Пароль успешно изменён.","success");
+  setTimeout(()=>{
+   $("#changePasswordDialog").close();
+   changePasswordForm.reset();
+   toast("Пароль изменён")
+  },700)
+ }catch(error){
+  setMessage(error.message||String(error),"error")
+ }
+};
 
 const openDriverProfilePage=$("#openDriverProfilePage");
 if(openDriverProfilePage)openDriverProfilePage.onclick=()=>showPage("driverProfilePage");

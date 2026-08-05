@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.6 Driver Profile</title>
-  <link rel="manifest" href="manifest.webmanifest?v=106000">
-  <link rel="stylesheet" href="styles.css?v=106000">
+  <title>FleetPilot V10.6.1 Driver Navigation</title>
+  <link rel="manifest" href="manifest.webmanifest?v=106100">
+  <link rel="stylesheet" href="styles.css?v=106100">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -38,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.6 Driver Profile</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.6.1 Driver Navigation</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -324,7 +324,7 @@
 
       <div id="driverPortalMessage" class="cloud-message" hidden></div>
 
-      <section id="driverVehicleCard" class="driver-vehicle-card">
+      <section id="driverVehicleCard" class="driver-vehicle-card" data-driver-anchor="vehicle">
         <div class="driver-empty-state">Загрузка назначенного автомобиля…</div>
       </section>
 
@@ -336,7 +336,7 @@
           </div>
         </section>
 
-        <section class="driver-portal-card">
+        <section class="driver-portal-card" data-driver-anchor="documents">
           <div class="driver-card-head"><div><span class="eyebrow">Документы</span><h3>Мои документы</h3></div></div>
           <div id="driverDocumentsList" class="driver-simple-list"></div>
         </section>
@@ -349,7 +349,7 @@
           <div id="driverRepairRequestsList" class="driver-request-list"></div>
         </section>
 
-        <section class="driver-portal-card driver-portal-card-wide">
+        <section class="driver-portal-card driver-portal-card-wide" data-driver-anchor="notifications">
           <div class="driver-card-head">
             <div><span class="eyebrow">Уведомления</span><h3>Последние уведомления</h3></div>
           </div>
@@ -867,10 +867,36 @@
     
   <button type="button" data-page="documentsPage">
               <span>▤</span><small>Документы</small>
-            </button></nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
+            </button></nav>
+
+  <nav id="driverBottomNav" class="driver-bottom-nav" aria-label="Меню водителя">
+    <button type="button" class="active" data-driver-nav="vehicle"><span>🚗</span><small>Автомобиль</small></button>
+    <button type="button" data-driver-nav="documents"><span>▤</span><small>Документы</small></button>
+    <button type="button" data-driver-nav="repair"><span>🔧</span><small>Заявка</small></button>
+    <button type="button" data-driver-nav="notifications"><span>🔔</span><small>Уведомления</small></button>
+    <button type="button" data-driver-nav="profile"><span>◎</span><small>Профиль</small></button>
+  </nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
 </div>
 
 
+
+
+<dialog id="changePasswordDialog" class="enterprise-dialog change-password-dialog">
+  <form method="dialog" id="changePasswordForm" class="modal">
+    <div class="modal-head">
+      <div><span class="eyebrow">Безопасность</span><h2>Изменить пароль</h2></div>
+      <button type="button" data-close="changePasswordDialog">✕</button>
+    </div>
+    <p class="change-password-note">Новый пароль будет применён сразу ко всем следующим входам.</p>
+    <label><span>Новый пароль</span><input id="directNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Минимум 8 символов"></label>
+    <label><span>Повторите пароль</span><input id="directNewPasswordRepeat" type="password" autocomplete="new-password" minlength="8" required placeholder="Повторите новый пароль"></label>
+    <div id="directPasswordMessage" class="cloud-message" hidden></div>
+    <div class="settings-actions">
+      <button type="button" class="btn" data-close="changePasswordDialog">Отмена</button>
+      <button class="btn primary">Сохранить пароль</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="driverRepairDialog" class="enterprise-dialog driver-repair-dialog">
   <form method="dialog" id="driverRepairForm" class="modal">
@@ -1419,7 +1445,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=106000"></script>
-<script src="cloud.js?v=106000"></script>
-<script src="app.js?v=106000"></script>
+<script src="cloud-config.js?v=106100"></script>
+<script src="cloud.js?v=106100"></script>
+<script src="app.js?v=106100"></script>
 </body></html>

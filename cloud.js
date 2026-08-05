@@ -811,7 +811,11 @@ function bind(){
  $("#cloudBackToLogin")?.addEventListener("click",()=>showAuth("login"));
  $("#cloudResetPasswordGuest")?.addEventListener("click",resetPassword);
  $("#cloudSaveRecoveryPassword")?.addEventListener("click",saveRecoveryPassword);
- $("#cloudResetPassword")?.addEventListener("click",resetPassword);
+ $("#cloudResetPassword")?.addEventListener("click",()=>{
+  $("#cloudDialog")?.close();
+  $("#directPasswordMessage")?.setAttribute("hidden","");
+  $("#changePasswordDialog")?.showModal()
+ });
  $("#cloudPushNow")?.addEventListener("click",()=>pushNow());
  $("#cloudPullNow")?.addEventListener("click",()=>pullNow());
  $("#cloudSignOut")?.addEventListener("click",signOut);
@@ -1079,6 +1083,14 @@ async function restoreCloudFleetVersion(versionId){
  }
  return restored
 }
-window.FleetPilotCloud={start,signOut,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function changePasswordDirect(newPassword){
+ if(!client||!session)throw new Error("Сначала войдите в аккаунт");
+ if(String(newPassword||"").length<8)throw new Error("Пароль должен содержать минимум 8 символов");
+ const {error}=await client.auth.updateUser({password:String(newPassword)});
+ if(error)throw error;
+ return true
+}
+window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

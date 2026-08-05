@@ -6972,3 +6972,72 @@ html[data-theme="dark"] .driver-profile-info-card{
   flex:1;
  }
 }
+
+
+/* FleetPilot V10.6.1 — focused driver navigation */
+.driver-bottom-nav{
+ display:none;
+}
+body.driver-only-ui .bottom-nav,
+body.driver-only-ui .quick-action-button,
+body.driver-only-ui .quick-action-menu{
+ display:none!important;
+}
+body.driver-only-ui .driver-bottom-nav{
+ position:fixed;
+ left:230px;
+ right:0;
+ bottom:0;
+ z-index:80;
+ display:grid;
+ grid-template-columns:repeat(5,1fr);
+ min-height:66px;
+ padding:7px max(12px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+ border-top:1px solid #e5e7eb;
+ background:rgba(255,255,255,.96);
+ backdrop-filter:blur(18px);
+ box-shadow:0 -10px 30px rgba(15,23,42,.08);
+}
+body.driver-only-ui .driver-bottom-nav button{
+ display:grid;
+ place-items:center;
+ gap:3px;
+ padding:5px;
+ border:0;
+ border-radius:13px;
+ background:transparent;
+ color:#64748b;
+ cursor:pointer;
+}
+body.driver-only-ui .driver-bottom-nav button span{
+ font-size:17px;
+}
+body.driver-only-ui .driver-bottom-nav button small{
+ font-size:8px;
+ font-weight:900;
+}
+body.driver-only-ui .driver-bottom-nav button.active{
+ background:#eef2ff;
+ color:#4338ca;
+}
+body.driver-only-ui main{
+ padding-bottom:92px!important;
+}
+.change-password-note{
+ margin:0 0 12px;
+ color:#64748b;
+ line-height:1.5;
+}
+html[data-theme="dark"] body.driver-only-ui .driver-bottom-nav{
+ border-color:rgba(255,255,255,.08);
+ background:rgba(17,24,39,.96);
+}
+html[data-theme="dark"] body.driver-only-ui .driver-bottom-nav button.active{
+ background:#1e2a4a;
+ color:#a5b4fc;
+}
+@media(max-width:800px){
+ body.driver-only-ui .driver-bottom-nav{
+  left:0;
+ }
+}

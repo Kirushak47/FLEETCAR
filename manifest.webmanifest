@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.6 Driver Profile Cloud Beta",
+  "name": "FleetPilot V10.6.1 Driver Navigation Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=106000",
+  "start_url": "./?v=106100",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
