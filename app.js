@@ -197,7 +197,7 @@ function effectiveVisible(settings=uxSettings()){
  return settings.visible
 }
 
-const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage"]);
+const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage","documentsPage"]);
 const SIMPLE_ALLOWED_TABS=new Set(["info","finance","documents","damages"]);
 
 function currentUiMode(){return uxSettings().mode==="simple"?"simple":"advanced"}

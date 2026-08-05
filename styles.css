@@ -6036,3 +6036,18 @@ html[data-theme="dark"] .more-page .more-grid > *{
     grid-column:auto;
   }
 }
+
+
+/* FleetPilot Cloud V2.3 — journal width and navigation cleanup */
+#morePage .activity-log-card,
+.more-page .activity-log-card{
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 18px!important;
+  box-sizing:border-box;
+}
+
+[data-desktop-page="morePage"],
+.bottom-nav [data-page="morePage"]{
+  display:none!important;
+}

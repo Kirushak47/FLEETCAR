@@ -4,8 +4,8 @@ const TABLE="fleet_states",PROFILE_TABLE="profiles";
 const STATUS_KEY="fleetpilot.cloud.status.v3";
 const PENDING_EMAIL_KEY="fleetpilot.cloud.pending_email.v1";
 const DEMO_KEY="fleetpilot.demo.active.v1";
-const PHOTO_KEY="fleetpilot.profile.photo.v1";
-const NAME_KEY="fleetpilot.profile.name.v1";
+const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
+const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const PUSH_DELAY=1800;
 let client=null,session=null,profile=null,pushTimer=null,syncing=false,started=false;
 
@@ -18,6 +18,7 @@ const isDemo=()=>localStorage.getItem(DEMO_KEY)==="1";
 const dateTime=v=>v?new Date(v).toLocaleString("ru-RU"):"—";
 const owner=()=>profile?.role==="owner";
 const initial=email=>(String(email||"FleetPilot").trim()[0]||"F").toUpperCase();
+const accountKey=(base)=>`${base}.${session?.user?.id||"guest"}`;
 
 function message(id,text,type=""){
  const el=$(id);if(!el)return;
@@ -75,8 +76,8 @@ async function loadProfile(){
 function avatarData(){
  const email=session?.user?.email||"";
  return{
-  photo:localStorage.getItem(PHOTO_KEY)||"",
-  name:localStorage.getItem(NAME_KEY)||email.split("@")[0]||"FleetPilot User",
+  photo:session?localStorage.getItem(accountKey(PHOTO_KEY_BASE))||"": "",
+  name:session?localStorage.getItem(accountKey(NAME_KEY_BASE))||email.split("@")[0]||"FleetPilot User":"FleetPilot",
   letter:initial(email)
  }
 }
@@ -276,7 +277,7 @@ function savePhoto(file){
    canvas.width=size;canvas.height=size;
    const scale=Math.max(size/img.width,size/img.height),w=img.width*scale,h=img.height*scale;
    canvas.getContext("2d").drawImage(img,(size-w)/2,(size-h)/2,w,h);
-   localStorage.setItem(PHOTO_KEY,canvas.toDataURL("image/jpeg",.78));renderAvatar()
+   localStorage.setItem(accountKey(PHOTO_KEY_BASE),canvas.toDataURL("image/jpeg",.78));renderAvatar()
   };
   img.src=reader.result
  };
@@ -323,7 +324,11 @@ function bind(){
  $("#cloudPushNow")?.addEventListener("click",()=>pushNow());
  $("#cloudPullNow")?.addEventListener("click",()=>pullNow());
  $("#cloudSignOut")?.addEventListener("click",signOut);
- $("#profileOpenSettings")?.addEventListener("click",()=>{$("#cloudDialog")?.close();document.querySelector("#desktopSettingsButton")?.click()});
+ $("#profileOpenSettings")?.addEventListener("click",()=>{$("#cloudDialog")?.close();(()=>{
+      const settingsButton=document.querySelector("#desktopSettingsButton");
+      if(settingsButton)settingsButton.click();
+      else if(window.showPage)window.showPage("morePage")
+    })()});
  $("#profilePhotoInput")?.addEventListener("change",e=>savePhoto(e.target.files?.[0]));
  $("#demoGoToLogin")?.addEventListener("click",()=>{$("#cloudDialog")?.close();exitDemo()});
  $("#demoReset")?.addEventListener("click",()=>startDemo(true));
