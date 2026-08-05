@@ -1,30 +1,68 @@
-# FleetPilot V8.2 Cloud Beta
+# FleetPilot Cloud V1 — Owner Admin
 
-## Что добавлено
-- настройка собственного Supabase прямо в интерфейсе;
-- регистрация и вход по email/паролю;
-- единая облачная база автопарка;
-- загрузка текущих локальных данных в аккаунт;
-- скачивание базы на другом телефоне или компьютере;
-- автоматическая отправка изменений через 1,8 секунды после локального сохранения;
-- работа без аккаунта и без интернета сохраняется;
-- локальная копия остаётся основной для быстрого запуска;
-- перед заменой базы из облака создаётся аварийная локальная копия.
+## Before uploading to GitHub
 
-## Настройка
-1. Создайте проект на Supabase.
-2. Откройте SQL Editor и выполните файл `supabase_setup.sql`.
-3. В Supabase откройте Project Settings → API.
-4. Скопируйте Project URL и anon/publishable key.
-5. В FleetPilot откройте «Ещё» → FleetPilot Cloud → «Подключить».
-6. Вставьте URL и ключ, затем создайте аккаунт.
-7. При первом входе загрузите существующий автопарк в облако.
-8. На другом устройстве откройте тот же сайт и войдите в тот же аккаунт.
+### 1. Edit `cloud-config.js`
 
-## Важно
-- В Cloud Beta база сохраняется как один защищённый JSON-документ пользователя. Это надёжный первый этап синхронизации.
-- Большие фотографии в base64 увеличивают объём синхронизации. Следующий этап — перенос фотографий и документов в Supabase Storage.
-- Никогда не вставляйте service_role key в браузер. Используйте только anon/publishable key.
+Replace:
 
-Открыть после загрузки:
-https://kirushak47.github.io/FLEETCAR/?v=8200
+- `PASTE_SB_PUBLISHABLE_KEY_HERE` with the Supabase Publishable Key (`sb_publishable_...`)
+- `PASTE_OWNER_EMAIL_HERE` with your FleetPilot login email
+
+Do not insert a Secret Key or service_role key.
+
+### 2. Run SQL
+
+If Cloud Beta was already configured, use:
+
+`supabase_migration_cloud_v1.sql`
+
+Open Supabase → SQL Editor → New query, paste the complete file, replace
+`PASTE_OWNER_EMAIL_HERE`, and press Run.
+
+For a completely new project use:
+
+`supabase_setup_cloud_v1.sql`
+
+### 3. Authentication URL
+
+Supabase → Authentication → URL Configuration:
+
+Site URL:
+
+`https://kirushak47.github.io/FLEETCAR/`
+
+Redirect URLs:
+
+`https://kirushak47.github.io/FLEETCAR/**`
+
+### 4. Upload all files to GitHub
+
+Open:
+
+`https://kirushak47.github.io/FLEETCAR/?v=9000`
+
+## User experience
+
+Ordinary users see only:
+
+- Email
+- Password
+- Sign in
+- Create account
+- Password recovery
+- Email confirmation
+
+They never see Supabase URL or API keys.
+
+## Owner access
+
+When you sign in with the email configured as owner:
+
+- FleetPilot Admin appears
+- all registered profiles are listed
+- vehicle counts and last cloud sync are shown
+- a user's cloud backup can be downloaded
+- the real Supabase Dashboard can be opened
+
+The actual Secret Key is not stored in FleetPilot.
