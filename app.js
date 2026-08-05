@@ -1699,7 +1699,7 @@ function invalidateFleetLeafletMap(){
  try{map.invalidateSize({pan:false})}catch(error){console.warn("Leaflet invalidateSize failed",error)}
 }
 
-function openFullFleetMap(){
+window.openFullFleetMap=function openFullFleetMap(){
  setDesktopView("map");
  openFleetMapV2();
 
@@ -3132,7 +3132,7 @@ window.toggleDesktopSelection=toggleDesktopSelection;
 
 const OWNER_DASHBOARD_KEY="fleetpilot.owner.dashboard.v1";
 const OWNER_WIDGETS=[
- {id:"map",label:"Живая карта"},
+ {id:"gps",label:"GPS автопарка"},
  {id:"events",label:"Последние события"},
  {id:"profit",label:"ТОП-5 по прибыли"},
  {id:"attention",label:"Требуют внимания"}
@@ -3222,17 +3222,24 @@ function renderOwnerDashboard(){
  const visible=new Set(ownerDashboardSettings().visible);
  $$("[data-owner-widget]").forEach(widget=>widget.hidden=!visible.has(widget.dataset.ownerWidget));
 
- $("#ownerLiveMapPreview").innerHTML=`
-  <div class="owner-map-canvas">
-   <span class="owner-map-road road-a"></span><span class="owner-map-road road-b"></span>
-   ${gpsRows.slice(0,5).map((row,index)=>`<button type="button" class="owner-map-car ${row.gps?.online?"online":"offline"}" style="--x:${18+(index*16)%70}%;--y:${22+(index*19)%62}%" onclick="findCarOnGps('${row.car.id}')"><span>⌖</span></button>`).join("")}
+ $("#ownerGpsStatus").innerHTML=`
+  <div class="owner-gps-main">
+    <div class="owner-gps-ring">
+      <strong>${online}</strong>
+      <small>из ${cars.length}</small>
+    </div>
+    <div>
+      <span>Автомобилей онлайн</span>
+      <h4>${online} / ${cars.length}</h4>
+      <p>${online===cars.length&&cars.length?"Все трекеры передают данные":"Часть автомобилей требует проверки GPS"}</p>
+    </div>
   </div>
-  <div class="owner-map-summary">
-   ${gpsRows.slice(0,4).map(row=>`<button type="button" onclick="findCarOnGps('${row.car.id}')">
-    <span class="owner-map-status ${row.gps?.online?"online":"offline"}"></span>
-    <div><strong>${model(row.car).brand} ${model(row.car).model}</strong><small>${row.gps?.online?`${Math.round(row.gps.speed||0)} км/ч · онлайн`:"Нет сигнала GPS"}</small></div>
-   </button>`).join("")||`<div class="owner-empty">Подключите GPS, чтобы видеть автомобили на карте.</div>`}
-  </div>`;
+  <div class="owner-gps-metrics">
+    <div><small>GPS подключено</small><strong>${gpsRows.filter(row=>row.gps).length}</strong></div>
+    <div><small>Нет сигнала</small><strong>${gpsRows.filter(row=>row.gps&&!row.gps.online).length}</strong></div>
+    <div><small>В движении</small><strong>${gpsRows.filter(row=>row.gps?.online&&Number(row.gps.speed||0)>3).length}</strong></div>
+  </div>
+  <button type="button" class="owner-gps-open-map" onclick="openFullFleetMap()">Открыть карту автопарка</button>`;
 
  const events=ownerDashboardEvents();
  $("#ownerRecentEvents").innerHTML=events.map(item=>`
