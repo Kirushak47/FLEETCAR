@@ -5714,29 +5714,10 @@ html[data-theme="dark"] #calendarPage input{
   color:#f8fafc;
 }
 
-/* FleetPilot V8.1 Stable */
-@media(min-width:1100px){
- .desktop-fleet-controls-slot{display:grid;gap:10px;margin:12px 0 14px}
- .desktop-fleet-controls-slot .desktop-fleet-toolbar{display:grid!important;grid-template-columns:minmax(260px,1fr) 180px 190px;gap:9px;margin:0!important;order:1}
- .desktop-fleet-controls-slot .desktop-fleet-summary{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:0!important;order:2}
- .desktop-fleet-controls-slot .desktop-bulk-bar{position:static!important;inset:auto!important;margin:0!important;order:3;box-shadow:none!important}
- .desktop-command-layout{margin-top:0!important}
- #desktopTableView .desktop-table-scroll{max-height:none;min-height:180px}
-}
-@media(max-width:1099px){
- html[data-ui-mode="simple"] .bottom-nav [data-page="calendarPage"],
- html[data-ui-mode="simple"] .bottom-nav [data-page="mobileMapPage"],
- html[data-ui-mode="simple"] .bottom-nav [data-page="morePage"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
- .quick-action-button{bottom:calc(env(safe-area-inset-bottom) + 92px)!important}
-}
-html[data-theme="dark"] #analyticsPage .card,
-html[data-theme="dark"] #analyticsPage .summary-card,
-html[data-theme="dark"] #analyticsPage .analytics-card,
-html[data-theme="dark"] #calendarPage .card,
-html[data-theme="dark"] #repairsPage .card,
-html[data-theme="dark"] #paymentsPage .card,
-html[data-theme="dark"] #expensesPage .card,
-html[data-theme="dark"] #morePage .card{background:#151d31!important;border-color:rgba(255,255,255,.08)!important;color:#e5e7eb!important}
-html[data-theme="dark"] table{color:#dbe4f0}
-html[data-theme="dark"] th{background:#182136!important;color:#94a3b8!important}
-html[data-theme="dark"] td{border-color:rgba(255,255,255,.06)!important}
+/* FleetPilot V8.2 — Cloud Beta */
+.cloud-settings-card{margin-bottom:14px}.cloud-settings-card .section-head p{margin:6px 0 0;color:#7b8798;font-size:9px}
+.cloud-connection-summary{display:flex;align-items:center;gap:12px;margin-top:12px;padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#f8fafc}.cloud-connection-summary>div{flex:1}.cloud-connection-summary strong,.cloud-connection-summary small{display:block}.cloud-connection-summary strong{font-size:10px}.cloud-connection-summary small{margin-top:4px;color:#8a95a6;font-size:8px}.cloud-state-dot{width:11px;height:11px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 5px rgba(148,163,184,.12)}.cloud-state-dot.online{background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.11)}.cloud-state-dot.syncing{background:#6366f1;box-shadow:0 0 0 5px rgba(99,102,241,.11);animation:cloudPulse 1.2s infinite}.cloud-state-dot.error{background:#ef4444;box-shadow:0 0 0 5px rgba(239,68,68,.10)}
+@keyframes cloudPulse{50%{opacity:.45}}
+.cloud-dialog{width:min(680px,calc(100% - 24px));padding:0;border:0;border-radius:20px;background:transparent}.cloud-dialog::backdrop{background:rgba(15,23,42,.65);backdrop-filter:blur(7px)}.cloud-shell{overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 30px 90px rgba(15,23,42,.32)}.cloud-head{display:flex;justify-content:space-between;gap:18px;padding:20px;border-bottom:1px solid #e8ecf1}.cloud-head h2{margin:6px 0 4px;font-size:18px}.cloud-head p{margin:0;color:#7b8798;font-size:9px}.cloud-body{display:grid;gap:14px;max-height:72vh;overflow:auto;padding:18px 20px}.cloud-body section{display:grid;gap:10px;padding:14px;border:1px solid #e7ebf1;border-radius:14px;background:#fbfcfe}.cloud-body h3{margin:0;font-size:11px}.cloud-body label{display:grid;gap:6px}.cloud-body label>span{font-size:8px;font-weight:850}.cloud-body input{min-height:42px;padding:0 11px;border:1px solid #dfe5ed;border-radius:11px;background:#fff;font-size:9px}.cloud-inline-actions,.cloud-auth-actions,.cloud-user-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.cloud-inline-actions span{color:#7b8798;font-size:8px}.cloud-message{padding:10px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8px;font-weight:800}.cloud-message.error{background:#fef2f2;color:#b91c1c}.cloud-message.success{background:#f0fdf4;color:#15803d}.cloud-user-row small,.cloud-user-row strong{display:block}.cloud-user-row small{color:#8a95a6;font-size:7px}.cloud-user-row strong{margin-top:3px;font-size:10px}.cloud-sync-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cloud-sync-grid>div{padding:10px;border-radius:10px;background:#f5f7fb}.cloud-sync-grid small,.cloud-sync-grid strong{display:block}.cloud-sync-grid small{color:#8a95a6;font-size:7px}.cloud-sync-grid strong{margin-top:4px;font-size:9px}.cloud-warning{margin:0;color:#9a6b16;font-size:7.5px;line-height:1.5}
+html[data-theme="dark"] .cloud-connection-summary,html[data-theme="dark"] .cloud-body section,html[data-theme="dark"] .cloud-sync-grid>div{border-color:rgba(255,255,255,.08);background:#182136}html[data-theme="dark"] .cloud-shell{background:#151d31;color:#f8fafc}html[data-theme="dark"] .cloud-head{border-color:rgba(255,255,255,.08)}html[data-theme="dark"] .cloud-body input{border-color:rgba(255,255,255,.09);background:#111827;color:#f8fafc}
+@media(max-width:620px){.cloud-auth-actions{display:grid;grid-template-columns:1fr 1fr}.cloud-inline-actions{align-items:stretch;flex-direction:column}.cloud-sync-grid{grid-template-columns:1fr}}

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V8.1 Stable</title>
-  <link rel="manifest" href="manifest.webmanifest?v=8100">
-  <link rel="stylesheet" href="styles.css?v=8100">
+  <title>FleetPilot V8.2 Cloud Beta</title>
+  <link rel="manifest" href="manifest.webmanifest?v=8200">
+  <link rel="stylesheet" href="styles.css?v=8200">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -31,7 +31,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V8.1 Stable</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V8.2 Cloud Beta</span><h1 id="pageTitle">Автопарк</h1></div>
     <div class="topbar-actions"><button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button><button id="headerAdd" class="round">＋</button></div>
   </header>
 
@@ -81,8 +81,6 @@
             <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong id="desktopGpsReadyStatus">GPS</strong><small>Следующее обновление через <b id="gpsSyncCountdown">—</b> сек.</small></div></div>
           </article>
         </section>
-
-        <div id="desktopFleetControlsSlot" class="desktop-fleet-controls-slot"></div>
 
         <div class="desktop-command-layout">
           <section class="desktop-command-main">
@@ -467,7 +465,17 @@
   </div>
   <div id="activityLog" class="activity-journal-list"></div>
 </div>
-      <div class="card gps-settings-card">
+      <div class="card cloud-settings-card">
+  <div class="section-head">
+    <div><span class="eyebrow">FleetPilot Cloud</span><h3>Синхронизация устройств</h3><p>Один автопарк на телефоне, компьютере и других устройствах.</p></div>
+    <button type="button" id="openCloudDialog" class="btn primary">Подключить</button>
+  </div>
+  <div id="cloudConnectionSummary" class="cloud-connection-summary">
+    <span class="cloud-state-dot local"></span>
+    <div><strong>Локальный режим</strong><small>Данные хранятся только на этом устройстве</small></div>
+  </div>
+</div>
+<div class="card gps-settings-card">
 <div class="section-head"><div><span class="eyebrow">Телематика</span><h3>GPS</h3><p>Подключите GPS-систему, которая уже установлена в автомобилях.</p></div>
 <button type="button" id="openGpsSetup" class="btn primary">Подключить GPS</button></div>
 <div id="gpsConnectionSummary" class="gps-connection-summary"></div></div>
@@ -783,6 +791,44 @@
     <iframe id="vehicleReportFrame" class="vehicle-report-frame" title="Отчёт по автомобилю"></iframe>
   </div>
 </dialog>
+<dialog id="cloudDialog" class="cloud-dialog">
+<form method="dialog" id="cloudForm" class="cloud-shell">
+  <div class="cloud-head">
+    <div><span class="eyebrow">FleetPilot Cloud</span><h2>Облачная синхронизация</h2><p>Подключите собственный проект Supabase и войдите в аккаунт.</p></div>
+    <button type="button" id="closeCloudDialog" class="dialog-close">×</button>
+  </div>
+  <div class="cloud-body">
+    <section class="cloud-setup-section">
+      <h3>1. Подключение Supabase</h3>
+      <label><span>Project URL</span><input id="cloudSupabaseUrl" type="url" placeholder="https://xxxxx.supabase.co"></label>
+      <label><span>Anon / publishable key</span><input id="cloudSupabaseKey" type="password" autocomplete="off" placeholder="Вставьте публичный ключ"></label>
+      <div class="cloud-inline-actions"><button type="button" id="saveCloudConfig" class="btn">Сохранить подключение</button><span id="cloudConfigState"></span></div>
+    </section>
+    <section class="cloud-auth-section">
+      <h3>2. Аккаунт</h3>
+      <label><span>Email</span><input id="cloudEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label><span>Пароль</span><input id="cloudPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Минимум 6 символов"></label>
+      <div class="cloud-auth-actions">
+        <button type="button" id="cloudSignIn" class="btn primary">Войти</button>
+        <button type="button" id="cloudSignUp" class="btn">Создать аккаунт</button>
+      </div>
+      <div id="cloudAuthMessage" class="cloud-message" hidden></div>
+    </section>
+    <section id="cloudAccountSection" class="cloud-account-section" hidden>
+      <div class="cloud-user-row"><div><small>Выполнен вход</small><strong id="cloudUserEmail"></strong></div><button type="button" id="cloudSignOut" class="btn">Выйти</button></div>
+      <div class="cloud-sync-grid">
+        <div><small>Статус</small><strong id="cloudSyncStatus">Ожидание</strong></div>
+        <div><small>Последняя синхронизация</small><strong id="cloudLastSync">—</strong></div>
+      </div>
+      <div class="cloud-auth-actions">
+        <button type="button" id="cloudPushNow" class="btn">Загрузить это устройство</button>
+        <button type="button" id="cloudPullNow" class="btn primary">Скачать из облака</button>
+      </div>
+      <p class="cloud-warning">«Скачать из облака» заменяет локальную базу на этом устройстве. Перед заменой создаётся локальная резервная копия.</p>
+    </section>
+  </div>
+</form>
+</dialog>
 <dialog id="gpsSetupDialog" class="gps-setup-dialog">
 <form method="dialog" id="gpsSetupForm" class="gps-setup-shell">
 <div class="gps-setup-head"><div><span class="eyebrow">Подключение GPS</span><h2>Подключить GPS</h2><p>Введите данные системы, которой вы уже пользуетесь.</p></div><button type="button" id="closeGpsSetup" class="dialog-close">×</button></div>
@@ -808,5 +854,7 @@
 <div class="gps-setup-actions"><button type="button" id="saveGpsMapping" class="btn primary">Сохранить сопоставление</button></div>
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="app.js?v=8100"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="cloud.js?v=8200"></script>
+<script src="app.js?v=8200"></script>
 </body></html>
