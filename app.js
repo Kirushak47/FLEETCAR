@@ -390,6 +390,28 @@ $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);render
 
 
 
+
+const ownerSettingsButton=$("#ownerDashboardSettingsButton");
+if(ownerSettingsButton)ownerSettingsButton.onclick=openOwnerDashboardSettings;
+$$("[data-hide-owner-widget]").forEach(button=>button.onclick=()=>hideOwnerDashboardWidget(button.dataset.hideOwnerWidget));
+const ownerMapButton=$("#ownerOpenMap");
+if(ownerMapButton)ownerMapButton.onclick=()=>{setDesktopView("map");openFleetMapV2()};
+const ownerDashboardForm=$("#ownerDashboardSettingsDialog form");
+if(ownerDashboardForm)ownerDashboardForm.onsubmit=event=>{
+ event.preventDefault();
+ const visible=$$("#ownerDashboardWidgetSettings input:checked").map(input=>input.value);
+ saveOwnerDashboardSettings({visible});
+ $("#ownerDashboardSettingsDialog").close();
+ renderOwnerDashboard();
+ toast("Дашборд обновлён")
+};
+const ownerDashboardReset=$("#ownerDashboardReset");
+if(ownerDashboardReset)ownerDashboardReset.onclick=()=>{
+ saveOwnerDashboardSettings({visible:OWNER_WIDGETS.map(item=>item.id)});
+ renderOwnerDashboardSettings();
+ renderOwnerDashboard()
+};
+
 function safeOpenCalendarPage(){
  showPage("calendarPage")
 }
@@ -3079,7 +3101,165 @@ function applyDesktopBulkCity(){
 }
 window.toggleDesktopSelection=toggleDesktopSelection;
 
+
+const OWNER_DASHBOARD_KEY="fleetpilot.owner.dashboard.v1";
+const OWNER_WIDGETS=[
+ {id:"map",label:"Живая карта"},
+ {id:"events",label:"Последние события"},
+ {id:"profit",label:"ТОП-5 по прибыли"},
+ {id:"attention",label:"Требуют внимания"}
+];
+
+function ownerDashboardSettings(){
+ try{
+  const value=JSON.parse(localStorage.getItem(OWNER_DASHBOARD_KEY)||"null");
+  return value&&Array.isArray(value.visible)?value:{visible:OWNER_WIDGETS.map(x=>x.id)}
+ }catch{
+  return{visible:OWNER_WIDGETS.map(x=>x.id)}
+ }
+}
+function saveOwnerDashboardSettings(settings){
+ localStorage.setItem(OWNER_DASHBOARD_KEY,JSON.stringify(settings))
+}
+function fleetPilotIsOwner(){
+ return Boolean(window.FleetPilotCloud?.isOwner)
+}
+function ownerDashboardMoney(value){
+ return`${Number(value||0).toLocaleString("pl-PL",{maximumFractionDigits:0})} zł`
+}
+function ownerActiveCars(){
+ return(Array.isArray(db?.cars)?db.cars:[]).filter(c=>!c.archived&&!c.deletedAt)
+}
+function ownerCarAttention(car){
+ try{
+  const h=safeDesktopHealth(car);
+  const gps=gpsStatusForCar(car);
+  return car.status==="repair"||h.oilLeft<=1000||h.insuranceDays<=7||h.inspectionDays<=7||(gps&&!gps.online)
+ }catch{return car.status==="repair"}
+}
+function ownerDashboardEvents(){
+ const activity=Array.isArray(db?.activity)?db.activity:[];
+ const timeline=Array.isArray(db?.timeline)?db.timeline:[];
+ return[...activity,...timeline]
+  .sort((a,b)=>new Date(b.createdAt||b.date||0)-new Date(a.createdAt||a.date||0))
+  .slice(0,6)
+}
+function ownerDashboardEventText(item){
+ return item.title||item.action||item.text||item.description||"Изменение в автопарке"
+}
+function ownerDashboardEventDate(item){
+ const value=item.createdAt||item.date||item.updatedAt;
+ return value?new Date(value).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""
+}
+function renderOwnerDashboard(){
+ const root=$("#ownerDashboard");
+ if(!root)return;
+
+ const owner=fleetPilotIsOwner();
+ root.hidden=!owner;
+ const settingsButton=$("#ownerDashboardSettingsButton");
+ if(settingsButton)settingsButton.hidden=!owner;
+ if(!owner)return;
+
+ const cars=ownerActiveCars();
+ const gpsRows=cars.map(car=>({car,gps:gpsStatusForCar(car)}));
+ const online=gpsRows.filter(row=>row.gps?.online).length;
+ const drivers=cars.filter(car=>car.tenant&&car.status==="active").length;
+ const attention=cars.filter(ownerCarAttention);
+ const expiringDocs=cars.filter(car=>{
+  try{
+   const h=safeDesktopHealth(car);
+   return h.insuranceDays<=14||h.inspectionDays<=14
+  }catch{return false}
+ });
+ const serviceSoon=cars.filter(car=>{
+  try{return safeDesktopHealth(car).oilLeft<=1500}catch{return false}
+ });
+ const totalProfit=cars.reduce((sum,car)=>sum+Number(safeDesktopCarProfit(car.id)||0),0);
+
+ const kpis=[
+  ["⌖","Автомобилей онлайн",`${online} / ${cars.length}`,"GPS сейчас"],
+  ["↗","Доход за период",ownerDashboardMoney(totalProfit),"По данным FleetPilot"],
+  ["♟","Водителей на линии",drivers,"Активные арендаторы"],
+  ["!","Требуют внимания",attention.length,"Документы, ТО или GPS"],
+  ["▤","Документы скоро истекают",expiringDocs.length,"В ближайшие 14 дней"],
+  ["◇","ТО в ближайшее время",serviceSoon.length,"До 1 500 км"]
+ ];
+ $("#ownerDashboardKpis").innerHTML=kpis.map(([icon,label,value,note])=>`
+  <article class="owner-kpi-card">
+   <span class="owner-kpi-icon">${icon}</span>
+   <div><small>${label}</small><strong>${value}</strong><p>${note}</p></div>
+  </article>`).join("");
+
+ const visible=new Set(ownerDashboardSettings().visible);
+ $$("[data-owner-widget]").forEach(widget=>widget.hidden=!visible.has(widget.dataset.ownerWidget));
+
+ $("#ownerLiveMapPreview").innerHTML=`
+  <div class="owner-map-canvas">
+   <span class="owner-map-road road-a"></span><span class="owner-map-road road-b"></span>
+   ${gpsRows.slice(0,5).map((row,index)=>`<button type="button" class="owner-map-car ${row.gps?.online?"online":"offline"}" style="--x:${18+(index*16)%70}%;--y:${22+(index*19)%62}%" onclick="findCarOnGps('${row.car.id}')"><span>⌖</span></button>`).join("")}
+  </div>
+  <div class="owner-map-summary">
+   ${gpsRows.slice(0,4).map(row=>`<button type="button" onclick="findCarOnGps('${row.car.id}')">
+    <span class="owner-map-status ${row.gps?.online?"online":"offline"}"></span>
+    <div><strong>${model(row.car).brand} ${model(row.car).model}</strong><small>${row.gps?.online?`${Math.round(row.gps.speed||0)} км/ч · онлайн`:"Нет сигнала GPS"}</small></div>
+   </button>`).join("")||`<div class="owner-empty">Подключите GPS, чтобы видеть автомобили на карте.</div>`}
+  </div>`;
+
+ const events=ownerDashboardEvents();
+ $("#ownerRecentEvents").innerHTML=events.map(item=>`
+  <div class="owner-list-row">
+   <span class="owner-list-icon">↻</span>
+   <div><strong>${ownerDashboardEventText(item)}</strong><small>${ownerDashboardEventDate(item)}</small></div>
+  </div>`).join("")||`<div class="owner-empty">Пока нет новых событий.</div>`;
+
+ const top=[...cars].sort((a,b)=>safeDesktopCarProfit(b.id)-safeDesktopCarProfit(a.id)).slice(0,5);
+ $("#ownerTopProfit").innerHTML=top.map((car,index)=>`
+  <button type="button" class="owner-list-row owner-profit-row" onclick="openCar('${car.id}')">
+   <span class="owner-rank">${index+1}</span>
+   <div><strong>${model(car).brand} ${model(car).model}</strong><small>${car.plate||"Без номера"}</small></div>
+   <b>${ownerDashboardMoney(safeDesktopCarProfit(car.id))}</b>
+  </button>`).join("")||`<div class="owner-empty">Добавьте первый автомобиль.</div>`;
+
+ $("#ownerAttentionCars").innerHTML=attention.slice(0,6).map(car=>{
+  let note="Требуется проверка";
+  try{
+   const h=safeDesktopHealth(car),gps=gpsStatusForCar(car);
+   if(car.status==="repair")note="Автомобиль в ремонте";
+   else if(h.insuranceDays<=7)note=`Страховка: ${h.insuranceDays} дн.`;
+   else if(h.inspectionDays<=7)note=`Техосмотр: ${h.inspectionDays} дн.`;
+   else if(h.oilLeft<=1000)note=`Масло через ${Math.max(0,Math.round(h.oilLeft))} км`;
+   else if(gps&&!gps.online)note="Нет сигнала GPS"
+  }catch{}
+  return`<button type="button" class="owner-list-row owner-attention-row" onclick="openCar('${car.id}')">
+   <span class="owner-alert-dot"></span>
+   <div><strong>${model(car).brand} ${model(car).model}</strong><small>${note}</small></div><b>›</b>
+  </button>`
+ }).join("")||`<div class="owner-empty owner-all-good">✓ Всё под контролем</div>`;
+}
+function hideOwnerDashboardWidget(id){
+ const settings=ownerDashboardSettings();
+ settings.visible=settings.visible.filter(item=>item!==id);
+ saveOwnerDashboardSettings(settings);
+ renderOwnerDashboard()
+}
+function renderOwnerDashboardSettings(){
+ const root=$("#ownerDashboardWidgetSettings");if(!root)return;
+ const visible=new Set(ownerDashboardSettings().visible);
+ root.innerHTML=OWNER_WIDGETS.map(item=>`
+  <label class="owner-widget-setting-row">
+   <span>${item.label}</span>
+   <input type="checkbox" value="${item.id}" ${visible.has(item.id)?"checked":""}>
+  </label>`).join("")
+}
+function openOwnerDashboardSettings(){
+ renderOwnerDashboardSettings();
+ $("#ownerDashboardSettingsDialog")?.showModal()
+}
+window.hideOwnerDashboardWidget=hideOwnerDashboardWidget;
+
 function renderFleet(){
+ renderOwnerDashboard();
  refreshCityControls();
  applyUxSettings();
  renderOwnerDashboard();

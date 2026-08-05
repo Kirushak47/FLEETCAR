@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot Cloud V2.3 Cloud Beta",
+  "name": "FleetPilot V9 Polish Edition Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=9230",
+  "start_url": "./?v=90000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

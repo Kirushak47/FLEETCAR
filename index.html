@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot Cloud V2.3</title>
-  <link rel="manifest" href="manifest.webmanifest?v=9230">
-  <link rel="stylesheet" href="styles.css?v=9230">
+  <title>FleetPilot V9 Polish Edition</title>
+  <link rel="manifest" href="manifest.webmanifest?v=90000">
+  <link rel="stylesheet" href="styles.css?v=90000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -17,7 +17,7 @@
       <div><strong>FleetPilot</strong><small>Fleet management</small></div>
     </div>
     <nav class="desktop-sidebar-nav">
-      <button type="button" data-desktop-page="fleetPage" class="active"><span>⌂</span>Автопарк</button>
+      <button type="button" data-desktop-page="fleetPage" class="active"><span>⌂</span>Главная</button>
       <button type="button" data-desktop-page="repairsPage"><span>◇</span>Сервис</button>
       <button type="button" data-desktop-page="paymentsPage"><span>▣</span>Аренда</button>
       <button type="button" data-desktop-page="expensesPage"><span>↘</span>Расходы</button>
@@ -33,7 +33,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot Cloud V2.3</span><h1 id="pageTitle">Автопарк</h1></div>
+    <div><span class="eyebrow">FleetPilot V9 Polish Edition</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -48,15 +48,58 @@
     <section id="fleetPage" class="page active">
       <div class="desktop-fleet-page-head">
         <div>
-          <span class="desktop-page-kicker">Fleet overview</span>
-          <h2>Мои автомобили</h2>
-          <p>Управляйте автопарком и контролируйте важные события.</p>
+          <span class="desktop-page-kicker">Owner command center</span>
+          <h2>Обзор автопарка</h2>
+          <p>Главные показатели, события и состояние автомобилей в одном месте.</p>
         </div>
         <div class="desktop-page-actions">
+          <button type="button" id="ownerDashboardSettingsButton" class="btn secondary">⚙ Настроить дашборд</button>
           <button type="button" id="desktopSearchButton" class="desktop-icon-button" aria-label="Поиск">⌕</button>
           <button type="button" id="desktopAddCar" class="btn primary">+ Автомобиль</button>
         </div>
       </div>
+
+      <section id="ownerDashboard" class="owner-dashboard" hidden>
+        <div id="ownerDashboardKpis" class="owner-dashboard-kpis">
+          <div class="owner-skeleton-card"></div><div class="owner-skeleton-card"></div>
+          <div class="owner-skeleton-card"></div><div class="owner-skeleton-card"></div>
+          <div class="owner-skeleton-card"></div><div class="owner-skeleton-card"></div>
+        </div>
+
+        <div id="ownerDashboardGrid" class="owner-dashboard-grid">
+          <article class="owner-dashboard-widget owner-map-widget" data-owner-widget="map">
+            <div class="owner-widget-head">
+              <div><span>Телематика</span><h3>Живая карта</h3></div>
+              <div class="owner-widget-actions"><button type="button" id="ownerOpenMap">Открыть карту</button><button type="button" data-hide-owner-widget="map">×</button></div>
+            </div>
+            <div id="ownerLiveMapPreview" class="owner-live-map-preview"></div>
+          </article>
+
+          <article class="owner-dashboard-widget" data-owner-widget="events">
+            <div class="owner-widget-head">
+              <div><span>Что изменилось</span><h3>Последние события</h3></div>
+              <button type="button" data-hide-owner-widget="events">×</button>
+            </div>
+            <div id="ownerRecentEvents" class="owner-widget-list"></div>
+          </article>
+
+          <article class="owner-dashboard-widget" data-owner-widget="profit">
+            <div class="owner-widget-head">
+              <div><span>Эффективность</span><h3>ТОП-5 по прибыли</h3></div>
+              <button type="button" data-hide-owner-widget="profit">×</button>
+            </div>
+            <div id="ownerTopProfit" class="owner-widget-list"></div>
+          </article>
+
+          <article class="owner-dashboard-widget owner-attention-widget" data-owner-widget="attention">
+            <div class="owner-widget-head">
+              <div><span>Контроль рисков</span><h3>Требуют внимания</h3></div>
+              <button type="button" data-hide-owner-widget="attention">×</button>
+            </div>
+            <div id="ownerAttentionCars" class="owner-widget-list"></div>
+          </article>
+        </div>
+      </section>
 
       <section class="desktop-command-center" aria-label="FleetPilot Command Center">
         <div class="desktop-view-switcher" role="tablist" aria-label="Вид автопарка">
@@ -551,6 +594,21 @@
             </button></nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
 </div>
 
+<dialog id="ownerDashboardSettingsDialog">
+  <form method="dialog" class="modal owner-dashboard-settings-modal">
+    <div class="modal-head">
+      <div><span class="eyebrow">Главная владельца</span><h2>Настроить дашборд</h2></div>
+      <button type="button" data-close="ownerDashboardSettingsDialog">✕</button>
+    </div>
+    <p class="settings-help">Скрывайте блоки, которыми не пользуетесь. Их всегда можно вернуть здесь.</p>
+    <div id="ownerDashboardWidgetSettings" class="owner-widget-settings"></div>
+    <div class="settings-actions">
+      <button type="button" id="ownerDashboardReset" class="btn">Показать всё</button>
+      <button class="btn primary">Готово</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dashboardSettingsDialog"><form id="dashboardSettingsForm" class="modal dashboard-settings-modal">
   <div class="modal-head">
     <div><span class="eyebrow">Главная страница</span><h2>Настроить блоки</h2></div>
@@ -947,7 +1005,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=9230"></script>
-<script src="cloud.js?v=9230"></script>
-<script src="app.js?v=9230"></script>
+<script src="cloud-config.js?v=90000"></script>
+<script src="cloud.js?v=90000"></script>
+<script src="app.js?v=90000"></script>
 </body></html>

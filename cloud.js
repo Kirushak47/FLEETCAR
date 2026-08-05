@@ -351,6 +351,6 @@ async function start(){
  if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
  render()
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,get session(){return session}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,get session(){return session},get profile(){return profile},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();
