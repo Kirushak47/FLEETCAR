@@ -6,8 +6,10 @@ const PENDING_EMAIL_KEY="fleetpilot.cloud.pending_email.v1";
 const DEMO_KEY="fleetpilot.demo.active.v1";
 const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
 const NAME_KEY_BASE="fleetpilot.profile.name.v2";
+const DEVICE_ID_KEY="fleetpilot.cloud.device_id.v1";
 const PUSH_DELAY=1800;
-let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,syncing=false,started=false,authResolved=false,workspaceResolved=false;
+const REALTIME_POLL_MS=45000;
+let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,realtimeChannel=null,realtimePollTimer=null,realtimeApplyTimer=null,syncing=false,remoteApplying=false,started=false,authResolved=false,workspaceResolved=false;
 
 const $=s=>document.querySelector(s);
 const cfg=()=>window.FLEETPILOT_CLOUD_CONFIG||{};
@@ -19,6 +21,16 @@ const dateTime=v=>v?new Date(v).toLocaleString("ru-RU"):"—";
 const owner=()=>enterpriseRole()==="owner";
 const initial=email=>(String(email||"FleetPilot").trim()[0]||"F").toUpperCase();
 const accountKey=(base)=>`${base}.${session?.user?.id||"guest"}`;
+const deviceId=()=>{
+ let id=localStorage.getItem(DEVICE_ID_KEY);
+ if(!id){
+  id=(crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  localStorage.setItem(DEVICE_ID_KEY,id)
+ }
+ return id
+};
+const deviceName=()=>`${deviceId()}|${navigator.userAgent}`.slice(0,120);
+
 
 function message(id,text,type=""){
  const el=$(id);if(!el)return;
@@ -291,7 +303,111 @@ function renderSummary(){
   root.innerHTML=`<span class="cloud-state-dot local"></span><div><strong>Вход не выполнен</strong><small>Войдите или откройте демо-режим</small></div><button type="button" class="btn primary" onclick="FleetPilotCloud.showLogin()">Войти</button>`
  }
 }
+
+function stopRealtimeSync(){
+ clearTimeout(realtimeApplyTimer);
+ clearInterval(realtimePollTimer);
+ realtimeApplyTimer=null;
+ realtimePollTimer=null;
+
+ if(realtimeChannel&&client){
+  try{client.removeChannel(realtimeChannel)}catch(error){console.warn("Realtime channel cleanup",error)}
+ }
+ realtimeChannel=null
+}
+function cloudTimestamp(){
+ return parse(STATUS_KEY,{})?.lastSync||null
+}
+function isCloudNewer(remoteUpdatedAt){
+ if(!remoteUpdatedAt)return false;
+ const local=cloudTimestamp();
+ return !local||new Date(remoteUpdatedAt).getTime()>new Date(local).getTime()+250
+}
+async function applyRemoteFleetState(row,{reload=true}={}){
+ if(!row?.payload||remoteApplying)return false;
+ if(String(row.device_name||"").startsWith(`${deviceId()}|`))return false;
+ if(!isCloudNewer(row.updated_at))return false;
+
+ remoteApplying=true;
+ try{
+  removeOldQuotaBackups();
+  await backupCurrent();
+  window.replaceFleetPilotDatabase(row.payload);
+  setStatus("Обновлено с другого устройства",row.updated_at,"online");
+  window.toast?.("Получены новые данные из облака");
+
+  if(reload){
+   clearTimeout(realtimeApplyTimer);
+   realtimeApplyTimer=setTimeout(()=>location.reload(),500)
+  }
+  return true
+ }catch(error){
+  console.error("Realtime apply failed",error);
+  setStatus("Ошибка автоматического обновления",null,"error");
+  return false
+ }finally{
+  remoteApplying=false
+ }
+}
+async function checkCloudForUpdates(){
+ if(!client||!session||!membership?.workspace_id||syncing||remoteApplying||document.hidden)return false;
+ try{
+  const row=await fetchRow();
+  return await applyRemoteFleetState(row)
+ }catch(error){
+  console.warn("Realtime fallback check failed",error);
+  return false
+ }
+}
+function scheduleRemoteApply(row){
+ if(!row?.payload)return;
+ if(String(row.device_name||"").startsWith(`${deviceId()}|`))return;
+
+ clearTimeout(realtimeApplyTimer);
+ realtimeApplyTimer=setTimeout(async()=>{
+  // Let an active local save finish before reading the newest cloud version.
+  if(syncing||pushTimer){
+   scheduleRemoteApply(row);
+   return
+  }
+  await applyRemoteFleetState(row)
+ },350)
+}
+async function startRealtimeSync(){
+ stopRealtimeSync();
+ if(!client||!session||!membership?.workspace_id||isDemo())return;
+
+ const workspaceId=membership.workspace_id;
+ realtimeChannel=client
+  .channel(`fleet-state-${workspaceId}`)
+  .on("postgres_changes",{
+   event:"*",
+   schema:"public",
+   table:TABLE,
+   filter:`workspace_id=eq.${workspaceId}`
+  },payload=>{
+   const row=payload.new||null;
+   if(row)scheduleRemoteApply(row)
+  })
+  .subscribe(status=>{
+   if(status==="SUBSCRIBED")setStatus("Онлайн · автосинхронизация",cloudTimestamp(),"online");
+   if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setStatus("Переподключение к облаку…",cloudTimestamp(),"syncing")
+  });
+
+ realtimePollTimer=setInterval(checkCloudForUpdates,REALTIME_POLL_MS)
+}
+function bindRealtimeLifecycle(){
+ document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden)checkCloudForUpdates()
+ });
+ window.addEventListener("focus",checkCloudForUpdates);
+ window.addEventListener("online",()=>{
+  startRealtimeSync();
+  checkCloudForUpdates()
+ })
+}
 async function loadSessionContext(nextSession){
+ stopRealtimeSync();
  session=nextSession||null;
  profile=null;
  workspace=null;
@@ -306,7 +422,8 @@ async function loadSessionContext(nextSession){
   await loadPlatformAdmin()
  }
 
- workspaceResolved=true
+ workspaceResolved=true;
+ if(session&&membership?.workspace_id)await startRealtimeSync()
 }
 function render(){
  const logged=$("#profileLoggedInView"),guest=$("#profileGuestView"),demo=$("#profileDemoView"),admin=$("#cloudAdminSection");
@@ -411,13 +528,13 @@ async function pushNow({silent=false}={}){
   const now=new Date().toISOString();
   const {data,error}=await client.rpc("save_workspace_fleet_state",{
    state_payload:payload,
-   state_device_name:navigator.userAgent.slice(0,120)
+   state_device_name:deviceName()
   });
 
   if(error)throw error;
 
   const savedAt=(Array.isArray(data)?data[0]?.updated_at:data?.updated_at)||now;
-  setStatus("Синхронизировано",savedAt,"online");
+  setStatus("Все изменения сохранены",savedAt,"online");
   message("#cloudAuthMessage","");
   if(!silent)window.toast?.("Облачная база обновлена");
   return true
@@ -431,21 +548,43 @@ async function pushNow({silent=false}={}){
   syncing=false
  }
 }
-async function pullNow({ask=true}={}){
- if(syncing||!session)return false;syncing=true;setStatus("Загрузка из облака…",null,"syncing");
+async function pullNow({ask=true,row=null,reload=true}={}){
+ if(syncing||!session)return false;
+ syncing=true;
+ setStatus("Загрузка из облака…",null,"syncing");
+
  try{
-  const row=await fetchRow();if(!row?.payload)throw new Error("В облаке пока нет данных");
-  const s=stats(row.payload);
+  const cloudRow=row||await fetchRow();
+  if(!cloudRow?.payload)throw new Error("В облаке пока нет данных");
+
+  const s=stats(cloudRow.payload);
   if(ask&&!confirm(`Скачать облачную базу?\n\nАвтомобили: ${s.cars}\nРемонты: ${s.repairs}\nОплаты: ${s.payments}`))return false;
+
   removeOldQuotaBackups();
-  await backupCurrent(); // failure no longer blocks pull
-  window.replaceFleetPilotDatabase(row.payload);
-  setStatus("Загружено из облака",row.updated_at,"online");
-  location.reload();return true
- }catch(e){message("#cloudAuthMessage",friendly(e),"error");setStatus("Ошибка загрузки",null,"error");return false}
- finally{syncing=false}
+  await backupCurrent();
+  window.replaceFleetPilotDatabase(cloudRow.payload);
+  setStatus("Загружено из облака",cloudRow.updated_at,"online");
+
+  if(reload)location.reload();
+  return true
+ }catch(e){
+  message("#cloudAuthMessage",friendly(e),"error");
+  setStatus("Ошибка загрузки",null,"error");
+  return false
+ }finally{
+  syncing=false
+ }
 }
-function schedulePush(){clearTimeout(pushTimer);if(session&&!isDemo())pushTimer=setTimeout(()=>pushNow({silent:true}),PUSH_DELAY)}
+function schedulePush(){
+ clearTimeout(pushTimer);
+ pushTimer=null;
+ if(session&&!isDemo()&&["owner","coordinator"].includes(enterpriseRole())){
+  pushTimer=setTimeout(async()=>{
+   pushTimer=null;
+   await pushNow({silent:true})
+  },PUSH_DELAY)
+ }
+}
 async function firstSync(){
  try{
   const row=await fetchRow();
@@ -517,6 +656,8 @@ async function resetPassword(){
 async function signOut(){
  if(!confirm("Выйти из аккаунта? Данные этого пользователя будут удалены с устройства, но останутся в облаке."))return;
  clearTimeout(pushTimer);
+ pushTimer=null;
+ stopRealtimeSync();
  if(client)await client.auth.signOut();
  session=null;profile=null;
  localStorage.removeItem(DEMO_KEY);
@@ -660,6 +801,7 @@ async function start(){
 
  removeOldQuotaBackups();
  bind();
+ bindRealtimeLifecycle();
  init();
 
  if(new URLSearchParams(location.search).get("email-confirmed")==="1"){
@@ -814,6 +956,6 @@ async function assignDriverVehicle(driverUserId,carId){
  });
  if(error)throw error
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

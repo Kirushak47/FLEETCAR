@@ -6749,3 +6749,17 @@ html:not(.workspace-locked) #workspaceGate{display:none!important}
 html[data-theme="dark"] .driver-vehicle-card,html[data-theme="dark"] .driver-portal-card,html[data-theme="dark"] .driver-service-inbox{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
 html[data-theme="dark"] .driver-vehicle-stats>div,html[data-theme="dark"] .driver-list-row,html[data-theme="dark"] .driver-request-row,html[data-theme="dark"] .driver-notification-row,html[data-theme="dark"] .workspace-request-row,html[data-theme="dark"] .driver-repair-vehicle-summary{border-color:rgba(255,255,255,.07);background:#151d31}
 @media(max-width:760px){.driver-portal-head{display:grid}.driver-portal-head .btn{width:100%}.driver-portal-grid{grid-template-columns:1fr}.driver-portal-card-wide{grid-column:auto}.driver-vehicle-stats{grid-template-columns:1fr 1fr}.driver-request-row,.workspace-request-row{grid-template-columns:1fr}.driver-request-badges{justify-items:start}.driver-vehicle-main{grid-template-columns:48px 1fr}.driver-vehicle-status{grid-column:1/-1;justify-self:start}}
+
+
+/* FleetPilot V10.5.1 — Realtime cloud sync */
+#cloudSyncStatus::before{
+ content:"";
+ display:inline-block;
+ width:7px;
+ height:7px;
+ margin-right:7px;
+ border-radius:50%;
+ background:#22c55e;
+ box-shadow:0 0 0 4px rgba(34,197,94,.12);
+ vertical-align:1px;
+}
