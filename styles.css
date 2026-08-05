@@ -6763,3 +6763,17 @@ html[data-theme="dark"] .driver-vehicle-stats>div,html[data-theme="dark"] .drive
  box-shadow:0 0 0 4px rgba(34,197,94,.12);
  vertical-align:1px;
 }
+
+
+/* FleetPilot V10.5.2 — password recovery */
+#authRecoveryView p{
+ margin:0 0 18px;
+ color:#64748b;
+ line-height:1.55;
+}
+#authRecoveryView .auth-submit{
+ margin-top:4px;
+}
+html.auth-locked body{
+ overflow:hidden;
+}

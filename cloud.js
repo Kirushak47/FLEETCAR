@@ -9,7 +9,7 @@ const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const DEVICE_ID_KEY="fleetpilot.cloud.device_id.v1";
 const PUSH_DELAY=1800;
 const REALTIME_POLL_MS=45000;
-let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,realtimeChannel=null,realtimePollTimer=null,realtimeApplyTimer=null,syncing=false,remoteApplying=false,started=false,authResolved=false,workspaceResolved=false;
+let client=null,session=null,profile=null,workspace=null,membership=null,platformAdmin=false,pushTimer=null,realtimeChannel=null,realtimePollTimer=null,realtimeApplyTimer=null,syncing=false,remoteApplying=false,recoveryMode=false,started=false,authResolved=false,workspaceResolved=false;
 
 const $=s=>document.querySelector(s);
 const cfg=()=>window.FLEETPILOT_CLOUD_CONFIG||{};
@@ -57,7 +57,7 @@ function init(){
  return client
 }
 function showAuth(view="welcome"){
- const screens=["#authWelcomeView","#authLoginView","#authRegisterView","#authConfirmView"];
+ const screens=["#authWelcomeView","#authLoginView","#authRegisterView","#authConfirmView","#authRecoveryView"];
  screens.forEach(selector=>{
   const el=$(selector);
   if(el){
@@ -70,7 +70,8 @@ function showAuth(view="welcome"){
   welcome:"#authWelcomeView",
   login:"#authLoginView",
   register:"#authRegisterView",
-  confirm:"#authConfirmView"
+  confirm:"#authConfirmView",
+  recovery:"#authRecoveryView"
  };
 
  const target=$(map[view]||map.welcome);
@@ -82,8 +83,12 @@ function showAuth(view="welcome"){
 function setGate(){
  const gate=$("#authGate");
  if(!gate)return;
- gate.hidden=Boolean(session)||isDemo();
- document.documentElement.classList.toggle("auth-locked",!gate.hidden);
+
+ const showGate=recoveryMode||(!session&&!isDemo());
+ gate.hidden=!showGate;
+ document.documentElement.classList.toggle("auth-locked",showGate);
+
+ if(recoveryMode)showAuth("recovery");
  setWorkspaceGate()
 }
 async function loadProfile(){
@@ -649,10 +654,55 @@ async function resend(){
 async function resetPassword(){
  const email=session?.user?.email||$("#cloudEmail")?.value.trim();
  if(!email)return message("#cloudAuthMessage","Введите email","error");
- const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:cfg().redirectUrl});
+ const recoveryUrl=new URL(cfg().redirectUrl||location.href);
+ recoveryUrl.searchParams.set("password-recovery","1");
+ recoveryUrl.searchParams.delete("email-confirmed");
+ const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:recoveryUrl.toString()});
  if(error)return message("#cloudAuthMessage",friendly(error),"error");
  alert("Письмо для изменения пароля отправлено")
 }
+async function saveRecoveryPassword(){
+ const password=$("#cloudRecoveryPassword")?.value||"";
+ const repeat=$("#cloudRecoveryPasswordRepeat")?.value||"";
+
+ if(password.length<8){
+  return message("#cloudRecoveryMessage","Пароль должен содержать минимум 8 символов.","error")
+ }
+ if(password!==repeat){
+  return message("#cloudRecoveryMessage","Пароли не совпадают.","error")
+ }
+
+ message("#cloudRecoveryMessage","Сохраняем новый пароль…");
+
+ const {error}=await client.auth.updateUser({password});
+ if(error)return message("#cloudRecoveryMessage",friendly(error),"error");
+
+ recoveryMode=false;
+ message("#cloudRecoveryMessage","Пароль успешно изменён.","success");
+
+ // End temporary recovery session. User signs in normally with the new password.
+ stopRealtimeSync();
+ await client.auth.signOut();
+ session=null;
+ profile=null;
+ workspace=null;
+ membership=null;
+ platformAdmin=false;
+ authResolved=true;
+ workspaceResolved=true;
+
+ const cleanUrl=new URL(location.href);
+ cleanUrl.searchParams.delete("password-recovery");
+ cleanUrl.searchParams.delete("type");
+ cleanUrl.hash="";
+ history.replaceState({},document.title,cleanUrl.pathname+cleanUrl.search);
+
+ showAuth("login");
+ if($("#cloudPassword"))$("#cloudPassword").value="";
+ render();
+ setTimeout(()=>message("#cloudAuthMessage","Пароль изменён. Войдите с новым паролем.","success"),100)
+}
+
 async function signOut(){
  if(!confirm("Выйти из аккаунта? Данные этого пользователя будут удалены с устройства, но останутся в облаке."))return;
  clearTimeout(pushTimer);
@@ -749,6 +799,7 @@ function bind(){
  $("#cloudResendEmail")?.addEventListener("click",resend);
  $("#cloudBackToLogin")?.addEventListener("click",()=>showAuth("login"));
  $("#cloudResetPasswordGuest")?.addEventListener("click",resetPassword);
+ $("#cloudSaveRecoveryPassword")?.addEventListener("click",saveRecoveryPassword);
  $("#cloudResetPassword")?.addEventListener("click",resetPassword);
  $("#cloudPushNow")?.addEventListener("click",()=>pushNow());
  $("#cloudPullNow")?.addEventListener("click",()=>pullNow());
@@ -793,11 +844,20 @@ function bind(){
  $("#workspaceSignOut")?.addEventListener("click",signOut);
 
 }
+
+function hasRecoveryMarker(){
+ const query=new URLSearchParams(location.search);
+ const hash=new URLSearchParams(location.hash.replace(/^#/,""));
+ return query.get("password-recovery")==="1"
+  || query.get("type")==="recovery"
+  || hash.get("type")==="recovery"
+}
 async function start(){
  if(started)return;
  started=true;
  authResolved=false;
  workspaceResolved=false;
+ recoveryMode=hasRecoveryMarker();
 
  removeOldQuotaBackups();
  bind();
@@ -811,12 +871,43 @@ async function start(){
  }
 
  if(client){
+  // Supabase exchanges the recovery token for a temporary session.
   const {data}=await client.auth.getSession();
-  await loadSessionContext(data?.session||null);
-  authResolved=true;
-  render();
 
-  client.auth.onAuthStateChange(async(_,nextSession)=>{
+  if(recoveryMode){
+   session=data?.session||null;
+   profile=null;
+   workspace=null;
+   membership=null;
+   platformAdmin=false;
+   workspaceResolved=true;
+   authResolved=true;
+   showAuth("recovery");
+   render()
+  }else{
+   await loadSessionContext(data?.session||null);
+   authResolved=true;
+   render()
+  }
+
+  client.auth.onAuthStateChange(async(event,nextSession)=>{
+   if(event==="PASSWORD_RECOVERY"){
+    recoveryMode=true;
+    stopRealtimeSync();
+    session=nextSession||null;
+    profile=null;
+    workspace=null;
+    membership=null;
+    platformAdmin=false;
+    workspaceResolved=true;
+    authResolved=true;
+    showAuth("recovery");
+    render();
+    return
+   }
+
+   if(recoveryMode)return;
+
    authResolved=false;
    workspaceResolved=false;
    await loadSessionContext(nextSession);
@@ -830,7 +921,7 @@ async function start(){
  }
 
  const pending=parse(PENDING_EMAIL_KEY,"");
- if(!session&&!isDemo()&&pending){
+ if(!recoveryMode&&!session&&!isDemo()&&pending){
   if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;
   showAuth("confirm")
  }
@@ -956,6 +1047,6 @@ async function assignDriverVehicle(driverUserId,carId){
  });
  if(error)throw error
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();
