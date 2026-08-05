@@ -7188,3 +7188,56 @@ html[data-theme="dark"] .workspace-request-filter{
   display:grid;
  }
 }
+
+
+/* FleetPilot V10.7 — vehicle handover and history */
+.driver-handover-actions{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px;
+ margin:-4px 0 14px;
+}
+.driver-handover-actions button:only-child{grid-column:1/-1}
+.handover-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.handover-equipment{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:9px;
+ padding:13px;
+ border:1px solid #e5e7eb;
+ border-radius:14px;
+}
+.handover-equipment legend{padding:0 7px;font-weight:900}
+.handover-equipment label{display:flex!important;align-items:center;gap:7px;font-size:9px;font-weight:800}
+.handover-photo-upload{padding:13px;border:1px dashed #a5b4fc;border-radius:14px;background:#eef2ff}
+.handover-photo-upload span,.handover-photo-upload small{display:block}
+.handover-photo-upload small{margin:4px 0 9px;color:#64748b}
+.handover-photo-preview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.handover-photo-preview>div{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#e2e8f0}
+.handover-photo-preview img{width:100%;height:100%;object-fit:cover}
+.handover-photo-preview button{position:absolute;top:5px;right:5px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(15,23,42,.8);color:#fff}
+.handover-history-row{position:relative;display:grid;grid-template-columns:18px 1fr;gap:10px;padding:0 0 18px}
+.handover-history-line{position:relative}
+.handover-history-line::before{content:"";position:absolute;left:7px;top:4px;width:10px;height:10px;border-radius:50%;background:#4f46e5;box-shadow:0 0 0 4px #eef2ff}
+.handover-history-line::after{content:"";position:absolute;left:11px;top:18px;bottom:-4px;width:2px;background:#e0e7ff}
+.handover-history-row:last-child .handover-history-line::after{display:none}
+.handover-history-content{padding:14px;border:1px solid #e5e7eb;border-radius:15px;background:#f8fafc}
+.handover-history-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.handover-history-head span{padding:6px 8px;border-radius:999px;font-size:8px;font-weight:900}
+.handover-history-head span.active{background:#dcfce7;color:#15803d}
+.handover-history-head span.completed{background:#e2e8f0;color:#334155}
+.handover-history-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.handover-history-grid>div{padding:9px;border-radius:10px;background:#fff}
+.handover-history-grid small,.handover-history-grid b{display:block}
+.handover-history-grid small{color:#64748b;font-size:7px}.handover-history-grid b{margin-top:4px;font-size:9px}
+.handover-history-content p{font-size:9px}
+.handover-photo-history{display:flex;gap:7px;overflow:auto}
+.handover-photo-history img{width:76px;height:58px;object-fit:cover;border-radius:9px;border:1px solid #e5e7eb}
+html[data-theme="dark"] .handover-history-content,html[data-theme="dark"] .handover-history-grid>div{border-color:rgba(255,255,255,.08);background:#151d31}
+html[data-theme="dark"] .handover-photo-upload{background:#172554;border-color:#4338ca}
+@media(max-width:650px){
+ .driver-handover-actions,.handover-form-grid{grid-template-columns:1fr}
+ .handover-equipment{grid-template-columns:1fr}
+ .handover-photo-preview{grid-template-columns:repeat(3,1fr)}
+ .handover-history-grid{grid-template-columns:1fr 1fr}
+}

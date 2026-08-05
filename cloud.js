@@ -1091,6 +1091,33 @@ async function changePasswordDirect(newPassword){
  if(error)throw error;
  return true
 }
-window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function getDriverHandoverState(){
+ if(!client||!membership)return null;
+ const {data,error}=await client.rpc("get_driver_handover_state");
+ if(error)throw error;
+ return Array.isArray(data)?data[0]||null:data||null
+}
+async function submitVehicleHandover(payload){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(enterpriseRole()!=="driver")throw new Error("Только водитель может подтвердить передачу");
+ const {data,error}=await client.rpc("submit_vehicle_handover",{
+  handover_type_value:String(payload.type),
+  mileage_value:Number(payload.mileage||0),
+  fuel_level_value:Number(payload.fuelLevel||0),
+  equipment_value:payload.equipment||{},
+  photos_value:payload.photos||[],
+  notes_value:String(payload.notes||"").trim()||null
+ });
+ if(error)throw error;
+ return Array.isArray(data)?data[0]||null:data||null
+}
+async function getVehicleHandoverHistory(carId){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_vehicle_handover_history",{car_id_value:String(carId)});
+ if(error)throw error;
+ return data||[]
+}
+window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

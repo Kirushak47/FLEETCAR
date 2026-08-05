@@ -687,6 +687,124 @@ function driverAssignedCar(){
  const carId=driverPortalContext?.car_id;
  return carId?car(carId):null
 }
+
+let driverHandoverState=null;
+let vehicleHandoverPhotoData=[];
+
+function handoverMessage(text,type=""){
+ const el=$("#vehicleHandoverMessage");if(!el)return;
+ el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`
+}
+async function compressHandoverImage(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onerror=()=>reject(new Error("Не удалось прочитать фотографию"));
+  reader.onload=()=>{
+   const image=new Image();
+   image.onerror=()=>reject(new Error("Некорректная фотография"));
+   image.onload=()=>{
+    const max=1280;
+    const scale=Math.min(1,max/Math.max(image.width,image.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.round(image.width*scale);
+    canvas.height=Math.round(image.height*scale);
+    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
+    resolve({
+     name:file.name,
+     type:"image/jpeg",
+     data:canvas.toDataURL("image/jpeg",.72)
+    })
+   };
+   image.src=reader.result
+  };
+  reader.readAsDataURL(file)
+ })
+}
+function renderHandoverPhotoPreview(){
+ const root=$("#vehicleHandoverPhotoPreview");if(!root)return;
+ root.innerHTML=vehicleHandoverPhotoData.map((photo,index)=>`
+  <div><img src="${photo.data}" alt="Фото ${index+1}">
+   <button type="button" onclick="removeHandoverPhoto(${index})">✕</button></div>`).join("")
+}
+function removeHandoverPhoto(index){
+ vehicleHandoverPhotoData.splice(index,1);
+ renderHandoverPhotoPreview()
+}
+window.removeHandoverPhoto=removeHandoverPhoto;
+
+async function loadDriverHandoverState(){
+ if(enterpriseCurrentRole()!=="driver")return;
+ try{
+  driverHandoverState=await window.FleetPilotCloud.getDriverHandoverState();
+  const actions=$("#driverHandoverActions");
+  if(!actions)return;
+  actions.hidden=!driverPortalContext?.car_id;
+  $("#startVehicleIssue").hidden=Boolean(driverHandoverState?.active_handover_id);
+  $("#startVehicleReturn").hidden=!driverHandoverState?.active_handover_id
+ }catch(error){
+  console.warn("Handover state",error)
+ }
+}
+function openVehicleHandover(type){
+ if(!driverPortalContext?.car_id)return toast("Автомобиль не назначен");
+ const assignedCar=driverAssignedCar();
+ const snapshot=driverPortalContext.vehicle_snapshot||{};
+ const displayCar=assignedCar||snapshot;
+ const brand=assignedCar?model(assignedCar).brand:(snapshot.brand||"Автомобиль");
+ const modelName=assignedCar?model(assignedCar).model:(snapshot.model||"");
+
+ $("#vehicleHandoverType").value=type;
+ $("#vehicleHandoverTitle").textContent=type==="issue"?"Принять автомобиль":"Вернуть автомобиль";
+ $("#vehicleHandoverSubmit").textContent=type==="issue"?"Подтвердить приём":"Подтвердить возврат";
+ $("#vehicleHandoverConfirmText").textContent=type==="issue"
+  ?"Подтверждаю получение автомобиля в указанном состоянии"
+  :"Подтверждаю возврат автомобиля в указанном состоянии";
+ $("#vehicleHandoverCarSummary").innerHTML=`<strong>${brand} ${modelName}</strong><span>${displayCar.plate||"—"}</span>`;
+ $("#vehicleHandoverMileage").value=displayCar.mileage||driverPortalContext.mileage||0;
+ $("#vehicleHandoverFuel").value="50";
+ $("#vehicleHandoverNotes").value="";
+ $("#vehicleHandoverConfirm").checked=false;
+ $$("[data-handover-equipment]").forEach(input=>input.checked=true);
+ vehicleHandoverPhotoData=[];
+ renderHandoverPhotoPreview();
+ handoverMessage("");
+ $("#vehicleHandoverDialog").showModal()
+}
+async function loadVehicleHandoverHistory(carId){
+ const root=$("#vehicleHandoverHistory");if(!root)return;
+ root.innerHTML='<div class="driver-empty-state">Загрузка истории передач…</div>';
+ try{
+  const rows=await window.FleetPilotCloud.getVehicleHandoverHistory(carId);
+  root.innerHTML=rows.map(row=>{
+   const issue=row.issue_at?new Date(row.issue_at).toLocaleString("ru-RU"):"—";
+   const returned=row.return_at?new Date(row.return_at).toLocaleString("ru-RU"):null;
+   const distance=row.return_mileage!=null?Math.max(0,row.return_mileage-row.issue_mileage):null;
+   return `<article class="handover-history-row">
+    <div class="handover-history-line"></div>
+    <div class="handover-history-content">
+     <div class="handover-history-head">
+      <strong>${row.driver_name||row.driver_email||"Водитель"}</strong>
+      <span class="${returned?"completed":"active"}">${returned?"Возвращён":"Выдан"}</span>
+     </div>
+     <div class="handover-history-grid">
+      <div><small>Выдача</small><b>${issue}</b></div>
+      <div><small>Пробег при выдаче</small><b>${km(row.issue_mileage)}</b></div>
+      <div><small>Возврат</small><b>${returned||"Автомобиль у водителя"}</b></div>
+      <div><small>Пробег при возврате</small><b>${row.return_mileage!=null?km(row.return_mileage):"—"}</b></div>
+      <div><small>Пройдено</small><b>${distance!=null?km(distance):"—"}</b></div>
+      <div><small>Фото</small><b>${(row.issue_photos_count||0)+(row.return_photos_count||0)}</b></div>
+     </div>
+     ${row.issue_notes?`<p><strong>При выдаче:</strong> ${row.issue_notes}</p>`:""}
+     ${row.return_notes?`<p><strong>При возврате:</strong> ${row.return_notes}</p>`:""}
+     <div class="handover-photo-history">
+      ${(row.issue_photos||[]).slice(0,8).map(photo=>`<img src="${photo.data}" alt="Фото выдачи">`).join("")}
+      ${(row.return_photos||[]).slice(0,8).map(photo=>`<img src="${photo.data}" alt="Фото возврата">`).join("")}
+     </div>
+    </div>
+   </article>`
+  }).join("")||'<div class="driver-empty-state">Передач автомобиля пока не было.</div>'
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
 function renderDriverVehicleCard(){
  const root=$("#driverVehicleCard");if(!root)return;
  const assigned=driverPortalContext;
@@ -719,7 +837,7 @@ function renderDriverVehicleCard(){
   </div>
   <div class="driver-vehicle-stats">
    <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
-   <div><small>Назначен</small><strong>${assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
+   <div><small>${driverHandoverState?.active_handover_id?"Выдан":"Назначен"}</small><strong>${driverHandoverState?.issue_at?new Date(driverHandoverState.issue_at).toLocaleDateString("ru-RU"):assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
    <div><small>Следующее ТО</small><strong>${assignedCar?km(Math.max(0,oil(assignedCar))):"—"}</strong></div>
    <div><small>Город</small><strong>${displayCar.city||window.FleetPilotCloud?.membership?.city||"—"}</strong></div>
   </div>`
@@ -771,6 +889,7 @@ async function renderDriverPortal(){
  driverPortalMessage("Загрузка…");
  try{
   driverPortalContext=await window.FleetPilotCloud.getDriverPortalContext();
+  await loadDriverHandoverState();
   renderDriverVehicleCard();
   renderDriverDocuments();
   renderDriverProfile();
@@ -1163,6 +1282,61 @@ if(driverOpenAccountSettings)driverOpenAccountSettings.onclick=()=>window.FleetP
 
 const driverSignOut=$("#driverSignOut");
 if(driverSignOut)driverSignOut.onclick=()=>window.FleetPilotCloud?.signOut?.();
+
+
+const startVehicleIssue=$("#startVehicleIssue");
+if(startVehicleIssue)startVehicleIssue.onclick=()=>openVehicleHandover("issue");
+const startVehicleReturn=$("#startVehicleReturn");
+if(startVehicleReturn)startVehicleReturn.onclick=()=>openVehicleHandover("return");
+
+const vehicleHandoverPhotos=$("#vehicleHandoverPhotos");
+if(vehicleHandoverPhotos)vehicleHandoverPhotos.onchange=async event=>{
+ const files=[...(event.target.files||[])].slice(0,8);
+ handoverMessage("Подготавливаем фотографии…");
+ try{
+  vehicleHandoverPhotoData=[];
+  for(const file of files)vehicleHandoverPhotoData.push(await compressHandoverImage(file));
+  renderHandoverPhotoPreview();
+  handoverMessage("")
+ }catch(error){handoverMessage(error.message||String(error),"error")}
+};
+
+const vehicleHandoverForm=$("#vehicleHandoverForm");
+if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
+ event.preventDefault();
+ if(vehicleHandoverPhotoData.length<1)return handoverMessage("Добавьте хотя бы одну фотографию.","error");
+ const equipment={};
+ $$("[data-handover-equipment]").forEach(input=>equipment[input.dataset.handoverEquipment]=input.checked);
+ handoverMessage("Сохраняем передачу автомобиля…");
+ try{
+  const type=$("#vehicleHandoverType").value;
+  const result=await window.FleetPilotCloud.submitVehicleHandover({
+   type,
+   mileage:$("#vehicleHandoverMileage").value,
+   fuelLevel:$("#vehicleHandoverFuel").value,
+   equipment,
+   photos:vehicleHandoverPhotoData,
+   notes:$("#vehicleHandoverNotes").value
+  });
+
+  const assignedCar=driverAssignedCar();
+  if(assignedCar&&result?.mileage!=null){
+   assignedCar.mileage=Number(result.mileage);
+   if(type==="return"){
+    assignedCar.tenant="";
+    assignedCar.status=result.requires_attention?"attention":"free"
+   }else{
+    assignedCar.tenant=driverProfileDisplayName();
+    assignedCar.status="active"
+   }
+   save()
+  }
+
+  $("#vehicleHandoverDialog").close();
+  toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
+  await renderDriverPortal()
+ }catch(error){handoverMessage(error.message||String(error),"error")}
+};
 
 const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
@@ -4562,12 +4736,16 @@ function renderCarProfile(id,activeTab="info"){
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
  const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
  const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card"><h3>Плановые расходы</h3>${exp.slice(0,10).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div></div>`;
- const history=`<div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>`;
+ const history=`<div class="detail-tab-grid">
+  <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
+  <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
+ </div>`;
  const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
  $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
+ if(activeTab==="history")loadVehicleHandoverHistory(c.id);
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
 function modelOptions(sel=""){const grouped={};Object.entries(MODELS).forEach(([k,m])=>{(grouped[m.brand]||(grouped[m.brand]=[])).push([k,m])});return Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"pl")).map(brand=>`<optgroup label="${brand}">${grouped[brand].sort((a,b)=>a[1].model.localeCompare(b[1].model,"pl")).map(([k,m])=>`<option value="${k}" ${k===sel?"selected":""}>${m.model}${m.years?` (${m.years})`:""}</option>`).join("")}</optgroup>`).join("")+`<optgroup label="Другое"><option value="__custom__" ${sel==="__custom__"?"selected":""}>＋ Добавить свою марку и модель</option></optgroup>`}

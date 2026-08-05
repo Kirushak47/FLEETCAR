@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.6.2 Service Alerts</title>
-  <link rel="manifest" href="manifest.webmanifest?v=106200">
-  <link rel="stylesheet" href="styles.css?v=106200">
+  <title>FleetPilot V10.7 Vehicle Handover</title>
+  <link rel="manifest" href="manifest.webmanifest?v=107000">
+  <link rel="stylesheet" href="styles.css?v=107000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -38,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.6.2 Service Alerts</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.7 Vehicle Handover</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -328,6 +328,11 @@
       <section id="driverVehicleCard" class="driver-vehicle-card" data-driver-anchor="vehicle">
         <div class="driver-empty-state">Загрузка назначенного автомобиля…</div>
       </section>
+      <section id="driverHandoverActions" class="driver-handover-actions" hidden>
+        <button type="button" id="startVehicleIssue" class="btn primary">📸 Принять автомобиль</button>
+        <button type="button" id="startVehicleReturn" class="btn danger">↩ Вернуть автомобиль</button>
+      </section>
+
 
       <div class="driver-portal-grid">
         <section class="driver-portal-card">
@@ -881,6 +886,68 @@
 
 
 
+
+
+<dialog id="vehicleHandoverDialog" class="enterprise-dialog vehicle-handover-dialog">
+  <form method="dialog" id="vehicleHandoverForm" class="modal">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Vehicle Handover</span>
+        <h2 id="vehicleHandoverTitle">Приём автомобиля</h2>
+      </div>
+      <button type="button" data-close="vehicleHandoverDialog">✕</button>
+    </div>
+
+    <input id="vehicleHandoverType" type="hidden" value="issue">
+
+    <div id="vehicleHandoverCarSummary" class="driver-repair-vehicle-summary"></div>
+
+    <div class="handover-form-grid">
+      <label><span>Текущий пробег</span><input id="vehicleHandoverMileage" type="number" min="0" required></label>
+      <label><span>Уровень топлива</span>
+        <select id="vehicleHandoverFuel" required>
+          <option value="0">Пустой</option>
+          <option value="25">1/4</option>
+          <option value="50" selected>1/2</option>
+          <option value="75">3/4</option>
+          <option value="100">Полный</option>
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="handover-equipment">
+      <legend>Комплектация</legend>
+      <label><input type="checkbox" data-handover-equipment="first_aid"> Аптечка</label>
+      <label><input type="checkbox" data-handover-equipment="extinguisher"> Огнетушитель</label>
+      <label><input type="checkbox" data-handover-equipment="triangle"> Знак аварийной остановки</label>
+      <label><input type="checkbox" data-handover-equipment="vest"> Жилет</label>
+      <label><input type="checkbox" data-handover-equipment="documents"> Документы</label>
+      <label><input type="checkbox" data-handover-equipment="keys"> Комплект ключей</label>
+    </fieldset>
+
+    <label><span>Комментарий / обнаруженные повреждения</span>
+      <textarea id="vehicleHandoverNotes" rows="3" placeholder="Опишите замечания или оставьте пустым"></textarea>
+    </label>
+
+    <label class="handover-photo-upload">
+      <span>Фотографии автомобиля</span>
+      <small>Перед, зад, обе стороны, салон и одометр. До 8 фотографий.</small>
+      <input id="vehicleHandoverPhotos" type="file" accept="image/*" capture="environment" multiple required>
+    </label>
+    <div id="vehicleHandoverPhotoPreview" class="handover-photo-preview"></div>
+
+    <label class="driver-check-row">
+      <input id="vehicleHandoverConfirm" type="checkbox" required>
+      <span id="vehicleHandoverConfirmText">Подтверждаю состояние автомобиля и указанный пробег</span>
+    </label>
+
+    <div id="vehicleHandoverMessage" class="cloud-message" hidden></div>
+    <div class="settings-actions">
+      <button type="button" class="btn" data-close="vehicleHandoverDialog">Отмена</button>
+      <button class="btn primary" id="vehicleHandoverSubmit">Подтвердить приём</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="changePasswordDialog" class="enterprise-dialog change-password-dialog">
   <form method="dialog" id="changePasswordForm" class="modal">
@@ -1446,7 +1513,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=106200"></script>
-<script src="cloud.js?v=106200"></script>
-<script src="app.js?v=106200"></script>
+<script src="cloud-config.js?v=107000"></script>
+<script src="cloud.js?v=107000"></script>
+<script src="app.js?v=107000"></script>
 </body></html>

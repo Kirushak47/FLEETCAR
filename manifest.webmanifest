@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.6.2 Service Alerts Cloud Beta",
+  "name": "FleetPilot V10.7 Vehicle Handover Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=106200",
+  "start_url": "./?v=107000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
