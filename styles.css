@@ -6790,3 +6790,185 @@ html.auth-locked body{
 html[data-theme="dark"] .cloud-version-row{border-color:rgba(255,255,255,.08);background:#151d31}
 html[data-theme="dark"] .cloud-versions-card{background:linear-gradient(145deg,#111827,#172554)!important}
 @media(max-width:620px){.cloud-version-row{grid-template-columns:1fr}.cloud-version-row .btn{width:100%}}
+
+
+/* FleetPilot V10.6 — Dedicated Driver UI */
+body.driver-only-ui{
+ background:#f4f7fb;
+}
+body.driver-only-ui .desktop-sidebar{
+ width:230px;
+ background:linear-gradient(180deg,#101827,#172033);
+}
+body.driver-only-ui .desktop-sidebar nav button{
+ display:none!important;
+}
+body.driver-only-ui .desktop-sidebar nav button[data-role-nav="driver"]{
+ display:flex!important;
+}
+body.driver-only-ui .desktop-sidebar nav button[data-role-nav="driver"] span{
+ display:inline-grid;
+ place-items:center;
+ width:28px;
+ height:28px;
+ border-radius:10px;
+ background:rgba(255,255,255,.08);
+}
+body.driver-only-ui .desktop-sidebar-footer #desktopSettingsButton{
+ display:none!important;
+}
+body.driver-only-ui #globalSearchButton,
+body.driver-only-ui #headerAdd{
+ display:none!important;
+}
+body.driver-only-ui .topbar .eyebrow{
+ font-size:0;
+}
+body.driver-only-ui .topbar .eyebrow::after{
+ content:"FleetPilot Driver";
+ font-size:9px;
+}
+.driver-head-actions{
+ display:flex;
+ gap:8px;
+ flex-wrap:wrap;
+}
+.driver-profile-page{
+ max-width:1050px;
+ margin:0 auto;
+}
+.driver-profile-layout{
+ display:grid;
+ gap:14px;
+}
+.driver-profile-main-card,
+.driver-profile-actions-card,
+.driver-profile-info-card{
+ border:1px solid #e5e7eb;
+ border-radius:20px;
+ background:#fff;
+ box-shadow:0 12px 34px rgba(15,23,42,.06);
+}
+.driver-profile-main-card{
+ display:grid;
+ grid-template-columns:72px 1fr auto;
+ align-items:center;
+ gap:14px;
+ padding:20px;
+}
+.driver-profile-avatar{
+ display:grid;
+ place-items:center;
+ width:68px;
+ height:68px;
+ border-radius:22px;
+ background:linear-gradient(145deg,#4f46e5,#2563eb);
+ color:#fff;
+ font-size:24px;
+ font-weight:900;
+}
+.driver-profile-main-card h3{
+ margin:4px 0;
+ font-size:22px;
+}
+.driver-profile-main-card p{
+ margin:0;
+ color:#64748b;
+}
+.driver-profile-status{
+ padding:7px 11px;
+ border-radius:999px;
+ background:rgba(34,197,94,.12);
+ color:#15803d;
+ font-size:9px;
+ font-weight:900;
+}
+.driver-profile-grid{
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;
+}
+.driver-profile-info-card{
+ padding:16px;
+}
+.driver-profile-info-card small,
+.driver-profile-info-card strong{
+ display:block;
+}
+.driver-profile-info-card small{
+ color:#64748b;
+ font-size:8px;
+}
+.driver-profile-info-card strong{
+ margin-top:7px;
+ font-size:13px;
+}
+.driver-profile-actions-card{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:18px;
+ padding:18px;
+}
+.driver-profile-actions-card h3{
+ margin:4px 0;
+}
+.driver-profile-actions-card p{
+ margin:0;
+ color:#64748b;
+}
+.driver-profile-actions{
+ display:flex;
+ gap:8px;
+ flex-wrap:wrap;
+}
+html[data-theme="dark"] body.driver-only-ui{
+ background:#0b1120;
+}
+html[data-theme="dark"] .driver-profile-main-card,
+html[data-theme="dark"] .driver-profile-actions-card,
+html[data-theme="dark"] .driver-profile-info-card{
+ border-color:rgba(255,255,255,.08);
+ background:#111827;
+ color:#f8fafc;
+}
+@media(max-width:800px){
+ body.driver-only-ui .desktop-sidebar{
+  display:none!important;
+ }
+ body.driver-only-ui .app-shell{
+  grid-template-columns:1fr!important;
+ }
+ body.driver-only-ui .topbar{
+  left:0!important;
+ }
+ .driver-profile-grid{
+  grid-template-columns:1fr 1fr;
+ }
+ .driver-profile-actions-card{
+  display:grid;
+ }
+}
+@media(max-width:520px){
+ .driver-profile-main-card{
+  grid-template-columns:58px 1fr;
+ }
+ .driver-profile-avatar{
+  width:56px;
+  height:56px;
+  border-radius:18px;
+ }
+ .driver-profile-status{
+  grid-column:1/-1;
+  justify-self:start;
+ }
+ .driver-profile-grid{
+  grid-template-columns:1fr;
+ }
+ .driver-head-actions{
+  width:100%;
+ }
+ .driver-head-actions .btn{
+  flex:1;
+ }
+}

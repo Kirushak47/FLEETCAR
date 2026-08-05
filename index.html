@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.5.3 Data Recovery</title>
-  <link rel="manifest" href="manifest.webmanifest?v=105300">
-  <link rel="stylesheet" href="styles.css?v=105300">
+  <title>FleetPilot V10.6 Driver Profile</title>
+  <link rel="manifest" href="manifest.webmanifest?v=106000">
+  <link rel="stylesheet" href="styles.css?v=106000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -26,6 +26,7 @@
       <button type="button" data-desktop-page="companyPage" data-role-nav="owner,coordinator"><span>♟</span>Компания</button>
       <button type="button" data-desktop-page="dataPage" data-role-nav="owner,coordinator"><span>⤓</span>Данные</button>
       <button type="button" data-desktop-page="driverPortalPage" data-role-nav="driver"><span>◉</span>Мой автомобиль</button>
+      <button type="button" data-desktop-page="driverProfilePage" data-role-nav="driver"><span>◎</span>Мой профиль</button>
       <button type="button" data-desktop-page="analyticsPage"><span>▥</span>Аналитика</button><button type="button" data-desktop-page="documentsPage" class="desktop-nav-item">
       <span>▤</span><b>Документы</b>
     </button>
@@ -37,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.5.3 Data Recovery</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.6 Driver Profile</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -318,7 +319,7 @@
           <h2>Мой автомобиль</h2>
           <p>Автомобиль, задания, документы и заявки на ремонт.</p>
         </div>
-        <button type="button" id="openDriverRepairRequest" class="btn primary">🔧 Сообщить о неисправности</button>
+        <div class="driver-head-actions"><button type="button" id="openDriverProfilePage" class="btn">Мой профиль</button><button type="button" id="openDriverRepairRequest" class="btn primary">🔧 Сообщить о неисправности</button></div>
       </header>
 
       <div id="driverPortalMessage" class="cloud-message" hidden></div>
@@ -354,6 +355,61 @@
           </div>
           <div id="driverNotificationsList" class="driver-notifications-list"></div>
         </section>
+      </div>
+    </section>
+
+
+    <section id="driverProfilePage" class="page driver-profile-page" data-role-page="driver">
+      <header class="driver-portal-head">
+        <div>
+          <span class="eyebrow">Driver Portal</span>
+          <h2>Мой профиль</h2>
+          <p>Личные данные, компания и назначенный автомобиль.</p>
+        </div>
+        <button type="button" id="driverOpenAccountSettings" class="btn">Настройки аккаунта</button>
+      </header>
+
+      <div class="driver-profile-layout">
+        <article class="driver-profile-main-card">
+          <div class="driver-profile-avatar" id="driverProfileAvatar">FP</div>
+          <div>
+            <span class="eyebrow">Водитель</span>
+            <h3 id="driverProfileName">Пользователь FleetPilot</h3>
+            <p id="driverProfileEmail">—</p>
+          </div>
+          <span class="driver-profile-status">Активен</span>
+        </article>
+
+        <div class="driver-profile-grid">
+          <article class="driver-profile-info-card">
+            <small>Компания</small>
+            <strong id="driverProfileWorkspace">—</strong>
+          </article>
+          <article class="driver-profile-info-card">
+            <small>Город</small>
+            <strong id="driverProfileCity">—</strong>
+          </article>
+          <article class="driver-profile-info-card">
+            <small>Роль</small>
+            <strong>Водитель</strong>
+          </article>
+          <article class="driver-profile-info-card">
+            <small>Автомобиль</small>
+            <strong id="driverProfileVehicle">Не назначен</strong>
+          </article>
+        </div>
+
+        <article class="driver-profile-actions-card">
+          <div>
+            <span class="eyebrow">Аккаунт</span>
+            <h3>Безопасность и доступ</h3>
+            <p>Изменение фотографии, имени, пароля и выход из аккаунта.</p>
+          </div>
+          <div class="driver-profile-actions">
+            <button type="button" id="driverOpenProfileDialog" class="btn primary">Открыть профиль</button>
+            <button type="button" id="driverSignOut" class="btn danger">Выйти</button>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -1363,7 +1419,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=105300"></script>
-<script src="cloud.js?v=105300"></script>
-<script src="app.js?v=105300"></script>
+<script src="cloud-config.js?v=106000"></script>
+<script src="cloud.js?v=106000"></script>
+<script src="app.js?v=106000"></script>
 </body></html>

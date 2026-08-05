@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.5.3 Data Recovery Cloud Beta",
+  "name": "FleetPilot V10.6 Driver Profile Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=105300",
+  "start_url": "./?v=106000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

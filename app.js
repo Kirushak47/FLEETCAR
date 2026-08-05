@@ -367,11 +367,11 @@ const ENTERPRISE_ROLE_LABELS={
  user:"Пользователь"
 };
 const ENTERPRISE_ROLE_ACCESS={
- owner:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","morePage","mobileMapPage","searchPage","carPage"],
- coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","companyPage","mobileMapPage","searchPage","carPage"],
+ owner:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","dataPage","morePage","mobileMapPage","searchPage","carPage"],
+ coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","companyPage","dataPage","mobileMapPage","searchPage","carPage"],
  accountant:["dashboardPage","paymentsPage","expensesPage","analyticsPage","documentsPage","calendarPage","searchPage"],
  mechanic:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","searchPage","carPage"],
- driver:["driverPortalPage","documentsPage","calendarPage","searchPage","carPage"],
+ driver:["driverPortalPage","driverProfilePage"],
  user:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","morePage","mobileMapPage","searchPage","carPage"]
 };
 function enterpriseCurrentRole(){
@@ -399,21 +399,43 @@ function applyEnterpriseAccess(){
  applyPlatformAdminUI();
  if(!window.FleetPilotCloud)return;
  const role=enterpriseCurrentRole();
+
  $$("[data-desktop-page]").forEach(button=>{
   const page=button.dataset.desktopPage;
   button.hidden=!enterpriseCanOpen(page)
  });
+
+ $$("[data-role-nav]").forEach(button=>{
+  const roles=(button.dataset.roleNav||"").split(",");
+  button.hidden=!roles.includes(role)
+ });
+
  $$("[data-role-page]").forEach(page=>{
   const roles=(page.dataset.rolePage||"").split(",");
   page.dataset.roleDenied=roles.includes(role)?"false":"true"
  });
- document.body.dataset.enterpriseRole=role
+
+ document.body.dataset.enterpriseRole=role;
+ document.body.classList.toggle("driver-only-ui",role==="driver")
 }
 window.applyEnterpriseAccess=applyEnterpriseAccess;
 window.addEventListener("fleetpilot:access-ready",()=>{
  applyEnterpriseAccess();
+ const role=enterpriseCurrentRole();
  const activePage=document.querySelector(".page.active")?.id;
- if(activePage&&!enterpriseCanOpen(activePage))showPage("dashboardPage")
+ const defaultPage=role==="driver"?"driverPortalPage":"dashboardPage";
+
+ if(!activePage||!enterpriseCanOpen(activePage)){
+  showPage(defaultPage)
+ }
+
+ if(role==="driver"){
+  document.body.classList.add("driver-only-ui");
+  renderDriverPortal();
+  renderDriverProfile()
+ }else{
+  document.body.classList.remove("driver-only-ui")
+ }
 });
 
 function enterpriseMessage(text,type=""){
@@ -750,11 +772,41 @@ async function renderDriverPortal(){
   driverPortalContext=await window.FleetPilotCloud.getDriverPortalContext();
   renderDriverVehicleCard();
   renderDriverDocuments();
+  renderDriverProfile();
   await Promise.all([renderDriverRepairRequests(),renderDriverNotifications()]);
   driverPortalMessage("")
  }catch(error){
   driverPortalMessage(error.message||String(error),"error")
  }
+}
+
+function driverProfileDisplayName(){
+ const profile=window.FleetPilotCloud?.profile||{};
+ const savedName=localStorage.getItem(`fleetpilot.profile.name.v2.${window.FleetPilotCloud?.session?.user?.id||"guest"}`);
+ return savedName||profile.full_name||profile.name||profile.email?.split("@")[0]||"Пользователь FleetPilot"
+}
+function renderDriverProfile(){
+ if(enterpriseCurrentRole()!=="driver")return;
+
+ const cloud=window.FleetPilotCloud||{};
+ const email=cloud.session?.user?.email||cloud.profile?.email||"—";
+ const name=driverProfileDisplayName();
+ const workspaceName=cloud.workspace?.name||"—";
+ const city=cloud.membership?.city||cloud.workspace?.city||"—";
+ const assigned=driverAssignedCar();
+ const snapshot=driverPortalContext?.vehicle_snapshot||{};
+ const vehicleName=assigned
+  ?`${model(assigned).brand} ${model(assigned).model} · ${assigned.plate||"—"}`
+  :driverPortalContext?.car_id
+    ?`${snapshot.brand||"Автомобиль"} ${snapshot.model||""} · ${snapshot.plate||"—"}`
+    :"Не назначен";
+
+ if($("#driverProfileName"))$("#driverProfileName").textContent=name;
+ if($("#driverProfileEmail"))$("#driverProfileEmail").textContent=email;
+ if($("#driverProfileWorkspace"))$("#driverProfileWorkspace").textContent=workspaceName;
+ if($("#driverProfileCity"))$("#driverProfileCity").textContent=city;
+ if($("#driverProfileVehicle"))$("#driverProfileVehicle").textContent=vehicleName;
+ if($("#driverProfileAvatar"))$("#driverProfileAvatar").textContent=(name.trim()[0]||"F").toUpperCase()
 }
 async function openDriverRepairDialog(){
  if(!driverPortalContext)await renderDriverPortal();
@@ -826,7 +878,7 @@ function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage")renderDriverPortal();if(id==="repairsPage")renderWorkspaceRepairRequests();
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage")renderDriverPortal();if(id==="driverProfilePage")renderDriverProfile();if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -925,6 +977,19 @@ if(workspaceSettingsForm)workspaceSettingsForm.onsubmit=async event=>{
 const refreshActivityLog=$("#refreshActivityLog");
 if(refreshActivityLog)refreshActivityLog.onclick=renderCompanyActivity;
 
+
+
+const openDriverProfilePage=$("#openDriverProfilePage");
+if(openDriverProfilePage)openDriverProfilePage.onclick=()=>showPage("driverProfilePage");
+
+const driverOpenProfileDialog=$("#driverOpenProfileDialog");
+if(driverOpenProfileDialog)driverOpenProfileDialog.onclick=()=>window.FleetPilotCloud?.openProfile?.();
+
+const driverOpenAccountSettings=$("#driverOpenAccountSettings");
+if(driverOpenAccountSettings)driverOpenAccountSettings.onclick=()=>window.FleetPilotCloud?.openProfile?.();
+
+const driverSignOut=$("#driverSignOut");
+if(driverSignOut)driverSignOut.onclick=()=>window.FleetPilotCloud?.signOut?.();
 
 const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
