@@ -5606,3 +5606,19 @@ html[data-theme="dark"] .mobile-gps-sync-card,html[data-theme="dark"] .mobile-ma
 .desktop-table-empty-row td{
  padding:0!important;
 }
+
+/* FleetPilot V8.0.1 — calendar, analytics and table repair */
+.desktop-table-row-error td{
+ padding:12px!important;
+ background:rgba(239,68,68,.07);
+ color:#b91c1c;
+ font-size:8px;
+ font-weight:800;
+}
+
+@media(min-width:1100px){
+ #calendarPage.page.active,
+ #analyticsPage.page.active{
+  display:block!important;
+ }
+}

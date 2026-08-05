@@ -336,7 +336,7 @@ if(window.matchMedia){
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 function showPage(id){
- if(isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
+ if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
@@ -367,13 +367,33 @@ $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);render
 });
 
 
+
+function safeOpenCalendarPage(){
+ showPage("calendarPage")
+}
+
+function safeOpenAnalyticsPage(){
+ showPage("analyticsPage")
+}
+
+window.safeOpenCalendarPage=safeOpenCalendarPage;
+window.safeOpenAnalyticsPage=safeOpenAnalyticsPage;
+
 function syncDesktopNavigation(pageId){
  $$("[data-desktop-page]").forEach(button=>button.classList.toggle("active",button.dataset.desktopPage===pageId))
 }
 $$("[data-desktop-page]").forEach(button=>{
  button.onclick=()=>{
   const pageId=button.dataset.desktopPage;
-  showPage(pageId);
+
+  if(pageId==="calendarPage"){
+   safeOpenCalendarPage()
+  }else if(pageId==="analyticsPage"){
+   safeOpenAnalyticsPage()
+  }else{
+   showPage(pageId)
+  }
+
   syncDesktopNavigation(pageId)
  }
 });
@@ -407,7 +427,7 @@ $("#printVehicleReport").onclick=printCurrentVehicleReport;
 $("#downloadVehicleReportHtml").onclick=downloadCurrentVehicleReportHtml;
 $("#closeVehicleReport").onclick=()=>$("#vehicleReportDialog").close();
 $("#addQuickTask").onclick=addManualTask;
-$("#openAnalyticsFromTop").onclick=()=>showPage("analyticsPage");
+$("#openAnalyticsFromTop").onclick=safeOpenAnalyticsPage;
 $("#clearActivityFeed").onclick=()=>{if(confirm("Очистить ленту действий?")){writeLocalArray(ACTIVITY_KEY,[]);renderDesktopActivityFeed()}};
 $("#criticalShowCars").onclick=()=>{localStorage.setItem(ALERT_KEY,today());$("#criticalAlertDialog").close();showPage("fleetPage");$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))};
 $("#criticalRemindLater").onclick=()=>{$("#criticalAlertDialog").close()};
@@ -439,7 +459,7 @@ $("#desktopMapFilter").onchange=()=>{
  fleetMapV2SelectedCity="";
  renderFleetMapV2({fit:true})
 };
-$("#commandOpenCalendar").onclick=()=>showPage("calendarPage");
+$("#commandOpenCalendar").onclick=safeOpenCalendarPage;
 $("#desktopApplyStatus").onclick=applyDesktopBulkStatus;
 $("#desktopApplyCity").onclick=applyDesktopBulkCity;
 $("#desktopClearSelection").onclick=clearDesktopSelection;
@@ -1656,6 +1676,11 @@ function setDesktopView(view){
   renderDesktopEvents();
   renderDesktopInsights();
  })
+}
+
+function fleetPilotCurrentMonth(){
+ const now=new Date();
+ return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`
 }
 
 function desktopCommandKpis(){
