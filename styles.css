@@ -5922,3 +5922,117 @@ html[data-theme="dark"] .auth-view input{border-color:rgba(255,255,255,.09);back
 .auth-gate[hidden]{
   display:none!important;
 }
+
+
+/* FleetPilot Cloud V2.2 — More page cleanup */
+#morePage,
+.more-page{
+  max-width:1180px;
+  margin:0 auto;
+  padding-bottom:32px;
+}
+
+#morePage > .page-head,
+.more-page > .page-head{
+  margin-bottom:18px;
+}
+
+#morePage .activity-log-card,
+.more-page .activity-log-card{
+  max-width:760px;
+  margin:0 auto 18px;
+}
+
+#morePage .account-settings-card,
+#morePage .gps-settings-card,
+.more-page .account-settings-card,
+.more-page .gps-settings-card{
+  margin-bottom:14px;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(15,23,42,.06);
+}
+
+#morePage .section-head,
+.more-page .section-head{
+  align-items:center;
+  padding:18px 18px 10px;
+}
+
+#morePage .section-head h3,
+.more-page .section-head h3{
+  margin:4px 0 3px;
+}
+
+#morePage .section-head p,
+.more-page .section-head p{
+  margin:0;
+  color:#64748b;
+  font-size:11px;
+}
+
+#morePage .account-summary-card,
+.more-page .account-summary-card{
+  margin:0 18px 18px;
+}
+
+#morePage .more-grid,
+.more-page .more-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin-top:14px;
+}
+
+#morePage .more-grid > *,
+.more-page .more-grid > *{
+  min-height:140px;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(15,23,42,.06);
+}
+
+#morePage .more-grid > *:last-child:nth-child(odd),
+.more-page .more-grid > *:last-child:nth-child(odd){
+  grid-column:1 / -1;
+}
+
+#morePage [data-page="dataPage"],
+.more-page [data-page="dataPage"]{
+  display:none!important;
+}
+
+html[data-theme="dark"] #morePage .account-settings-card,
+html[data-theme="dark"] #morePage .gps-settings-card,
+html[data-theme="dark"] #morePage .more-grid > *,
+html[data-theme="dark"] .more-page .account-settings-card,
+html[data-theme="dark"] .more-page .gps-settings-card,
+html[data-theme="dark"] .more-page .more-grid > *{
+  border-color:rgba(255,255,255,.08);
+  background:#111827;
+  box-shadow:none;
+}
+
+@media(max-width:900px){
+  #morePage,
+  .more-page{
+    max-width:none;
+  }
+
+  #morePage .activity-log-card,
+  .more-page .activity-log-card{
+    max-width:none;
+  }
+
+  #morePage .more-grid,
+  .more-page .more-grid{
+    grid-template-columns:1fr;
+  }
+
+  #morePage .more-grid > *:last-child:nth-child(odd),
+  .more-page .more-grid > *:last-child:nth-child(odd){
+    grid-column:auto;
+  }
+}
