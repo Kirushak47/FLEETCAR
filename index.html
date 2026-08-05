@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.1.2 Workspace Sync Fix</title>
-  <link rel="manifest" href="manifest.webmanifest?v=101200">
-  <link rel="stylesheet" href="styles.css?v=101200">
+  <title>FleetPilot V10.3 Company Management</title>
+  <link rel="manifest" href="manifest.webmanifest?v=103000">
+  <link rel="stylesheet" href="styles.css?v=103000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -35,7 +35,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.1.2 Workspace Sync Fix</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.3 Company Management</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -427,23 +427,50 @@
 
 
 
-    <section id="companyPage" class="page enterprise-page" data-role-page="owner,coordinator">
-      <div class="enterprise-page-head">
-        <div>
-          <span class="eyebrow">FleetPilot Enterprise</span>
-          <h2 id="workspaceTitle">Автопарк</h2>
-          <p>Команда, роли, города и доступ к вашему автопарку.</p>
-        </div>
-        <button type="button" id="openInviteMember" class="btn primary">+ Пригласить сотрудника</button>
+    <section id="companyPage" class="page company-management-page" data-role-page="owner,coordinator">
+  <div class="company-shell">
+    <header class="company-hero">
+      <div>
+        <span class="eyebrow">FleetPilot Company</span>
+        <h2 id="workspaceTitle">Компания</h2>
+        <p>Команда, права доступа, настройки и журнал действий.</p>
       </div>
+      <button type="button" id="openInviteMember" class="btn primary">+ Пригласить</button>
+    </header>
 
+    <nav class="company-tabs" aria-label="Разделы компании">
+      <button type="button" class="active" data-company-tab="overview">Обзор</button>
+      <button type="button" data-company-tab="team">Команда</button>
+      <button type="button" data-company-tab="invites">Приглашения</button>
+      <button type="button" data-company-tab="permissions">Права ролей</button>
+      <button type="button" data-company-tab="settings">Настройки</button>
+      <button type="button" data-company-tab="activity">Журнал действий</button>
+    </nav>
+
+    <div id="enterpriseMessage" class="cloud-message" hidden></div>
+
+    <section class="company-panel active" data-company-panel="overview">
       <div class="enterprise-kpis">
         <article><small>Участников</small><strong id="enterpriseMembersCount">—</strong></article>
         <article><small>Владельцев</small><strong id="enterpriseOwnersCount">—</strong></article>
-        <article><small>Активных приглашений</small><strong id="enterpriseInvitesCount">—</strong></article>
+        <article><small>Приглашений</small><strong id="enterpriseInvitesCount">—</strong></article>
         <article><small>Городов</small><strong id="enterpriseCitiesCount">—</strong></article>
       </div>
+      <div class="company-overview-grid">
+        <article class="company-overview-card">
+          <span class="eyebrow">Доступ</span>
+          <h3>Роли команды</h3>
+          <div id="companyRoleSummary" class="company-role-summary"></div>
+        </article>
+        <article class="company-overview-card">
+          <span class="eyebrow">Облако</span>
+          <h3>Состояние Workspace</h3>
+          <div id="companyWorkspaceSummary" class="company-workspace-summary"></div>
+        </article>
+      </div>
+    </section>
 
+    <section class="company-panel" data-company-panel="team">
       <div class="enterprise-toolbar">
         <input id="enterpriseMemberSearch" type="search" placeholder="Поиск по email, роли или городу">
         <select id="enterpriseRoleFilter">
@@ -456,17 +483,66 @@
         </select>
         <button type="button" id="refreshEnterpriseMembers" class="btn">Обновить</button>
       </div>
-
-      <div id="enterpriseMessage" class="cloud-message" hidden></div>
       <div id="enterpriseMembersList" class="enterprise-members-list"></div>
-
-      <section class="enterprise-invites-card">
-        <div class="enterprise-section-head">
-          <div><span class="eyebrow">Ожидают регистрации</span><h3>Приглашения</h3></div>
-        </div>
-        <div id="enterpriseInvitesList" class="enterprise-invites-list"></div>
-      </section>
     </section>
+
+    <section class="company-panel" data-company-panel="invites">
+      <div class="company-section-head">
+        <div><span class="eyebrow">Доступ к Workspace</span><h3>Приглашения</h3></div>
+        <button type="button" class="btn primary" id="openInviteMemberSecondary">+ Новое приглашение</button>
+      </div>
+      <div id="enterpriseInvitesList" class="enterprise-invites-list"></div>
+    </section>
+
+    <section class="company-panel" data-company-panel="permissions">
+      <div class="company-section-head">
+        <div>
+          <span class="eyebrow">Role permissions</span>
+          <h3>Права ролей</h3>
+          <p>Выберите роль и настройте доступ к разделам и действиям.</p>
+        </div>
+        <button type="button" id="resetRolePermissions" class="btn">Сбросить стандартные</button>
+      </div>
+      <div class="role-permissions-layout">
+        <aside id="rolePermissionTabs" class="role-permission-tabs"></aside>
+        <div>
+          <div id="rolePermissionsGrid" class="role-permissions-grid"></div>
+          <div class="company-save-row">
+            <button type="button" id="saveRolePermissions" class="btn primary">Сохранить права</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="company-panel" data-company-panel="settings">
+      <form id="workspaceSettingsForm" class="workspace-settings-form">
+        <div class="company-section-head">
+          <div><span class="eyebrow">Workspace</span><h3>Настройки компании</h3></div>
+          <button class="btn primary">Сохранить</button>
+        </div>
+        <div class="workspace-settings-grid">
+          <label><span>Название</span><input id="workspaceSettingsName" required maxlength="80"></label>
+          <label><span>Основной город</span><input id="workspaceSettingsCity" maxlength="80"></label>
+          <label><span>Валюта</span>
+            <select id="workspaceSettingsCurrency">
+              <option value="PLN">PLN</option><option value="EUR">EUR</option>
+              <option value="USD">USD</option><option value="UAH">UAH</option>
+            </select>
+          </label>
+          <label><span>Часовой пояс</span><input id="workspaceSettingsTimezone" placeholder="Europe/Warsaw"></label>
+        </div>
+      </form>
+    </section>
+
+    <section class="company-panel" data-company-panel="activity">
+      <div class="company-section-head">
+        <div><span class="eyebrow">Audit</span><h3>Журнал действий</h3></div>
+        <button type="button" id="refreshActivityLog" class="btn">Обновить</button>
+      </div>
+      <div id="companyActivityLog" class="company-activity-log"></div>
+    </section>
+  </div>
+</section>
 
     <section id="dataPage" class="page">
       <div class="section-head">
@@ -1151,7 +1227,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=101200"></script>
-<script src="cloud.js?v=101200"></script>
-<script src="app.js?v=101200"></script>
+<script src="cloud-config.js?v=103000"></script>
+<script src="cloud.js?v=103000"></script>
+<script src="app.js?v=103000"></script>
 </body></html>

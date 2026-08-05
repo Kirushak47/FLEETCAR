@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.1.2 Workspace Sync Fix Cloud Beta",
+  "name": "FleetPilot V10.3 Company Management Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=101200",
+  "start_url": "./?v=103000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

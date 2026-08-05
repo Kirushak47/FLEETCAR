@@ -610,6 +610,61 @@ async function start(){
  if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
  render()
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function getRolePermissions(){
+ if(!client||!membership)return{};
+ const {data,error}=await client.rpc("get_workspace_role_permissions");
+ if(error)throw error;
+ const result={};
+ for(const row of data||[]){
+  if(!result[row.role])result[row.role]={};
+  result[row.role][row.permission]=Boolean(row.allowed)
+ }
+ return result
+}
+async function saveRolePermissions(role,permissions){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может менять права");
+ const {error}=await client.rpc("save_workspace_role_permissions",{
+  target_role:role,
+  permission_values:permissions
+ });
+ if(error)throw error
+}
+async function resetRolePermissions(role){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может менять права");
+ const {error}=await client.rpc("reset_workspace_role_permissions",{target_role:role});
+ if(error)throw error
+}
+async function updateWorkspaceSettings(settings){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может менять настройки");
+ const {data,error}=await client.rpc("update_workspace_settings",{
+  workspace_name:String(settings.name||"").trim(),
+  workspace_city:String(settings.city||"").trim()||null,
+  workspace_currency:String(settings.currency||"PLN"),
+  workspace_timezone:String(settings.timezone||"Europe/Warsaw")
+ });
+ if(error)throw error;
+ await loadWorkspace();
+ return data
+}
+async function getWorkspaceActivity(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_workspace_activity_log");
+ if(error)throw error;
+ return data||[]
+}
+async function logWorkspaceActivity(action,entityType=null,entityId=null,details={}){
+ if(!client||!membership)return;
+ await client.rpc("log_workspace_activity",{
+  action_name:action,
+  entity_type_value:entityType,
+  entity_id_value:entityId,
+  details_value:details
+ }).catch(()=>{})
+}
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

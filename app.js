@@ -424,6 +424,116 @@ function enterpriseRoleOptions(selected){
   .filter(([key])=>key!=="user")
   .map(([key,label])=>`<option value="${key}" ${key===selected?"selected":""}>${label}</option>`).join("")
 }
+
+const ROLE_PERMISSION_DEFINITIONS={
+ cars:[
+  ["cars.view","Видеть автомобили"],
+  ["cars.create","Добавлять автомобили"],
+  ["cars.edit","Редактировать автомобили"],
+  ["cars.delete","Удалять автомобили"],
+  ["cars.assign","Назначать водителей"],
+  ["cars.mileage","Изменять пробег"]
+ ],
+ finance:[
+  ["finance.view","Видеть финансы"],
+  ["finance.expenses","Добавлять расходы"],
+  ["finance.payments","Редактировать платежи"],
+  ["finance.analytics","Видеть прибыль и аналитику"]
+ ],
+ service:[
+  ["service.view","Видеть ремонты"],
+  ["service.create","Создавать ремонты"],
+  ["service.edit","Менять статус ремонта"],
+  ["service.photos","Добавлять фотографии"]
+ ],
+ documents:[
+  ["documents.view","Видеть документы"],
+  ["documents.create","Добавлять документы"],
+  ["documents.delete","Удалять документы"],
+  ["documents.contracts","Видеть договоры"]
+ ],
+ company:[
+  ["company.team","Видеть команду"],
+  ["company.invite","Приглашать пользователей"],
+  ["company.roles","Менять роли"],
+  ["company.permissions","Менять права"]
+ ],
+ driver:[
+  ["driver.portal","Использовать кабинет водителя"],
+  ["driver.tasks","Выполнять задания"],
+  ["driver.photos","Загружать фотоконтроль"],
+  ["driver.protocols","Подписывать протоколы"]
+ ]
+};
+const ROLE_PERMISSION_LABELS={
+ coordinator:"Координатор",
+ accountant:"Бухгалтер",
+ mechanic:"Механик",
+ driver:"Водитель"
+};
+let companyPermissions={};
+let selectedPermissionRole="coordinator";
+
+function activateCompanyTab(tab){
+ $$("[data-company-tab]").forEach(btn=>btn.classList.toggle("active",btn.dataset.companyTab===tab));
+ $$("[data-company-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.companyPanel===tab));
+ if(tab==="permissions")renderRolePermissions();
+ if(tab==="settings")fillWorkspaceSettings();
+ if(tab==="activity")renderCompanyActivity()
+}
+function renderPermissionRoleTabs(){
+ const root=$("#rolePermissionTabs");if(!root)return;
+ root.innerHTML=Object.entries(ROLE_PERMISSION_LABELS).map(([role,label])=>`
+  <button type="button" class="${role===selectedPermissionRole?"active":""}" data-permission-role="${role}">
+   <strong>${label}</strong><small>${role}</small>
+  </button>`).join("");
+ $$("[data-permission-role]").forEach(btn=>btn.onclick=()=>{
+  selectedPermissionRole=btn.dataset.permissionRole;
+  renderRolePermissions()
+ })
+}
+function renderRolePermissions(){
+ renderPermissionRoleTabs();
+ const root=$("#rolePermissionsGrid");if(!root)return;
+ const values=companyPermissions[selectedPermissionRole]||{};
+ root.innerHTML=Object.entries(ROLE_PERMISSION_DEFINITIONS).map(([group,items])=>`
+  <article class="permission-group">
+   <h4>${({cars:"Автомобили",finance:"Финансы",service:"Сервис",documents:"Документы",company:"Компания",driver:"Водитель"}[group]||group)}</h4>
+   ${items.map(([key,label])=>`
+    <label class="permission-switch">
+     <span>${label}</span>
+     <input type="checkbox" data-permission-key="${key}" ${values[key]?"checked":""}>
+     <i></i>
+    </label>`).join("")}
+  </article>`).join("")
+}
+async function loadRolePermissions(){
+ try{
+  companyPermissions=await window.FleetPilotCloud.getRolePermissions();
+  renderRolePermissions()
+ }catch(error){enterpriseMessage(error.message||String(error),"error")}
+}
+function fillWorkspaceSettings(){
+ const ws=window.FleetPilotCloud?.workspace||{};
+ if($("#workspaceSettingsName"))$("#workspaceSettingsName").value=ws.name||"";
+ if($("#workspaceSettingsCity"))$("#workspaceSettingsCity").value=ws.city||window.FleetPilotCloud?.membership?.city||"";
+ if($("#workspaceSettingsCurrency"))$("#workspaceSettingsCurrency").value=ws.currency||"PLN";
+ if($("#workspaceSettingsTimezone"))$("#workspaceSettingsTimezone").value=ws.timezone||"Europe/Warsaw"
+}
+async function renderCompanyActivity(){
+ const root=$("#companyActivityLog");if(!root)return;
+ root.innerHTML='<div class="owner-empty">Загрузка…</div>';
+ try{
+  const rows=await window.FleetPilotCloud.getWorkspaceActivity();
+  root.innerHTML=rows.map(row=>`
+   <article class="activity-row">
+    <div class="activity-dot"></div>
+    <div><strong>${row.actor_email||"Пользователь"}</strong><span>${row.action}</span>
+     <small>${new Date(row.created_at).toLocaleString("ru-RU")}</small>
+    </div>
+   </article>`).join("")||'<div class="owner-empty">Журнал пока пуст.</div>'
+ }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
+}
 async function renderEnterprisePage(){
  const root=$("#enterpriseMembersList");if(!root)return;
  applyEnterpriseAccess();
@@ -452,6 +562,17 @@ async function renderEnterprisePage(){
   $("#enterpriseOwnersCount").textContent=members.filter(x=>x.role==="owner"&&x.status==="active").length;
   $("#enterpriseInvitesCount").textContent=invites.filter(x=>x.status==="pending").length;
   $("#enterpriseCitiesCount").textContent=new Set(members.map(x=>x.city).filter(Boolean)).size;
+  const roleCounts={};
+  members.forEach(member=>roleCounts[member.role]=(roleCounts[member.role]||0)+1);
+  if($("#companyRoleSummary"))$("#companyRoleSummary").innerHTML=Object.entries(ENTERPRISE_ROLE_LABELS)
+   .filter(([role])=>roleCounts[role])
+   .map(([role,label])=>`<div><span>${label}</span><strong>${roleCounts[role]}</strong></div>`).join("");
+  const ws=window.FleetPilotCloud?.workspace||{};
+  if($("#companyWorkspaceSummary"))$("#companyWorkspaceSummary").innerHTML=`
+   <div><span>Название</span><strong>${ws.name||"—"}</strong></div>
+   <div><span>Город</span><strong>${ws.city||membership.city||"—"}</strong></div>
+   <div><span>Валюта</span><strong>${ws.currency||"PLN"}</strong></div>
+   <div><span>Часовой пояс</span><strong>${ws.timezone||"Europe/Warsaw"}</strong></div>`;
 
   const canManage=enterpriseCurrentRole()==="owner";
   root.innerHTML=filtered.map(member=>`
@@ -509,7 +630,7 @@ function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage")renderEnterprisePage();
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){renderEnterprisePage();loadRolePermissions();}
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -564,6 +685,49 @@ if(ownerDashboardReset)ownerDashboardReset.onclick=()=>{
  renderOwnerDashboard()
 };
 
+
+
+$$("[data-company-tab]").forEach(button=>button.onclick=()=>activateCompanyTab(button.dataset.companyTab));
+const openInviteMemberSecondary=$("#openInviteMemberSecondary");
+if(openInviteMemberSecondary)openInviteMemberSecondary.onclick=()=>$("#openInviteMember")?.click();
+
+const saveRolePermissionsButton=$("#saveRolePermissions");
+if(saveRolePermissionsButton)saveRolePermissionsButton.onclick=async()=>{
+ const values={};
+ $$("[data-permission-key]").forEach(input=>values[input.dataset.permissionKey]=input.checked);
+ try{
+  await window.FleetPilotCloud.saveRolePermissions(selectedPermissionRole,values);
+  companyPermissions[selectedPermissionRole]=values;
+  toast("Права сохранены");
+  window.FleetPilotCloud.logWorkspaceActivity("Изменены права роли","role",selectedPermissionRole,{permissions:values})
+ }catch(error){enterpriseMessage(error.message||String(error),"error")}
+};
+const resetRolePermissionsButton=$("#resetRolePermissions");
+if(resetRolePermissionsButton)resetRolePermissionsButton.onclick=async()=>{
+ if(!confirm("Вернуть стандартные права для этой роли?"))return;
+ try{
+  await window.FleetPilotCloud.resetRolePermissions(selectedPermissionRole);
+  await loadRolePermissions();
+  toast("Стандартные права восстановлены")
+ }catch(error){enterpriseMessage(error.message||String(error),"error")}
+};
+const workspaceSettingsForm=$("#workspaceSettingsForm");
+if(workspaceSettingsForm)workspaceSettingsForm.onsubmit=async event=>{
+ event.preventDefault();
+ try{
+  await window.FleetPilotCloud.updateWorkspaceSettings({
+   name:$("#workspaceSettingsName").value,
+   city:$("#workspaceSettingsCity").value,
+   currency:$("#workspaceSettingsCurrency").value,
+   timezone:$("#workspaceSettingsTimezone").value
+  });
+  $("#workspaceTitle").textContent=window.FleetPilotCloud.workspace?.name||"Компания";
+  toast("Настройки сохранены");
+  window.FleetPilotCloud.logWorkspaceActivity("Изменены настройки компании","workspace",window.FleetPilotCloud.workspace?.id,{})
+ }catch(error){enterpriseMessage(error.message||String(error),"error")}
+};
+const refreshActivityLog=$("#refreshActivityLog");
+if(refreshActivityLog)refreshActivityLog.onclick=renderCompanyActivity;
 
 const openInviteMember=$("#openInviteMember");
 if(openInviteMember)openInviteMember.onclick=()=>{
