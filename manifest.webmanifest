@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.1 Self-Service Workspace Cloud Beta",
+  "name": "FleetPilot V10.1.1 Real Invitations Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=101000",
+  "start_url": "./?v=101100",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

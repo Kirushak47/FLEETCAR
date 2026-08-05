@@ -576,13 +576,15 @@ if(inviteMemberForm)inviteMemberForm.onsubmit=async event=>{
  event.preventDefault();
  inviteMessage("Создаём приглашение…");
  try{
-  await window.FleetPilotCloud.enterpriseInvite({
+  const result=await window.FleetPilotCloud.enterpriseInvite({
    email:$("#inviteMemberEmail").value,
    role:$("#inviteMemberRole").value,
    city:$("#inviteMemberCity").value
   });
   $("#inviteMemberDialog").close();
-  toast("Приглашение создано");
+  toast(result?.emailSent===false
+   ?"Приглашение сохранено. Пользователь уже зарегистрирован — ему нужно войти."
+   :"Приглашение отправлено на email");
   renderEnterprisePage()
  }catch(error){
   inviteMessage(error.message||String(error),"error")

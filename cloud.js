@@ -202,15 +202,26 @@ async function enterpriseInvite({email,role,city}){
  if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может приглашать сотрудников");
 
  const normalized=String(email||"").trim().toLowerCase();
- const {data,error}=await client.from("workspace_invites").insert({
-  workspace_id:membership.workspace_id,
-  email:normalized,
-  role,
-  city:String(city||"").trim()||null,
-  invited_by:session.user.id
- }).select().single();
+ if(!normalized||!normalized.includes("@"))throw new Error("Введите правильный email");
 
- if(error)throw error;
+ const {data,error}=await client.functions.invoke("invite-member",{
+  body:{
+   email:normalized,
+   role,
+   city:String(city||"").trim()||null
+  }
+ });
+
+ if(error){
+  let details="";
+  try{
+   const payload=await error.context?.json?.();
+   details=payload?.error||payload?.message||""
+  }catch{}
+  throw new Error(details||error.message||"Не удалось отправить приглашение")
+ }
+
+ if(!data?.ok)throw new Error(data?.error||"Не удалось отправить приглашение");
  return data
 }
 async function enterpriseUpdateMember(userId,patch){
