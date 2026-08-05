@@ -395,7 +395,7 @@ const ownerSettingsButton=$("#ownerDashboardSettingsButton");
 if(ownerSettingsButton)ownerSettingsButton.onclick=openOwnerDashboardSettings;
 $$("[data-hide-owner-widget]").forEach(button=>button.onclick=()=>hideOwnerDashboardWidget(button.dataset.hideOwnerWidget));
 const ownerMapButton=$("#ownerOpenMap");
-if(ownerMapButton)ownerMapButton.onclick=()=>{setDesktopView("map");openFleetMapV2()};
+if(ownerMapButton)ownerMapButton.onclick=openFullFleetMap;
 const ownerDashboardForm=$("#ownerDashboardSettingsDialog form");
 if(ownerDashboardForm)ownerDashboardForm.onsubmit=event=>{
  event.preventDefault();
@@ -489,11 +489,13 @@ window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
  const view=button.dataset.fleetView;
- setDesktopView(view);
 
  if(view==="map"){
-  openFleetMapV2()
+  openFullFleetMap();
+  return
  }
+
+ setDesktopView(view);
 
  if(view==="table"){
   requestAnimationFrame(renderDesktopTable)
@@ -1690,6 +1692,31 @@ function updateCarStatusLive(carId,status){
  toast(`Статус: ${statusText(status)}`)
 }
 
+
+function invalidateFleetLeafletMap(){
+ const map=leafletFleetMap;
+ if(!map||typeof map.invalidateSize!=="function")return;
+ try{map.invalidateSize({pan:false})}catch(error){console.warn("Leaflet invalidateSize failed",error)}
+}
+
+function openFullFleetMap(){
+ setDesktopView("map");
+ openFleetMapV2();
+
+ requestAnimationFrame(()=>{
+  const fullMap=$("#desktopMapView");
+  if(fullMap){
+   fullMap.scrollIntoView({behavior:"smooth",block:"start"});
+   fullMap.classList.add("full-map-highlight");
+   setTimeout(()=>fullMap.classList.remove("full-map-highlight"),900)
+  }
+
+  [0,120,320,650].forEach(delay=>
+   setTimeout(invalidateFleetLeafletMap,delay)
+  )
+ })
+}
+
 function desktopView(){
  return localStorage.getItem(DESKTOP_VIEW_KEY)||"list"
 }
@@ -1712,9 +1739,9 @@ function setDesktopView(view){
     forceFit:!desktopMapHasInitialFit
    });
    requestAnimationFrame(()=>{
-    leafletFleetMap?.invalidateSize({pan:false});
-    setTimeout(()=>leafletFleetMap?.invalidateSize({pan:false}),120);
-    setTimeout(()=>leafletFleetMap?.invalidateSize({pan:false}),350)
+    invalidateFleetLeafletMap();
+    setTimeout(invalidateFleetLeafletMap,120);
+    setTimeout(invalidateFleetLeafletMap,350)
    })
   }
   renderDesktopEvents();
@@ -2834,7 +2861,8 @@ function openFleetMapV2(){
  fleetMapV2SelectedCity="";
  requestAnimationFrame(()=>{
   renderFleetMapV2({fit:true});
-  setTimeout(()=>renderFleetMapV2({fit:true}),180)
+  setTimeout(()=>renderFleetMapV2({fit:true}),180);
+  setTimeout(invalidateFleetLeafletMap,360)
  })
 }
 

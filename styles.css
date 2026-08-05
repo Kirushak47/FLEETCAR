@@ -6284,3 +6284,77 @@ html[data-theme="dark"] .owner-widget-setting-row{border-color:rgba(255,255,255,
  .owner-map-summary{margin-top:10px}
  .owner-map-summary>button:nth-child(n+4){display:none}
 }
+
+
+/* FleetPilot V9.1 — restore full Leaflet fleet map */
+.owner-live-map-preview{
+  position:relative;
+}
+.owner-live-map-preview::after{
+  content:"Предпросмотр";
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  z-index:5;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:999px;
+  background:rgba(255,255,255,.86);
+  color:#64748b;
+  font-size:8px;
+  font-weight:900;
+  backdrop-filter:blur(8px);
+}
+
+.full-fleet-map-view{
+  scroll-margin-top:18px;
+}
+
+.full-fleet-map-view .fleet-map-layout{
+  min-height:620px;
+}
+
+.full-fleet-map-view .poland-map-card,
+.full-fleet-map-view .leaflet-map-card,
+.full-fleet-map-view .leaflet-fleet-map{
+  min-height:620px!important;
+  height:620px!important;
+}
+
+.full-fleet-map-view .map-city-panel{
+  min-height:620px;
+  max-height:620px;
+  overflow:auto;
+}
+
+.full-fleet-map-view.full-map-highlight{
+  animation:fullMapReveal .9s ease;
+}
+
+@keyframes fullMapReveal{
+  0%{box-shadow:0 0 0 0 rgba(59,130,246,.35)}
+  45%{box-shadow:0 0 0 6px rgba(59,130,246,.12)}
+  100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}
+}
+
+html[data-theme="dark"] .owner-live-map-preview::after{
+  border-color:rgba(255,255,255,.08);
+  background:rgba(15,23,42,.85);
+  color:#cbd5e1;
+}
+
+@media(max-width:1099px){
+  .full-fleet-map-view .fleet-map-layout{
+    min-height:0;
+  }
+  .full-fleet-map-view .poland-map-card,
+  .full-fleet-map-view .leaflet-map-card,
+  .full-fleet-map-view .leaflet-fleet-map{
+    min-height:520px!important;
+    height:520px!important;
+  }
+  .full-fleet-map-view .map-city-panel{
+    min-height:auto;
+    max-height:none;
+  }
+}

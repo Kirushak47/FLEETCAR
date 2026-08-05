@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V9 Polish Edition Cloud Beta",
+  "name": "FleetPilot V9.1 Full Map Restore Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=90000",
+  "start_url": "./?v=90100",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
