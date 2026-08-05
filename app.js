@@ -378,6 +378,7 @@ function enterpriseCurrentRole(){
  return window.FleetPilotCloud?.role||"user"
 }
 function enterpriseCanOpen(pageId){
+ if(window.FleetPilotCloud?.session&&!window.FleetPilotCloud?.membership)return false;
  const role=enterpriseCurrentRole();
  return(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId)
 }

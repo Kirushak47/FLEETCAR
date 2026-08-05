@@ -1,17 +1,18 @@
-# FleetPilot V10.0.1 — Multi-Tenant Security
+# FleetPilot V10.1 — Self-Service Workspace
 
+Перед обновлением:
 1. Supabase → SQL Editor → New query.
-2. Run `supabase_v10_0_1_platform_admin.sql`.
-3. Upload all files to GitHub.
-4. Open:
-   https://kirushak47.github.io/FLEETCAR/?v=100010
+2. Выполнить `supabase_v10_1_self_service.sql`.
+3. Загрузить все файлы на GitHub.
+4. Открыть:
+   https://kirushak47.github.io/FLEETCAR/?v=101000
 
-Fixed:
-- workspace owner no longer sees platform administration;
-- Supabase button is visible only to platform admin;
-- workspace owner sees only their own fleet and team;
-- platform-admin status is stored separately in `platform_admins`;
-- ordinary owners cannot see other projects;
-- own role/status fields are disabled in the team screen;
-- added SQL safety against changing your own role/status;
-- terminology updated from generic company/CRM wording to fleet/workspace wording.
+Добавлено:
+- новый пользователь сам создаёт свой автопарк;
+- создатель автоматически получает роль Owner;
+- можно указать название, город и должность;
+- приглашённый пользователь видит приглашение и присоединяется;
+- общая облачная база теперь привязана к Workspace, а не к одному аккаунту;
+- Owner и Coordinator могут обновлять общую базу;
+- остальные роли получают доступ на чтение согласно RLS;
+- Platform Admin видит список всех проектов, владельцев, участников, машин и активности.

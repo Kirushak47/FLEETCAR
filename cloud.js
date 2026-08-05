@@ -65,11 +65,12 @@ function setGate(){
  const gate=$("#authGate");
  if(!gate)return;
  gate.hidden=Boolean(session)||isDemo();
- document.documentElement.classList.toggle("auth-locked",!gate.hidden)
+ document.documentElement.classList.toggle("auth-locked",!gate.hidden);
+ setWorkspaceGate()
 }
 async function loadProfile(){
  profile=null;if(!session||!client)return;
- const {data,error}=await client.from(PROFILE_TABLE).select("user_id,email,role,created_at").eq("user_id",session.user.id).maybeSingle();
+ const {data,error}=await client.from(PROFILE_TABLE).select("user_id,email,role,job_title,created_at").eq("user_id",session.user.id).maybeSingle();
  if(error)console.error("profile",error);
  profile=data||null
 }
@@ -117,6 +118,62 @@ function isPlatformAdmin(){
  return platformAdmin===true
 }
 
+
+async function getPendingWorkspaceInvite(){
+ if(!client||!session)return null;
+ const {data,error}=await client.rpc("get_my_pending_workspace_invite");
+ if(error){
+  console.error("pending invite",error);
+  return null
+ }
+ return Array.isArray(data)?data[0]||null:data||null
+}
+async function createWorkspace({name,city,jobTitle}){
+ if(!client||!session)throw new Error("Сначала войдите");
+ const {data,error}=await client.rpc("create_my_workspace",{
+  company_name:String(name||"").trim(),
+  company_city:String(city||"").trim()||null,
+  job_title_value:String(jobTitle||"CEO").trim()||"CEO"
+ });
+ if(error)throw error;
+ await loadProfile();
+ await loadWorkspace();
+ return data
+}
+async function acceptPendingInvite(){
+ if(!client||!session)throw new Error("Сначала войдите");
+ const {data,error}=await client.rpc("accept_my_workspace_invite");
+ if(error)throw error;
+ await loadProfile();
+ await loadWorkspace();
+ return data
+}
+async function platformOverview(){
+ if(!client||!isPlatformAdmin())return[];
+ const {data,error}=await client.rpc("platform_workspace_overview");
+ if(error)throw error;
+ return data||[]
+}
+function setWorkspaceGate(){
+ const gate=$("#workspaceGate");
+ if(!gate)return;
+ const show=Boolean(session&&!membership&&!isDemo());
+ gate.hidden=!show;
+ document.documentElement.classList.toggle("workspace-locked",show)
+}
+async function renderWorkspaceOnboarding(){
+ setWorkspaceGate();
+ if(!session||membership)return;
+ const invite=await getPendingWorkspaceInvite();
+ const box=$("#workspacePendingInvite");
+ if(!box)return;
+ box.hidden=!invite;
+ box.dataset.inviteId=invite?.invite_id||"";
+ if(invite){
+  const roleLabels={owner:"Владелец",coordinator:"Координатор",accountant:"Бухгалтер",mechanic:"Механик",driver:"Водитель"};
+  $("#workspacePendingInviteText").textContent=`${invite.workspace_name} · ${roleLabels[invite.role]||invite.role}${invite.city?` · ${invite.city}`:""}`;
+ }
+}
 function enterpriseRole(){
  return membership?.role||profile?.role||"user"
 }
@@ -222,13 +279,13 @@ function render(){
  }
  if($("#cloudUserEmail"))$("#cloudUserEmail").textContent=session?.user?.email||"";
  if($("#cloudUserRole")){
-  $("#cloudUserRole").textContent=owner()?"Владелец":"Пользователь";
+  $("#cloudUserRole").textContent=owner()?(profile?.job_title||"Владелец"):({coordinator:"Координатор",accountant:"Бухгалтер",mechanic:"Механик",driver:"Водитель"}[enterpriseRole()]||"Пользователь");
   $("#cloudUserRole").classList.toggle("owner",owner())
  }
  const saved=parse(STATUS_KEY,{});
  if($("#cloudSyncStatus"))$("#cloudSyncStatus").textContent=saved.text||"Облако подключено";
  if($("#cloudLastSync"))$("#cloudLastSync").textContent=saved.lastSync?dateTime(saved.lastSync):"Ещё не синхронизировано";
- renderAvatar();renderSummary();setGate()
+ renderAvatar();renderSummary();setGate();renderWorkspaceOnboarding()
 }
 function setStatus(text,lastSync=null,state="online"){
  store(STATUS_KEY,{text,lastSync,state});render()
@@ -243,7 +300,8 @@ async function refreshSession(){
 }
 async function fetchRow(){
  if(!session)throw new Error("Сначала войдите");
- const {data,error}=await client.from(TABLE).select("payload,updated_at,device_name").eq("user_id",session.user.id).maybeSingle();
+ if(!membership?.workspace_id)throw new Error("Сначала создайте автопарк");
+ const {data,error}=await client.from(TABLE).select("payload,updated_at,device_name").eq("workspace_id",membership.workspace_id).maybeSingle();
  if(error)throw error;return data
 }
 function stats(p){return{cars:p?.cars?.length||0,repairs:p?.repairs?.length||0,payments:p?.payments?.length||0,expenses:p?.expenses?.length||0}}
@@ -274,7 +332,9 @@ async function pushNow({silent=false}={}){
  try{
   const payload=window.getFleetPilotDatabase?.();
   const now=new Date().toISOString();
-  const {error}=await client.from(TABLE).upsert({user_id:session.user.id,payload,updated_at:now,device_name:navigator.userAgent.slice(0,120)},{onConflict:"user_id"});
+  if(!membership?.workspace_id)throw new Error("Сначала создайте автопарк");
+  if(!["owner","coordinator"].includes(enterpriseRole()))throw new Error("У вашей роли нет права изменять общую базу автопарка");
+  const {error}=await client.from(TABLE).upsert({workspace_id:membership.workspace_id,user_id:session.user.id,payload,updated_at:now,device_name:navigator.userAgent.slice(0,120)},{onConflict:"workspace_id"});
   if(error)throw error;setStatus("Синхронизировано",now,"online");
   if(!silent)window.toast?.("Синхронизировано");return true
  }catch(e){message("#cloudAuthMessage",friendly(e),"error");setStatus("Ошибка синхронизации",null,"error");return false}
@@ -388,23 +448,35 @@ function savePhoto(file){
 async function refreshAdmin(){
  if(!isPlatformAdmin())return;
  message("#cloudAdminMessage","Загрузка…");
- const [{data:profiles,error:pErr},{data:states,error:sErr}]=await Promise.all([
-  client.from(PROFILE_TABLE).select("user_id,email,role,created_at").order("created_at",{ascending:false}),
-  client.from(TABLE).select("user_id,payload,updated_at,device_name")
- ]);
- if(pErr||sErr){
+ try{
+  const projects=await platformOverview();
+  const today=new Date();today.setHours(0,0,0,0);
+  $("#adminUsersCount").textContent=projects.length;
+  $("#adminCarsCount").textContent=projects.reduce((sum,p)=>sum+Number(p.cars_count||0),0);
+  $("#adminTodayCount").textContent=projects.filter(p=>new Date(p.last_activity||0)>=today).length;
+
+  const root=$("#cloudAdminUsers");
+  root.hidden=false;
+  root.innerHTML=projects.map(project=>`
+   <article class="cloud-admin-user platform-project-row">
+    <div>
+     <strong>${project.workspace_name||"Без названия"}</strong>
+     <small>${project.owner_email||"Владелец не найден"} · ${project.members_count||0} участников</small>
+    </div>
+    <div>
+     <small>Автомобилей</small>
+     <strong>${project.cars_count||0}</strong>
+    </div>
+    <div>
+     <small>Последняя активность</small>
+     <strong>${dateTime(project.last_activity)}</strong>
+    </div>
+   </article>`).join("")||"<p>Проектов пока нет</p>";
+  message("#cloudAdminMessage","")
+ }catch(error){
   ["#adminUsersCount","#adminCarsCount","#adminTodayCount"].forEach(s=>{if($(s))$(s).textContent="!"});
-  return message("#cloudAdminMessage",friendly(pErr||sErr),"error")
+  message("#cloudAdminMessage",friendly(error),"error")
  }
- const map=new Map((states||[]).map(x=>[x.user_id,x]));
- const users=(profiles||[]).map(x=>({...x,state:map.get(x.user_id)}));
- const today=new Date();today.setHours(0,0,0,0);
- $("#adminUsersCount").textContent=users.length;
- $("#adminCarsCount").textContent=users.reduce((n,u)=>n+(u.state?.payload?.cars?.length||0),0);
- $("#adminTodayCount").textContent=users.filter(u=>new Date(u.state?.updated_at||0)>=today).length;
- const root=$("#cloudAdminUsers");root.hidden=false;
- root.innerHTML=users.map(u=>`<article class="cloud-admin-user"><div><strong>${u.email||"—"}</strong><small>${u.role==="owner"?"Владелец":"Пользователь"} · ${u.state?.payload?.cars?.length||0} авто</small></div><div><small>Последняя синхронизация</small><strong>${dateTime(u.state?.updated_at)}</strong></div></article>`).join("")||"<p>Пользователей пока нет</p>";
- message("#cloudAdminMessage","")
 }
 function bind(){
  $("#profileAvatarButton")?.addEventListener("click",openProfile);
@@ -437,6 +509,34 @@ function bind(){
  $("#demoExit")?.addEventListener("click",exitDemo);
  $("#refreshCloudAdmin")?.addEventListener("click",refreshAdmin);
  $("#openSupabaseDashboard")?.addEventListener("click",()=>window.open(cfg().dashboardUrl,"_blank","noopener"))
+
+ $("#createWorkspaceForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();
+  message("#workspaceCreateMessage","Создаём автопарк…");
+  try{
+   await createWorkspace({
+    name:$("#workspaceCreateName")?.value,
+    city:$("#workspaceCreateCity")?.value,
+    jobTitle:$("#workspaceCreateJobTitle")?.value
+   });
+   message("#workspaceCreateMessage","Автопарк создан.","success");
+   setTimeout(()=>location.reload(),350)
+  }catch(error){
+   message("#workspaceCreateMessage",friendly(error),"error")
+  }
+ });
+ $("#workspaceAcceptInvite")?.addEventListener("click",async()=>{
+  message("#workspaceCreateMessage","Подключаем к автопарку…");
+  try{
+   await acceptPendingInvite();
+   message("#workspaceCreateMessage","Готово.","success");
+   setTimeout(()=>location.reload(),350)
+  }catch(error){
+   message("#workspaceCreateMessage",friendly(error),"error")
+  }
+ });
+ $("#workspaceSignOut")?.addEventListener("click",signOut);
+
 }
 async function start(){
  if(started)return;started=true;removeOldQuotaBackups();bind();init();
@@ -453,6 +553,6 @@ async function start(){
  if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
  render()
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();
