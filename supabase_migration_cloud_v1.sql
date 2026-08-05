@@ -33,7 +33,7 @@ begin
   values (
     new.id,
     new.email,
-    case when lower(coalesce(new.email,'')) = lower('PASTE_OWNER_EMAIL_HERE')
+    case when lower(coalesce(new.email,'')) = lower('balyshevy@gmail.com')
       then 'owner' else 'user' end
   )
   on conflict (user_id) do update set email=excluded.email;
@@ -52,7 +52,7 @@ select id,email,
 from auth.users
 on conflict (user_id) do update
 set email=excluded.email,
-    role=case when lower(coalesce(excluded.email,''))=lower('PASTE_OWNER_EMAIL_HERE')
+    role=case when lower(coalesce(excluded.email,''))=lower('alyshevy@gmail.com')
               then 'owner' else public.profiles.role end;
 
 alter table public.profiles enable row level security;
