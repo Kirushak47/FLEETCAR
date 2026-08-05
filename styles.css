@@ -5713,3 +5713,30 @@ html[data-theme="dark"] #calendarPage input{
   background:#111827;
   color:#f8fafc;
 }
+
+/* FleetPilot V8.1 Stable */
+@media(min-width:1100px){
+ .desktop-fleet-controls-slot{display:grid;gap:10px;margin:12px 0 14px}
+ .desktop-fleet-controls-slot .desktop-fleet-toolbar{display:grid!important;grid-template-columns:minmax(260px,1fr) 180px 190px;gap:9px;margin:0!important;order:1}
+ .desktop-fleet-controls-slot .desktop-fleet-summary{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:0!important;order:2}
+ .desktop-fleet-controls-slot .desktop-bulk-bar{position:static!important;inset:auto!important;margin:0!important;order:3;box-shadow:none!important}
+ .desktop-command-layout{margin-top:0!important}
+ #desktopTableView .desktop-table-scroll{max-height:none;min-height:180px}
+}
+@media(max-width:1099px){
+ html[data-ui-mode="simple"] .bottom-nav [data-page="calendarPage"],
+ html[data-ui-mode="simple"] .bottom-nav [data-page="mobileMapPage"],
+ html[data-ui-mode="simple"] .bottom-nav [data-page="morePage"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+ .quick-action-button{bottom:calc(env(safe-area-inset-bottom) + 92px)!important}
+}
+html[data-theme="dark"] #analyticsPage .card,
+html[data-theme="dark"] #analyticsPage .summary-card,
+html[data-theme="dark"] #analyticsPage .analytics-card,
+html[data-theme="dark"] #calendarPage .card,
+html[data-theme="dark"] #repairsPage .card,
+html[data-theme="dark"] #paymentsPage .card,
+html[data-theme="dark"] #expensesPage .card,
+html[data-theme="dark"] #morePage .card{background:#151d31!important;border-color:rgba(255,255,255,.08)!important;color:#e5e7eb!important}
+html[data-theme="dark"] table{color:#dbe4f0}
+html[data-theme="dark"] th{background:#182136!important;color:#94a3b8!important}
+html[data-theme="dark"] td{border-color:rgba(255,255,255,.06)!important}

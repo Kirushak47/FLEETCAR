@@ -175,7 +175,7 @@ function effectiveVisible(settings=uxSettings()){
  return settings.visible
 }
 
-const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage"]);
+const SIMPLE_ALLOWED_PAGES=new Set(["fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","morePage","carPage","attentionPage","mobileMapPage"]);
 const SIMPLE_ALLOWED_TABS=new Set(["info","finance","documents","damages"]);
 
 function currentUiMode(){return uxSettings().mode==="simple"?"simple":"advanced"}
@@ -335,6 +335,12 @@ if(window.matchMedia){
 }
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
+
+function fleetPilotCurrentMonth(){
+ const now=new Date();
+ return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`
+}
+
 function showPage(id){
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="fleetPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
@@ -436,6 +442,7 @@ $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALER
 
 document.addEventListener("DOMContentLoaded",()=>{
  applyTheme();
+ placeDesktopFleetControls();
  if(window.innerWidth>=1100){
   setTimeout(scheduleInitialFleetBoot,0)
  }
@@ -1650,6 +1657,34 @@ function desktopView(){
  return localStorage.getItem(DESKTOP_VIEW_KEY)||"list"
 }
 
+const desktopFleetControlOrigins=new Map();
+
+function rememberDesktopFleetControlOrigin(element){
+ if(!element||desktopFleetControlOrigins.has(element.id))return;
+ desktopFleetControlOrigins.set(element.id,{parent:element.parentNode,next:element.nextSibling})
+}
+
+function placeDesktopFleetControls(){
+ const slot=$("#desktopFleetControlsSlot");
+ const summary=$("#fleetSummary");
+ const toolbar=document.querySelector(".desktop-fleet-toolbar");
+ const bulk=$("#desktopBulkBar");
+ if(!slot||!summary||!toolbar||!bulk)return;
+
+ [summary,toolbar,bulk].forEach(rememberDesktopFleetControlOrigin);
+
+ if(window.innerWidth>=1100){
+  [toolbar,summary,bulk].forEach(element=>slot.appendChild(element));
+ }else{
+  [summary,toolbar,bulk].forEach(element=>{
+   const origin=desktopFleetControlOrigins.get(element.id||"");
+   if(!origin?.parent)return;
+   if(origin.next&&origin.next.parentNode===origin.parent)origin.parent.insertBefore(element,origin.next);
+   else origin.parent.appendChild(element)
+  })
+ }
+}
+
 function setDesktopView(view){
  localStorage.setItem(DESKTOP_VIEW_KEY,view);
  document.documentElement.dataset.desktopFleetView=view;
@@ -1678,10 +1713,6 @@ function setDesktopView(view){
  })
 }
 
-function fleetPilotCurrentMonth(){
- const now=new Date();
- return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`
-}
 
 function desktopCommandKpis(){
  const cars=fleetCars();
@@ -3821,3 +3852,6 @@ window.addEventListener("pageshow",()=>{
 document.addEventListener("DOMContentLoaded",()=>{
  requestAnimationFrame(updateGpsBadgesOnly)
 });
+
+window.addEventListener("resize",placeDesktopFleetControls);
+window.addEventListener("pageshow",placeDesktopFleetControls);
