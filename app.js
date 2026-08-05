@@ -357,11 +357,144 @@ if(window.matchMedia){
 }
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
+
+const ENTERPRISE_ROLE_LABELS={
+ owner:"Владелец",
+ coordinator:"Координатор",
+ accountant:"Бухгалтер",
+ mechanic:"Механик",
+ driver:"Водитель",
+ user:"Пользователь"
+};
+const ENTERPRISE_ROLE_ACCESS={
+ owner:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","morePage","mobileMapPage","searchPage","carPage"],
+ coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","companyPage","mobileMapPage","searchPage","carPage"],
+ accountant:["dashboardPage","paymentsPage","expensesPage","analyticsPage","documentsPage","calendarPage","searchPage"],
+ mechanic:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","searchPage","carPage"],
+ driver:["dashboardPage","documentsPage","calendarPage","searchPage","carPage"],
+ user:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","morePage","mobileMapPage","searchPage","carPage"]
+};
+function enterpriseCurrentRole(){
+ return window.FleetPilotCloud?.role||"user"
+}
+function enterpriseCanOpen(pageId){
+ const role=enterpriseCurrentRole();
+ return(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId)
+}
+function applyEnterpriseAccess(){
+ const role=enterpriseCurrentRole();
+ $$("[data-desktop-page]").forEach(button=>{
+  const page=button.dataset.desktopPage;
+  button.hidden=!enterpriseCanOpen(page)
+ });
+ $$("[data-role-page]").forEach(page=>{
+  const roles=(page.dataset.rolePage||"").split(",");
+  page.dataset.roleDenied=roles.includes(role)?"false":"true"
+ });
+ document.body.dataset.enterpriseRole=role
+}
+function enterpriseMessage(text,type=""){
+ const el=$("#enterpriseMessage");if(!el)return;
+ el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`
+}
+function inviteMessage(text,type=""){
+ const el=$("#inviteMemberMessage");if(!el)return;
+ el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`
+}
+function enterpriseMemberEmail(member){
+ return member?.profiles?.email||member?.email||"Без email"
+}
+function enterpriseRoleOptions(selected){
+ return Object.entries(ENTERPRISE_ROLE_LABELS)
+  .filter(([key])=>key!=="user")
+  .map(([key,label])=>`<option value="${key}" ${key===selected?"selected":""}>${label}</option>`).join("")
+}
+async function renderEnterprisePage(){
+ const root=$("#enterpriseMembersList");if(!root)return;
+ applyEnterpriseAccess();
+
+ const workspace=window.FleetPilotCloud?.workspace;
+ const membership=window.FleetPilotCloud?.membership;
+ if($("#workspaceTitle"))$("#workspaceTitle").textContent=workspace?.name||"Компания";
+
+ if(!membership){
+  enterpriseMessage("Рабочее пространство ещё не создано. Выполните SQL-миграцию V10 и войдите повторно.","error");
+  root.innerHTML="";
+  return
+ }
+
+ enterpriseMessage("Загрузка…");
+ try{
+  const {members,invites}=await window.FleetPilotCloud.enterpriseList();
+  const query=($("#enterpriseMemberSearch")?.value||"").trim().toLowerCase();
+  const roleFilter=$("#enterpriseRoleFilter")?.value||"";
+  const filtered=members.filter(member=>{
+   const text=`${enterpriseMemberEmail(member)} ${member.role} ${member.city||""}`.toLowerCase();
+   return(!query||text.includes(query))&&(!roleFilter||member.role===roleFilter)
+  });
+
+  $("#enterpriseMembersCount").textContent=members.filter(x=>x.status==="active").length;
+  $("#enterpriseOwnersCount").textContent=members.filter(x=>x.role==="owner"&&x.status==="active").length;
+  $("#enterpriseInvitesCount").textContent=invites.filter(x=>x.status==="pending").length;
+  $("#enterpriseCitiesCount").textContent=new Set(members.map(x=>x.city).filter(Boolean)).size;
+
+  const canManage=enterpriseCurrentRole()==="owner";
+  root.innerHTML=filtered.map(member=>`
+   <article class="enterprise-member-card">
+    <div class="enterprise-member-avatar">${enterpriseMemberEmail(member)[0]?.toUpperCase()||"U"}</div>
+    <div class="enterprise-member-main">
+     <strong>${enterpriseMemberEmail(member)}</strong>
+     <small>${member.city||"Все города"} · добавлен ${new Date(member.created_at).toLocaleDateString("ru-RU")}</small>
+    </div>
+    <select data-enterprise-role="${member.user_id}" ${canManage?"":"disabled"}>${enterpriseRoleOptions(member.role)}</select>
+    <input data-enterprise-city="${member.user_id}" value="${member.city||""}" placeholder="Город" ${canManage?"":"disabled"}>
+    <span class="enterprise-status ${member.status}">${member.status==="active"?"Активен":"Отключён"}</span>
+    ${canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id?`<button type="button" class="enterprise-member-toggle" data-enterprise-toggle="${member.user_id}" data-status="${member.status}">${member.status==="active"?"Отключить":"Включить"}</button>`:""}
+   </article>`).join("")||`<div class="owner-empty">Участники не найдены.</div>`;
+
+  const inviteRoot=$("#enterpriseInvitesList");
+  inviteRoot.innerHTML=invites.filter(x=>x.status==="pending").map(invite=>`
+   <article class="enterprise-invite-row">
+    <div><strong>${invite.email}</strong><small>${ENTERPRISE_ROLE_LABELS[invite.role]||invite.role} · ${invite.city||"все города"}</small></div>
+    <span>до ${new Date(invite.expires_at).toLocaleDateString("ru-RU")}</span>
+    ${canManage?`<button type="button" data-cancel-invite="${invite.id}">Отменить</button>`:""}
+   </article>`).join("")||`<div class="owner-empty">Активных приглашений нет.</div>`;
+
+  $$("[data-enterprise-role]").forEach(select=>select.onchange=async()=>{
+   await window.FleetPilotCloud.enterpriseUpdateMember(select.dataset.enterpriseRole,{role:select.value});
+   toast("Роль обновлена");renderEnterprisePage()
+  });
+  $$("[data-enterprise-city]").forEach(input=>input.onchange=async()=>{
+   await window.FleetPilotCloud.enterpriseUpdateMember(input.dataset.enterpriseCity,{city:input.value.trim()||null});
+   toast("Город обновлён")
+  });
+  $$("[data-enterprise-toggle]").forEach(button=>button.onclick=async()=>{
+   const next=button.dataset.status==="active"?"disabled":"active";
+   await window.FleetPilotCloud.enterpriseUpdateMember(button.dataset.enterpriseToggle,{status:next});
+   renderEnterprisePage()
+  });
+  $$("[data-cancel-invite]").forEach(button=>button.onclick=async()=>{
+   await window.FleetPilotCloud.enterpriseCancelInvite(button.dataset.cancelInvite);
+   renderEnterprisePage()
+  });
+  enterpriseMessage("")
+ }catch(error){
+  console.error(error);
+  enterpriseMessage(error.message||String(error),"error")
+ }
+}
+window.renderEnterprisePage=renderEnterprisePage;
+
 function showPage(id){
+ applyEnterpriseAccess();
+ if(!enterpriseCanOpen(id)){
+  toast("У вашей роли нет доступа к этому разделу");
+  id="dashboardPage"
+ }
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage")renderEnterprisePage();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -415,6 +548,38 @@ if(ownerDashboardReset)ownerDashboardReset.onclick=()=>{
  renderOwnerDashboardSettings();
  renderOwnerDashboard()
 };
+
+
+const openInviteMember=$("#openInviteMember");
+if(openInviteMember)openInviteMember.onclick=()=>{
+ inviteMessage("");
+ $("#inviteMemberForm")?.reset();
+ $("#inviteMemberDialog")?.showModal()
+};
+const inviteMemberForm=$("#inviteMemberForm");
+if(inviteMemberForm)inviteMemberForm.onsubmit=async event=>{
+ event.preventDefault();
+ inviteMessage("Создаём приглашение…");
+ try{
+  await window.FleetPilotCloud.enterpriseInvite({
+   email:$("#inviteMemberEmail").value,
+   role:$("#inviteMemberRole").value,
+   city:$("#inviteMemberCity").value
+  });
+  $("#inviteMemberDialog").close();
+  toast("Приглашение создано");
+  renderEnterprisePage()
+ }catch(error){
+  inviteMessage(error.message||String(error),"error")
+ }
+};
+const refreshEnterpriseMembers=$("#refreshEnterpriseMembers");
+if(refreshEnterpriseMembers)refreshEnterpriseMembers.onclick=renderEnterprisePage;
+const enterpriseMemberSearch=$("#enterpriseMemberSearch");
+if(enterpriseMemberSearch)enterpriseMemberSearch.oninput=renderEnterprisePage;
+const enterpriseRoleFilter=$("#enterpriseRoleFilter");
+if(enterpriseRoleFilter)enterpriseRoleFilter.onchange=renderEnterprisePage;
+setTimeout(applyEnterpriseAccess,500);
 
 function safeOpenCalendarPage(){
  showPage("calendarPage")

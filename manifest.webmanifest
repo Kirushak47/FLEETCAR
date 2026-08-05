@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V9.4 Dashboard Refactor Cloud Beta",
+  "name": "FleetPilot V10 Enterprise Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=90400",
+  "start_url": "./?v=100000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

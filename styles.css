@@ -6535,3 +6535,31 @@ html[data-theme="dark"] .dashboard-quick-buttons button{border-color:rgba(255,25
  .dashboard-quick-buttons{display:grid;grid-template-columns:1fr 1fr}
  #dashboardPage .owner-dashboard-kpis{grid-template-columns:1fr 1fr}
 }
+
+
+/* FleetPilot V10 Enterprise Foundation */
+.enterprise-page{max-width:1180px;margin:0 auto}
+.enterprise-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.enterprise-page-head h2{margin:5px 0}.enterprise-page-head p{margin:0;color:#64748b}
+.enterprise-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.enterprise-kpis article{padding:16px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;box-shadow:var(--fp-shadow,0 10px 30px rgba(15,23,42,.06))}
+.enterprise-kpis small,.enterprise-kpis strong{display:block}.enterprise-kpis small{color:#64748b;font-size:9px}.enterprise-kpis strong{margin-top:6px;font-size:24px}
+.enterprise-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) 190px auto;gap:10px;margin-bottom:13px}
+.enterprise-toolbar input,.enterprise-toolbar select{padding:11px;border:1px solid #dbe2ec;border-radius:12px;background:#fff}
+.enterprise-members-list{display:grid;gap:9px}
+.enterprise-member-card{display:grid;grid-template-columns:42px minmax(180px,1fr) 160px 150px auto auto;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:15px;background:#fff}
+.enterprise-member-avatar{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:#eef2ff;color:#4f46e5;font-weight:900}
+.enterprise-member-main strong,.enterprise-member-main small{display:block}.enterprise-member-main small{margin-top:4px;color:#64748b;font-size:8px}
+.enterprise-member-card select,.enterprise-member-card input{width:100%;padding:9px;border:1px solid #e1e6ee;border-radius:10px;background:#f8fafc}
+.enterprise-status{padding:6px 9px;border-radius:999px;font-size:8px;font-weight:900}.enterprise-status.active{background:rgba(34,197,94,.12);color:#15803d}.enterprise-status.disabled{background:rgba(239,68,68,.1);color:#dc2626}
+.enterprise-member-toggle,.enterprise-invite-row button{padding:8px;border:0;border-radius:9px;background:#f1f5f9;color:#475569;font-size:8px;font-weight:900;cursor:pointer}
+.enterprise-invites-card{margin-top:18px;padding:16px;border:1px solid #e5e7eb;border-radius:18px;background:#fff}
+.enterprise-section-head h3{margin:4px 0 12px}.enterprise-invites-list{display:grid;gap:8px}
+.enterprise-invite-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:10px;border-radius:11px;background:#f8fafc}.enterprise-invite-row strong,.enterprise-invite-row small{display:block}.enterprise-invite-row small{margin-top:3px;color:#64748b;font-size:8px}.enterprise-invite-row>span{color:#64748b;font-size:8px}
+.enterprise-dialog{width:min(480px,calc(100vw - 24px));padding:0;border:0;border-radius:22px}.enterprise-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(6px)}
+.enterprise-dialog label{display:grid;gap:6px}.enterprise-dialog label span{font-size:9px;font-weight:900}.enterprise-dialog input,.enterprise-dialog select{padding:12px;border:1px solid #dbe2ec;border-radius:12px}
+[data-role-denied="true"]{display:none!important}
+html[data-theme="dark"] .enterprise-kpis article,html[data-theme="dark"] .enterprise-member-card,html[data-theme="dark"] .enterprise-invites-card{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .enterprise-member-card select,html[data-theme="dark"] .enterprise-member-card input,html[data-theme="dark"] .enterprise-toolbar input,html[data-theme="dark"] .enterprise-toolbar select,html[data-theme="dark"] .enterprise-invite-row{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
+@media(max-width:1050px){.enterprise-member-card{grid-template-columns:42px minmax(160px,1fr) 150px}.enterprise-member-card>*:nth-child(n+4){grid-column:2/-1}.enterprise-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.enterprise-page-head{display:grid}.enterprise-toolbar{grid-template-columns:1fr}.enterprise-kpis{grid-template-columns:1fr 1fr}.enterprise-member-card{grid-template-columns:42px 1fr}.enterprise-member-card>*:nth-child(n+3){grid-column:1/-1}.enterprise-invite-row{grid-template-columns:1fr}.enterprise-invite-row>span{justify-self:start}}

@@ -7,7 +7,7 @@ const DEMO_KEY="fleetpilot.demo.active.v1";
 const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
 const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const PUSH_DELAY=1800;
-let client=null,session=null,profile=null,pushTimer=null,syncing=false,started=false;
+let client=null,session=null,profile=null,workspace=null,membership=null,pushTimer=null,syncing=false,started=false;
 
 const $=s=>document.querySelector(s);
 const cfg=()=>window.FLEETPILOT_CLOUD_CONFIG||{};
@@ -16,7 +16,7 @@ const store=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
 const configured=()=>Boolean(cfg().url&&cfg().publishableKey&&!String(cfg().publishableKey).includes("PASTE_"));
 const isDemo=()=>localStorage.getItem(DEMO_KEY)==="1";
 const dateTime=v=>v?new Date(v).toLocaleString("ru-RU"):"—";
-const owner=()=>profile?.role==="owner";
+const owner=()=>enterpriseRole()==="owner";
 const initial=email=>(String(email||"FleetPilot").trim()[0]||"F").toUpperCase();
 const accountKey=(base)=>`${base}.${session?.user?.id||"guest"}`;
 
@@ -73,6 +73,86 @@ async function loadProfile(){
  if(error)console.error("profile",error);
  profile=data||null
 }
+async function loadWorkspace(){
+ workspace=null;
+ membership=null;
+ if(!session||!client)return null;
+
+ const {data:member,error}=await client
+  .from("workspace_members")
+  .select("workspace_id,user_id,role,city,status,created_at,workspaces(id,name,slug,created_at)")
+  .eq("user_id",session.user.id)
+  .eq("status","active")
+  .limit(1)
+  .maybeSingle();
+
+ if(error){
+  console.error("workspace load",error);
+  return null
+ }
+
+ membership=member||null;
+ workspace=member?.workspaces||null;
+ return membership
+}
+function enterpriseRole(){
+ return membership?.role||profile?.role||"user"
+}
+function hasEnterpriseRole(...roles){
+ return roles.includes(enterpriseRole())
+}
+async function enterpriseList(){
+ if(!client||!membership)return{members:[],invites:[]};
+
+ const [{data:members,error:mError},{data:invites,error:iError}]=await Promise.all([
+  client.from("workspace_members")
+   .select("workspace_id,user_id,role,city,status,created_at,profiles(email)")
+   .eq("workspace_id",membership.workspace_id)
+   .order("created_at",{ascending:true}),
+  client.from("workspace_invites")
+   .select("id,email,role,city,status,created_at,expires_at")
+   .eq("workspace_id",membership.workspace_id)
+   .order("created_at",{ascending:false})
+ ]);
+
+ if(mError||iError)throw(mError||iError);
+ return{members:members||[],invites:invites||[]}
+}
+async function enterpriseInvite({email,role,city}){
+ if(!client||!membership)throw new Error("Рабочее пространство недоступно");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может приглашать сотрудников");
+
+ const normalized=String(email||"").trim().toLowerCase();
+ const {data,error}=await client.from("workspace_invites").insert({
+  workspace_id:membership.workspace_id,
+  email:normalized,
+  role,
+  city:String(city||"").trim()||null,
+  invited_by:session.user.id
+ }).select().single();
+
+ if(error)throw error;
+ return data
+}
+async function enterpriseUpdateMember(userId,patch){
+ if(!client||!membership)throw new Error("Рабочее пространство недоступно");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может менять роли");
+ const {error}=await client.from("workspace_members")
+  .update(patch)
+  .eq("workspace_id",membership.workspace_id)
+  .eq("user_id",userId);
+ if(error)throw error
+}
+async function enterpriseCancelInvite(id){
+ if(!client||!membership)throw new Error("Рабочее пространство недоступно");
+ if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может отменять приглашения");
+ const {error}=await client.from("workspace_invites")
+  .update({status:"cancelled"})
+  .eq("workspace_id",membership.workspace_id)
+  .eq("id",id);
+ if(error)throw error
+}
+
 function avatarData(){
  const email=session?.user?.email||"";
  return{
@@ -133,10 +213,10 @@ function setStatus(text,lastSync=null,state="online"){
 }
 async function refreshSession(){
  if(!client)init();
- if(!client){session=null;profile=null;render();return}
+ if(!client){session=null;profile=null;workspace=null;membership=null;render();return}
  const {data}=await client.auth.getSession();
  session=data?.session||null;
- if(session){localStorage.removeItem(DEMO_KEY);await loadProfile()}
+ if(session){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace()}
  render()
 }
 async function fetchRow(){
@@ -211,7 +291,7 @@ async function signIn(){
  const {data,error}=await client.auth.signInWithPassword({email,password});
  if(error)return message("#cloudAuthMessage",friendly(error),"error");
  session=data.session;localStorage.removeItem(DEMO_KEY);localStorage.removeItem(PENDING_EMAIL_KEY);
- await loadProfile();render();message("#cloudAuthMessage","");
+ await loadProfile();await loadWorkspace();render();message("#cloudAuthMessage","");
  await firstSync()
 }
 async function signUp(){
@@ -219,7 +299,7 @@ async function signUp(){
  if(!email||!password)return message("#cloudRegisterMessage","Введите email и пароль","error");
  const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:cfg().redirectUrl}});
  if(error)return message("#cloudRegisterMessage",friendly(error),"error");
- if(data.session){session=data.session;await loadProfile();render();await firstSync()}
+ if(data.session){session=data.session;await loadProfile();await loadWorkspace();render();await firstSync()}
  else{
   store(PENDING_EMAIL_KEY,email);
   if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=email;
@@ -345,12 +425,12 @@ async function start(){
  if(client){
   const {data}=await client.auth.getSession();session=data?.session||null;
   if(session){localStorage.removeItem(DEMO_KEY);await loadProfile()}
-  client.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){localStorage.removeItem(DEMO_KEY);await loadProfile()}else profile=null;render()})
+  client.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){localStorage.removeItem(DEMO_KEY);await loadProfile();await loadWorkspace()}else{profile=null;workspace=null;membership=null}render()})
  }
  const pending=parse(PENDING_EMAIL_KEY,"");
  if(!session&&!isDemo()&&pending){if($("#cloudPendingEmail"))$("#cloudPendingEmail").textContent=pending;showAuth("confirm")}
  render()
 }
-window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,get session(){return session},get profile(){return profile},get isOwner(){return owner()}};
+window.FleetPilotCloud={start,schedulePush,pushNow,pullNow,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

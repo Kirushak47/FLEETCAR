@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V9.4 Dashboard Refactor</title>
-  <link rel="manifest" href="manifest.webmanifest?v=90400">
-  <link rel="stylesheet" href="styles.css?v=90400">
+  <title>FleetPilot V10 Enterprise</title>
+  <link rel="manifest" href="manifest.webmanifest?v=100000">
+  <link rel="stylesheet" href="styles.css?v=100000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -23,6 +23,7 @@
       <button type="button" data-desktop-page="paymentsPage"><span>▣</span>Аренда</button>
       <button type="button" data-desktop-page="expensesPage"><span>↘</span>Расходы</button>
       <button type="button" data-desktop-page="calendarPage"><span>□</span>Календарь</button>
+      <button type="button" data-desktop-page="companyPage" data-role-nav="owner,coordinator"><span>♟</span>Компания</button>
       <button type="button" data-desktop-page="analyticsPage"><span>▥</span>Аналитика</button><button type="button" data-desktop-page="documentsPage" class="desktop-nav-item">
       <span>▤</span><b>Документы</b>
     </button>
@@ -34,7 +35,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V9.4 Dashboard Refactor</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10 Enterprise</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -425,6 +426,48 @@
     </section>
 
 
+
+    <section id="companyPage" class="page enterprise-page" data-role-page="owner,coordinator">
+      <div class="enterprise-page-head">
+        <div>
+          <span class="eyebrow">FleetPilot Enterprise</span>
+          <h2 id="workspaceTitle">Компания</h2>
+          <p>Сотрудники, роли, города и доступ к рабочему пространству.</p>
+        </div>
+        <button type="button" id="openInviteMember" class="btn primary">+ Пригласить сотрудника</button>
+      </div>
+
+      <div class="enterprise-kpis">
+        <article><small>Участников</small><strong id="enterpriseMembersCount">—</strong></article>
+        <article><small>Владельцев</small><strong id="enterpriseOwnersCount">—</strong></article>
+        <article><small>Активных приглашений</small><strong id="enterpriseInvitesCount">—</strong></article>
+        <article><small>Городов</small><strong id="enterpriseCitiesCount">—</strong></article>
+      </div>
+
+      <div class="enterprise-toolbar">
+        <input id="enterpriseMemberSearch" type="search" placeholder="Поиск по email, роли или городу">
+        <select id="enterpriseRoleFilter">
+          <option value="">Все роли</option>
+          <option value="owner">Владелец</option>
+          <option value="coordinator">Координатор</option>
+          <option value="accountant">Бухгалтер</option>
+          <option value="mechanic">Механик</option>
+          <option value="driver">Водитель</option>
+        </select>
+        <button type="button" id="refreshEnterpriseMembers" class="btn">Обновить</button>
+      </div>
+
+      <div id="enterpriseMessage" class="cloud-message" hidden></div>
+      <div id="enterpriseMembersList" class="enterprise-members-list"></div>
+
+      <section class="enterprise-invites-card">
+        <div class="enterprise-section-head">
+          <div><span class="eyebrow">Ожидают регистрации</span><h3>Приглашения</h3></div>
+        </div>
+        <div id="enterpriseInvitesList" class="enterprise-invites-list"></div>
+      </section>
+    </section>
+
     <section id="dataPage" class="page">
       <div class="section-head">
         <div>
@@ -620,6 +663,33 @@
               <span>▤</span><small>Документы</small>
             </button></nav><button id="quickActionButton" class="quick-action-button" aria-label="Быстрое добавление">＋</button><div id="quickActionMenu" class="quick-action-menu" hidden><button type="button" data-quick-action="car"><span>🚘</span>Автомобиль</button><button type="button" data-quick-action="payment"><span>💳</span>Оплата</button><button type="button" data-quick-action="repair" data-advanced-action="true"><span>🔧</span>Ремонт</button><button type="button" data-quick-action="expense"><span>💸</span>Расход</button><button type="button" data-quick-action="document" data-advanced-action="true"><span>📄</span>Документ</button><button type="button" data-quick-action="deposit" data-advanced-action="true"><span>🔐</span>Кауция</button></div>
 </div>
+
+
+<dialog id="inviteMemberDialog" class="enterprise-dialog">
+  <form method="dialog" id="inviteMemberForm" class="modal">
+    <div class="modal-head">
+      <div><span class="eyebrow">Новый сотрудник</span><h2>Пригласить в компанию</h2></div>
+      <button type="button" data-close="inviteMemberDialog">✕</button>
+    </div>
+    <label><span>Email</span><input id="inviteMemberEmail" type="email" required placeholder="user@example.com"></label>
+    <label><span>Роль</span>
+      <select id="inviteMemberRole" required>
+        <option value="coordinator">Координатор</option>
+        <option value="accountant">Бухгалтер</option>
+        <option value="mechanic">Механик</option>
+        <option value="driver">Водитель</option>
+        <option value="owner">Владелец</option>
+      </select>
+    </label>
+    <label><span>Город / зона ответственности</span><input id="inviteMemberCity" placeholder="Warszawa"></label>
+    <p class="settings-help">После регистрации с этим email пользователь автоматически присоединится к компании с выбранной ролью.</p>
+    <div id="inviteMemberMessage" class="cloud-message" hidden></div>
+    <div class="settings-actions">
+      <button type="button" class="btn" data-close="inviteMemberDialog">Отмена</button>
+      <button class="btn primary">Создать приглашение</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="ownerDashboardSettingsDialog">
   <form method="dialog" class="modal owner-dashboard-settings-modal">
@@ -1032,7 +1102,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=90400"></script>
-<script src="cloud.js?v=90400"></script>
-<script src="app.js?v=90400"></script>
+<script src="cloud-config.js?v=100000"></script>
+<script src="cloud.js?v=100000"></script>
+<script src="app.js?v=100000"></script>
 </body></html>
