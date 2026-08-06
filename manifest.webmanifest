@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V10.8 Service Finance Cloud Beta",
+  "name": "FleetPilot V10.8.1 Period Profit Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=108000",
+  "start_url": "./?v=108100",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

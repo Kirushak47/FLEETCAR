@@ -7248,3 +7248,17 @@ html[data-theme="dark"] .handover-photo-upload{background:#172554;border-color:#
 .repair-source-request strong,.repair-source-request span,.repair-source-request small{display:block}
 html[data-theme="dark"] .expense-repair-fields{border-color:#3730a3;background:#151d31}
 html[data-theme="dark"] .repair-source-request{border-color:#78350f;background:#292014}
+
+.payment-allocation{
+ margin-top:7px!important;
+ padding:8px 10px;
+ border-radius:10px;
+ background:#eef2ff;
+ color:#3730a3!important;
+ font-size:8px;
+ font-weight:800;
+}
+html[data-theme="dark"] .payment-allocation{
+ background:#1e1b4b;
+ color:#c7d2fe!important;
+}

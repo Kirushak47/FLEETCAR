@@ -2105,16 +2105,30 @@ function weekPlanData(){
 }
 
 function financialDataForVisibleCars(period){
- const visible=cityFilteredCars();
  if(selectedFleetCity==="all")return financialData(period);
- const rows=visible.map(c=>financialData(period,c.id));
- return{
-  grossRevenue:rows.reduce((s,x)=>s+Number(x.grossRevenue||0),0),
-  grossCosts:rows.reduce((s,x)=>s+Number(x.grossCosts||0),0),
-  vatDue:rows.reduce((s,x)=>s+Number(x.vatDue||0),0),
-  pit:rows.reduce((s,x)=>s+Number(x.pit||0),0),
-  finalProfit:rows.reduce((s,x)=>s+Number(x.finalProfit||0),0)
- }
+ const allowed=new Set(cityFilteredCars().map(c=>c.id));
+ const bounds=periodBounds(period);
+ const payments=db.payments.filter(p=>allowed.has(p.carId));
+ const grossRevenue=payments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"received"),0);
+ const expectedRevenue=payments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"expected"),0);
+ const repairs=db.repairs.filter(r=>allowed.has(r.carId)&&r.status==="done"&&inPeriod(r.completedDate||r.date,bounds));
+ const paidExpenses=db.expenses.filter(x=>allowed.has(x.carId)&&x.status==="paid"&&!x.linkedRepairId&&inPeriod(x.date,bounds));
+ const repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
+ const otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
+ const grossCosts=repairGross+otherGross;
+ const tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
+ const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue,deductInputVat=vatPayer&&tax.deductVatCosts,netCosts=deductInputVat?grossCosts/vatFactor:grossCosts;
+ const vatDue=noTaxes?0:Math.max(0,(vatPayer?grossRevenue-netRevenue:0)-(deductInputVat?grossCosts-netCosts:0));
+ const profitBeforePit=netRevenue-netCosts;
+ let pit=0;
+ if(tax.method==="ryczalt"&&!noTaxes)pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);
+ else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);
+ else if(tax.method==="scale"&&!noTaxes){const taxable=Math.max(0,profitBeforePit);pit=bounds.months===1?Math.max(0,taxable*.12-300):(taxable<=120000?Math.max(0,taxable*.12-3600):10800+(taxable-120000)*.32)}
+ const allCars=Math.max(1,fleetCars().filter(c=>!c.archived).length);
+ const visibleCars=cityFilteredCars().filter(c=>!c.archived).length;
+ const contributions=noTaxes?0:Number(tax.monthlyContributions||0)*bounds.months*(visibleCars/allCars);
+ const finalProfit=grossRevenue-grossCosts-vatDue-pit-contributions;
+ return{grossRevenue,expectedRevenue,repairGross,otherGross,grossCosts,netRevenue,netCosts,vatDue,pit,contributions,finalProfit,profitBeforePit,paymentCount:payments.filter(p=>overlapDays(paymentPeriod(p),bounds)>0).length}
 }
 function actualWeekRevenue(){
  const from=startOfWeek(),to=endOfWeek();
@@ -4581,14 +4595,40 @@ function inPeriod(dateValue,bounds){
 }
 function financialData(period,carId=null){
  const bounds=periodBounds(period);
- const payments=db.payments.filter(p=>(!carId||p.carId===carId)&&inPeriod(paymentAccrualDate(p),bounds));
+ const scopedPayments=db.payments.filter(p=>!carId||p.carId===carId);
+ const grossRevenue=scopedPayments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"received"),0);
+ const expectedRevenue=scopedPayments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"expected"),0);
+
  const repairs=db.repairs.filter(r=>(!carId||r.carId===carId)&&r.status==="done"&&inPeriod(r.completedDate||r.date,bounds));
  const paidExpenses=db.expenses.filter(x=>(!carId||x.carId===carId)&&x.status==="paid"&&!x.linkedRepairId&&inPeriod(x.date,bounds));
- const grossRevenue=payments.reduce((s,p)=>s+Number(p.received||0),0),repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0),otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0),grossCosts=repairGross+otherGross,tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
- const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue,deductInputVat=vatPayer&&tax.deductVatCosts,netCosts=deductInputVat?grossCosts/vatFactor:grossCosts,outputVat=vatPayer?grossRevenue-netRevenue:0,inputVat=deductInputVat?grossCosts-netCosts:0,vatDue=noTaxes?0:Math.max(0,outputVat-inputVat),profitBeforePit=netRevenue-netCosts;
- let pit=0;if(tax.method==="ryczalt"&&!noTaxes)pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);else if(tax.method==="scale"&&!noTaxes){const taxable=Math.max(0,profitBeforePit);pit=bounds.months===1?Math.max(0,taxable*.12-300):(taxable<=120000?Math.max(0,taxable*.12-3600):10800+(taxable-120000)*.32)}
- const contributions=noTaxes?0:Number(tax.monthlyContributions||0)*bounds.months,finalProfit=grossRevenue-grossCosts-vatDue-pit-contributions;
- return{grossRevenue,repairGross,otherGross,grossCosts,netRevenue,netCosts,vatDue,pit,contributions,finalProfit,profitBeforePit,paymentCount:payments.length}
+ const repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
+ const otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
+ const grossCosts=repairGross+otherGross;
+
+ const tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
+ const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue;
+ const deductInputVat=vatPayer&&tax.deductVatCosts;
+ const netCosts=deductInputVat?grossCosts/vatFactor:grossCosts;
+ const outputVat=vatPayer?grossRevenue-netRevenue:0;
+ const inputVat=deductInputVat?grossCosts-netCosts:0;
+ const vatDue=noTaxes?0:Math.max(0,outputVat-inputVat);
+ const profitBeforePit=netRevenue-netCosts;
+
+ let pit=0;
+ if(tax.method==="ryczalt"&&!noTaxes)pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);
+ else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);
+ else if(tax.method==="scale"&&!noTaxes){
+  const taxable=Math.max(0,profitBeforePit);
+  pit=bounds.months===1?Math.max(0,taxable*.12-(carId?300/Math.max(1,fleetCars().length):300)):(taxable<=120000?Math.max(0,taxable*.12-(carId?3600/Math.max(1,fleetCars().length):3600)):10800+(taxable-120000)*.32)
+ }
+
+ const contributions=noTaxes?0:fixedContributionShare(carId,bounds);
+ const finalProfit=grossRevenue-grossCosts-vatDue-pit-contributions;
+ return{
+  grossRevenue,expectedRevenue,repairGross,otherGross,grossCosts,
+  netRevenue,netCosts,vatDue,pit,contributions,finalProfit,profitBeforePit,
+  paymentCount:scopedPayments.filter(p=>overlapDays(paymentPeriod(p),bounds)>0).length
+ }
 }
 function syncTaxMethodFields(){
  const method=$("#taxMethod").value;
@@ -4611,7 +4651,7 @@ function syncTaxMethodFields(){
 function renderProfitability(){
  const period=$("#profitPeriod")?.value||"month",tax=taxSettings(),data=financialData(period);
  $("#profitSummary").innerHTML=[
-  ["Оплата аренды",money(data.grossRevenue),"good"],
+  ["Доход за дни периода",money(data.grossRevenue),"good"],
   ["Ремонты и расходы",money(data.grossCosts),"danger"],
   ["VAT к оплате",money(data.vatDue),""],
   ["PIT",money(data.pit),""],
@@ -4625,11 +4665,20 @@ function renderProfitability(){
  syncTaxMethodFields();
  $("#carProfitability").innerHTML=fleetCars().map(c=>{
   const d=financialData(period,c.id),m=model(c);
-  return `<div class="profitability-row"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></div><span>Аренда ${money(d.grossRevenue)}</span><span>Ремонты ${money(d.repairGross)}</span><span>После налогов ${money(d.finalProfit)}</span></div>`
+  return `<div class="profitability-row"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></div><span>Доход периода ${money(d.grossRevenue)}</span><span>Ремонты ${money(d.repairGross)}</span><span>После налогов ${money(d.finalProfit)}</span></div>`
  }).join("");
 }
 
-function renderPayments(){const total=db.payments.reduce((s,p)=>s+p.received,0),expected=db.payments.reduce((s,p)=>s+p.expected,0),debt=expected-total;$("#paymentSummary").innerHTML=[["Ожидалось",money(expected)],["Получено",money(total)],["Задолженность",money(debt)],["Записей",db.payments.length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#paymentList").innerHTML=[...db.payments].sort((a,b)=>b.to.localeCompare(a.to)).map(p=>{const c=car(p.carId),s=paymentStatus(p),rest=Math.max(0,p.expected-p.received);return `<article class="list-item"><div class="top"><div><h3>${model(c).brand} ${model(c).model} · ${c.plate}</h3><p>${p.tenant||c.tenant||"Без арендатора"} · ${paymentTimingText(p.timing||c.paymentTiming||"advance")} · ${p.referenceWeek||p.week||isoWeek(p.from)} · ${date(p.from)} — ${date(p.to)} · поступило ${date(p.date)}</p></div><strong>${money(p.received)}</strong></div><p>Ожидалось ${money(p.expected)} · Осталось ${money(rest)}</p><span class="badge ${s}">${paymentStatusText(s)}</span><div class="item-actions"><button class="btn" onclick="editPayment('${p.id}')">Редактировать</button><button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Оплат пока нет</div>`}
+function renderPayments(){
+ const total=db.payments.reduce((s,p)=>s+Number(p.received||0),0);
+ const expected=db.payments.reduce((s,p)=>s+Number(p.expected||0),0),debt=expected-total;
+ $("#paymentSummary").innerHTML=[["Ожидалось",money(expected)],["Получено",money(total)],["Задолженность",money(debt)],["Записей",db.payments.length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+ $("#paymentList").innerHTML=[...db.payments].sort((a,b)=>(b.to||"").localeCompare(a.to||"")).map(p=>{
+  const c=car(p.carId),s=paymentStatus(p),rest=Math.max(0,Number(p.expected||0)-Number(p.received||0));
+  const allocation=paymentMonthAllocation(p).map(x=>`${x.month}: ${x.days} дн. · ${money(x.received)}`).join(" | ");
+  return `<article class="list-item"><div class="top"><div><h3>${model(c).brand} ${model(c).model} · ${c.plate}</h3><p>${p.tenant||c.tenant||"Без арендатора"} · ${paymentTimingText(p.timing||c.paymentTiming||"advance")} · ${p.referenceWeek||p.week||isoWeek(p.from)} · ${date(p.from)} — ${date(p.to)} · поступило ${date(p.date)}</p></div><strong>${money(p.received)}</strong></div><p>Ожидалось ${money(p.expected)} · Осталось ${money(rest)}</p>${allocation?`<p class="payment-allocation">Распределение: ${allocation}</p>`:""}<span class="badge ${s}">${paymentStatusText(s)}</span><div class="item-actions"><button class="btn" onclick="editPayment('${p.id}')">Редактировать</button><button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button></div></article>`
+ }).join("")||`<div class="card">Оплат пока нет</div>`
+}
 function renderExpenses(){const active=db.expenses.filter(x=>x.status==="planned"),sum=active.reduce((s,x)=>s+x.amount,0);$("#expenseSummary").innerHTML=[["Запланировано",active.length],["Плановая сумма",money(sum)],["Оплачено",db.expenses.filter(x=>x.status==="paid").length],["Отменено",db.expenses.filter(x=>x.status==="cancelled").length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#expenseList").innerHTML=[...db.expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{const c=car(x.carId);return `<article class="list-item"><div class="top"><div><h3>${x.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(x.date)}</p></div><strong>${money(x.amount)}</strong></div><p>${expenseCategoryText(x.category)} · ${x.note||""}</p><span class="badge ${x.status==="paid"?"paid":""}">${expenseStatusText(x.status)}</span><div class="item-actions"><button class="btn" onclick="editExpense('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Плановых расходов нет</div>`}
 function addMonthsIso(dateValue,months){const d=new Date(dateValue+"T12:00:00");d.setMonth(d.getMonth()+months);return d.toISOString().slice(0,10)}
 function buildInsuranceInstallments(total,count,firstDate,frequency,existing=[]){const step=frequency==="quarterly"?3:1,amount=Math.round((Number(total||0)/Math.max(1,count))*100)/100;return Array.from({length:count},(_,i)=>{const old=existing[i],finalAmount=i===count-1?Math.round((Number(total||0)-amount*(count-1))*100)/100:amount;return{id:old?.id||uid(),number:i+1,due:addMonthsIso(firstDate,i*step),amount:finalAmount,paid:old?.paid||false,paidDate:old?.paidDate||""}})}
@@ -4832,7 +4881,70 @@ function openPaymentDialog(carId="",id=""){
 }
 
 function monthFromDate(value){return value?String(value).slice(0,7):""}
-function paymentAccrualDate(payment){return payment.accrualMonth?`${payment.accrualMonth}-01`:payment.from||payment.to||payment.date}
+function paymentAccrualDate(payment){
+ return payment.from||payment.to||(payment.accrualMonth?`${payment.accrualMonth}-01`:payment.date)
+}
+function safeLocalDate(value){
+ if(!value)return null;
+ const date=new Date(`${value}T12:00:00`);
+ return Number.isNaN(date.getTime())?null:date
+}
+function inclusiveDays(from,to){
+ if(!from||!to)return 0;
+ return Math.max(0,Math.round((to-from)/86400000)+1)
+}
+function paymentPeriod(payment){
+ let from=safeLocalDate(payment.from),to=safeLocalDate(payment.to);
+ if(from&&to&&from>to)[from,to]=[to,from];
+ if(from&&to)return{from,to,days:inclusiveDays(from,to),source:"period"};
+ const fallback=safeLocalDate(payment.accrualMonth?`${payment.accrualMonth}-01`:payment.date||payment.to||payment.from);
+ return fallback?{from:fallback,to:fallback,days:1,source:"fallback"}:null
+}
+function overlapDays(period,bounds){
+ if(!period)return 0;
+ const from=bounds.from&&period.from<bounds.from?bounds.from:period.from;
+ const to=bounds.to&&period.to>bounds.to?bounds.to:period.to;
+ return from<=to?inclusiveDays(from,to):0
+}
+function allocatedPaymentAmount(payment,bounds,field="received"){
+ const amount=Number(payment[field]||0);
+ if(!amount)return 0;
+ const period=paymentPeriod(payment);
+ if(!period)return 0;
+ const overlap=overlapDays(period,bounds);
+ if(!overlap)return 0;
+ return amount*(overlap/Math.max(1,period.days))
+}
+function paymentMonthAllocation(payment){
+ const period=paymentPeriod(payment);
+ if(!period)return[];
+ const result=[];
+ let cursor=new Date(period.from);
+ while(cursor<=period.to){
+  const year=cursor.getFullYear(),month=cursor.getMonth();
+  const monthStart=new Date(year,month,1);
+  const monthEnd=new Date(year,month+1,0);
+  const bounds={from:monthStart,to:monthEnd};
+  const days=overlapDays(period,bounds);
+  if(days){
+   result.push({
+    month:`${year}-${String(month+1).padStart(2,"0")}`,
+    days,
+    received:allocatedPaymentAmount(payment,bounds,"received"),
+    expected:allocatedPaymentAmount(payment,bounds,"expected")
+   })
+  }
+  cursor=new Date(year,month+1,1)
+ }
+ return result
+}
+function fixedContributionShare(carId,bounds){
+ const total=Number(taxSettings().monthlyContributions||0)*bounds.months;
+ if(!carId)return total;
+ const eligible=fleetCars().filter(c=>!c.archived);
+ return eligible.length?total/eligible.length:total
+}
+
 function syncExpenseRepairFields(){const root=$("#expenseRepairFields");if(root)root.hidden=$("#expenseCategory")?.value!=="repair"}
 function currentConfirmedMileage(carId){
  const c=car(carId),local=Number(c?.mileage||0);
