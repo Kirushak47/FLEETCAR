@@ -1138,6 +1138,8 @@ function openAllFleetDriverRequests(){
  renderWorkspaceRepairRequests()
 }
 async function loadFleetServiceAlerts({rerender=false}={}){
+ const requestPanel=$("#fleetDriverRequestsPanel");
+ if(requestPanel)requestPanel.hidden=true;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
@@ -1147,6 +1149,11 @@ async function loadFleetServiceAlerts({rerender=false}={}){
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
  }catch(error){
+  workspaceRepairAlerts=[];
+  const panel=$("#fleetDriverRequestsPanel");
+  const list=$("#fleetDriverRequestsList");
+  if(panel)panel.hidden=true;
+  if(list)list.innerHTML="";
   console.warn("Fleet service alerts failed",error);
   return[]
  }
@@ -1263,6 +1270,19 @@ function driverAssignmentControl(member){
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
  </select>`
 }
+const LAST_PAGE_KEY="fleetpilot.last.page.v1";
+function rememberFleetPilotPage(id){
+ const transient=new Set(["searchPage","carPage","driverPortalPage","driverProfilePage"]);
+ if(id&&document.getElementById(id)&&!transient.has(id)){
+  localStorage.setItem(LAST_PAGE_KEY,id)
+ }
+}
+function restoreLastFleetPilotPage(){
+ const saved=localStorage.getItem(LAST_PAGE_KEY)||"dashboardPage";
+ const allowed=document.getElementById(saved)&&enterpriseCanOpen(saved)?saved:"dashboardPage";
+ requestAnimationFrame(()=>showPage(allowed))
+}
+
 function showPage(id){
  applyEnterpriseAccess();
  if(!enterpriseCanOpen(id)){
@@ -1270,6 +1290,7 @@ function showPage(id){
   id="dashboardPage"
  }
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
+ rememberFleetPilotPage(id);
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
@@ -1587,7 +1608,8 @@ $$("[data-desktop-page]").forEach(button=>{
 });
 $("#desktopAddCar").onclick=()=>openCarDialog();
 $("#desktopSearchButton").onclick=()=>$("#fleetSearch")?.focus();
-$("#desktopThemeToggle").onclick=()=>toggleTheme();
+const desktopThemeToggle=$("#desktopThemeToggle");
+if(desktopThemeToggle)desktopThemeToggle.remove();
 $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
@@ -1607,12 +1629,14 @@ $("#saveGpsMapping").onclick=saveGpsMapping;
 
 const dashboardCustomizeWindows=$("#dashboardCustomizeWindows");
 if(dashboardCustomizeWindows)dashboardCustomizeWindows.onclick=()=>{
- renderControlWindowOptions();
+ renderControlWindowsOptions();
  $("#controlWindowsDialog")?.showModal()
 };
 
-$("#customizeControlWindows").onclick=openControlWindowsDialog;
-$("#showAllControlWindows").onclick=()=>{
+const customizeControlWindows=$("#customizeControlWindows");
+if(customizeControlWindows)customizeControlWindows.onclick=openControlWindowsDialog;
+const showAllControlWindows=$("#showAllControlWindows");
+if(showAllControlWindows)showAllControlWindows.onclick=()=>{
  const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));
  saveControlWindowSettings(settings);
  renderControlWindowsOptions();
@@ -1630,12 +1654,14 @@ $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALER
 
 
 document.addEventListener("DOMContentLoaded",()=>{
- applyTheme();
+ localStorage.setItem(THEME_KEY,"light");
+ applyTheme("light");
+ restoreLastFleetPilotPage();
  if(window.innerWidth>=1100){
   setTimeout(scheduleInitialFleetBoot,0)
  }
 });
-window.addEventListener("pageshow",()=>applyTheme());
+window.addEventListener("pageshow",()=>applyTheme("light"));
 window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement()});
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
@@ -2529,7 +2555,8 @@ function renderControlWindowsOptions(){
 }
 function openControlWindowsDialog(){
  renderControlWindowsOptions();
- $("#controlWindowsDialog").showModal()
+ const dialog=$("#controlWindowsDialog");
+ if(dialog&&!dialog.open)dialog.showModal()
 }
 window.hideControlWindow=hideControlWindow;
 
@@ -4198,9 +4225,8 @@ function forceInitialFleetRender(){
  const fleetGrid=$("#fleetGrid");
  const carsBlock=fleetGrid?.closest("[data-dashboard-block='cars']");
 
- // Make the fleet page and the list visible before rendering.
- $$(".page").forEach(page=>page.classList.toggle("active",page.id==="fleetPage"));
- if(fleetPage)fleetPage.classList.add("active");
+ // Prepare fleet data in the background without changing the user's current page.
+ const currentPage=$(".page.active")?.id||localStorage.getItem(LAST_PAGE_KEY)||"dashboardPage";
 
  document.documentElement.dataset.desktopFleetView="list";
  localStorage.setItem(DESKTOP_VIEW_KEY,"list");

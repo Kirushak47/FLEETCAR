@@ -9229,3 +9229,20 @@ html[data-theme="dark"] .service-requests-summary-banner span{color:#b45309!impo
  .calendar-agenda-row{grid-template-columns:44px 36px 1fr}
  .calendar-agenda-row>b{display:none}
 }
+
+
+/* FleetPilot V12.6.1 critical fixes */
+#fleetDriverRequestsPanel[hidden]{
+ display:none!important;
+}
+#fleetDriverRequestsPanel:not([hidden]){
+ display:block!important;
+}
+#desktopThemeToggle,
+.theme-switcher,
+.appearance-panel,
+[data-theme-mode],
+[data-theme-switcher],
+.theme-toggle{
+ display:none!important;
+}
