@@ -8132,3 +8132,97 @@ html[data-theme="dark"] .service-requests-summary-banner span{color:#fbbf24}
  .service-requests-summary-open{grid-column:1/-1;text-align:right}
  .v12-car-document{grid-template-columns:1fr}
 }
+
+
+/* FleetPilot V12.2 — permanent light theme */
+html,
+html[data-theme="light"],
+html[data-theme="dark"]{
+ color-scheme:light!important;
+ --v12-bg:#f4f6fb!important;
+ --v12-surface:#ffffff!important;
+ --v12-surface-soft:#f8fafc!important;
+ --v12-border:#e6eaf2!important;
+ --v12-text:#111827!important;
+ --v12-muted:#667085!important;
+ background:#f4f6fb!important;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .desktop-content,
+html[data-theme="dark"] .enterprise-content,
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .desktop-shell,
+html[data-theme="dark"] .enterprise-shell{
+ background:#f4f6fb!important;
+ color:#111827!important;
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .desktop-topbar,
+html[data-theme="dark"] .enterprise-topbar,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .dashboard-card,
+html[data-theme="dark"] .control-card,
+html[data-theme="dark"] .desktop-card,
+html[data-theme="dark"] .enterprise-card,
+html[data-theme="dark"] .driver-portal-card,
+html[data-theme="dark"] .profitability-card,
+html[data-theme="dark"] .calendar-card,
+html[data-theme="dark"] .desktop-fleet-row,
+html[data-theme="dark"] .fleet-toolbar,
+html[data-theme="dark"] .filters,
+html[data-theme="dark"] .desktop-fleet-toolbar,
+html[data-theme="dark"] .command-bar,
+html[data-theme="dark"] .car-detail-tabs,
+html[data-theme="dark"] dialog .modal,
+html[data-theme="dark"] .doc-card,
+html[data-theme="dark"] .desktop-board-car,
+html[data-theme="dark"] .workspace-request-card,
+html[data-theme="dark"] .workspace-repair-request,
+html[data-theme="dark"] .v12-car-document{
+ background:#fff!important;
+ border-color:#e6eaf2!important;
+ color:#111827!important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea{
+ background:#fff!important;
+ border-color:#dfe4ed!important;
+ color:#111827!important;
+}
+
+html[data-theme="dark"] .desktop-board-column,
+html[data-theme="dark"] .driver-empty-state,
+html[data-theme="dark"] .control-empty,
+html[data-theme="dark"] .desktop-table-empty,
+html[data-theme="dark"] .v12-no-file{
+ background:#f8fafc!important;
+ border-color:#dfe4ed!important;
+ color:#667085!important;
+}
+
+html[data-theme="dark"] tbody tr{background:#fff!important}
+html[data-theme="dark"] tbody td{border-color:#e6eaf2!important}
+
+html[data-theme="dark"] .service-requests-summary-banner{
+ border-color:#fbbf24!important;
+ background:linear-gradient(135deg,#fff7ed,#fffbeb)!important;
+ color:#111827!important;
+}
+html[data-theme="dark"] .service-requests-summary-banner span{color:#b45309!important}
+
+.theme-switcher,
+[data-theme-switcher],
+#themeSwitcher,
+#themeToggle,
+.theme-toggle,
+.settings-theme-row,
+.dark-mode-control{
+ display:none!important;
+}

@@ -1,11 +1,13 @@
 .git
 .git/**
-.wrangler
-.wrangler/**
 .github
 .github/**
+.wrangler
+.wrangler/**
 node_modules
 node_modules/**
+_redirects
+_headers
 supabase*.sql
 README_ORIGINAL.md
 CLOUDFLARE_PAGES_SETUP.md

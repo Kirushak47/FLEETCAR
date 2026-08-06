@@ -1,3 +1,21 @@
+
+(function(){
+  const forceLight=()=>{
+    document.documentElement.setAttribute("data-theme","light");
+    document.documentElement.style.colorScheme="light";
+    try{
+      localStorage.setItem("fleetpilot.theme","light");
+      localStorage.setItem("theme","light");
+    }catch(e){}
+  };
+  forceLight();
+  window.addEventListener("DOMContentLoaded",()=>{
+    forceLight();
+    document.querySelectorAll(".theme-switcher,[data-theme-switcher],#themeSwitcher,#themeToggle,.theme-toggle,.settings-theme-row,.dark-mode-control").forEach(el=>el.remove());
+  });
+  new MutationObserver(forceLight).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme","class"]});
+})();
+
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DATA_KEY="fleetpilot.data.v1",META_KEY="fleetpilot.meta.v1",today=()=>new Date().toISOString().slice(0,10),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
 const addDays=(d,n)=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
