@@ -1,7 +1,7 @@
-# FleetPilot V10.9 — Insurance Installments
-SQL выполнять не нужно.
-1. Загрузить файлы на GitHub.
-2. Открыть https://kirushak47.github.io/FLEETCAR/?v=109000
-3. Ctrl+F5.
+# FleetPilot V11.1 Core Sync
 
-Добавлено: синхронизация даты страховки с автомобилем, отдельные суммы/даты рат, фактическая оплата, автоматический расход, защита от дублей и мгновенный пересчёт аналитики.
+1. Выполни `supabase_v11_1_core_sync.sql` в Supabase SQL Editor.
+2. Загрузи файлы в корень GitHub Pages.
+3. Открой https://kirushak47.github.io/FLEETCAR/?v=111000 и нажми Ctrl+F5.
+
+Исправлено: умная навигация к задачам, подсветка записи, иконки заявок по car_id, серверный возврат, снятие водителя, общий пробег и Realtime.

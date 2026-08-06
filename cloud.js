@@ -394,6 +394,13 @@ async function startRealtimeSync(){
    const row=payload.new||null;
    if(row)scheduleRemoteApply(row)
   })
+  .on("postgres_changes",{event:"*",schema:"public",table:"driver_vehicle_assignments",filter:`workspace_id=eq.${workspaceId}`},()=>{
+   window.dispatchEvent(new CustomEvent("fleetpilot:assignments-changed"));
+   checkCloudForUpdates()
+  })
+  .on("postgres_changes",{event:"*",schema:"public",table:"driver_repair_requests",filter:`workspace_id=eq.${workspaceId}`},()=>{
+   window.dispatchEvent(new CustomEvent("fleetpilot:repair-requests-changed"))
+  })
   .subscribe(status=>{
    if(status==="SUBSCRIBED")setStatus("Онлайн · автосинхронизация",cloudTimestamp(),"online");
    if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setStatus("Переподключение к облаку…",cloudTimestamp(),"syncing")
@@ -1050,7 +1057,7 @@ async function getMyWorkspaceNotifications(){
 }
 async function getDriverAssignments(){
  if(!client||!membership)return[];
- const {data,error}=await client.rpc("get_workspace_driver_assignments");
+ const {data,error}=await client.rpc("get_workspace_driver_assignments_v11");
  if(error)throw error;
  return data||[]
 }
@@ -1123,6 +1130,12 @@ async function linkDriverRequestRepair(requestId,repairId,status,comment=""){
  const {error}=await client.rpc("link_driver_request_repair",{request_id_value:requestId,linked_repair_id_value:String(repairId),request_status_value:String(status),manager_comment_value:String(comment||"").trim()||null});
  if(error)throw error
 }
-window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,linkDriverRequestRepair,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+async function updateDriverMileage(mileage,source="driver_manual"){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ const {data,error}=await client.rpc("update_assigned_vehicle_mileage",{mileage_value:Number(mileage||0),source_value:String(source)});
+ if(error)throw error;
+ return Array.isArray(data)?data[0]||null:data||null
+}
+window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,linkDriverRequestRepair,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,updateDriverMileage,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

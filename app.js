@@ -987,10 +987,11 @@ function renderFleetServiceAlertIndicators(){
  for(const carId of affectedCars){
   const rows=repairAlertsForCar(carId);
   const level=repairAlertLevel(rows);
-  const targets=[
-   ...document.querySelectorAll(`[data-fleet-car-id="${CSS.escape(carId)}"] .hero-card-controls`),
-   ...document.querySelectorAll(`[data-board-car="${CSS.escape(carId)}"]`)
-  ];
+  const carSelectors=[`[data-fleet-car-id="${CSS.escape(carId)}"]`,`[data-board-car="${CSS.escape(carId)}"]`,`[data-car-id="${CSS.escape(carId)}"]`];
+  const targets=[];
+  for(const selector of carSelectors){
+   document.querySelectorAll(selector).forEach(card=>targets.push(card.querySelector('.hero-card-controls')||card))
+  }
 
   targets.forEach(target=>{
    if(target.querySelector(`[data-car-service-alert="${CSS.escape(carId)}"]`))return;
@@ -1026,11 +1027,13 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  }
 }
 function openFleetServiceAlert(carId){
+ const rows=repairAlertsForCar(carId).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  selectedWorkspaceRepairCarId=String(carId);
  showPage("repairsPage");
- setTimeout(()=>{
-  renderWorkspaceRepairRequests();
-  document.querySelector("#workspaceRepairRequestsList")?.scrollIntoView({behavior:"smooth",block:"start"})
+ setTimeout(async()=>{
+  await renderWorkspaceRepairRequests();
+  if(rows[0])highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(rows[0].id))}"]`);
+  else document.querySelector("#workspaceRepairRequestsList")?.scrollIntoView({behavior:"smooth",block:"start"})
  },50)
 }
 function openAllFleetServiceAlerts(){
@@ -1069,7 +1072,7 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);
    const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
-   return `<article class="workspace-request-row urgency-${row.urgency}" data-workspace-request-car="${row.car_id}">
+   return `<article class="workspace-request-row urgency-${row.urgency}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}">
     <div>
      <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category} · ${carName}</strong>
      <span>${row.description}</span>
@@ -1093,7 +1096,12 @@ async function renderWorkspaceRepairRequests(){
 async function loadWorkspaceDriverAssignments(){
  try{
   const rows=await window.FleetPilotCloud.getDriverAssignments();
-  workspaceDriverAssignments=Object.fromEntries(rows.map(row=>[row.driver_user_id,row.car_id]))
+  workspaceDriverAssignments=Object.fromEntries(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[row.driver_user_id,row.car_id]));
+  const activeByCar=new Map(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[String(row.car_id),row]));
+  fleetCars().forEach(c=>{
+   const assignment=activeByCar.get(String(c.id));
+   if(!assignment&&c.driverUserId){c.driverUserId="";c.tenant="";if(c.status==="active")c.status="free"}
+  })
  }catch{workspaceDriverAssignments={}}
 }
 function driverAssignmentControl(member){
@@ -1317,20 +1325,10 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
   });
 
   const assignedCar=driverAssignedCar();
-  if(assignedCar&&result?.mileage!=null){
-   assignedCar.mileage=Number(result.mileage);
-   if(type==="return"){
-    assignedCar.tenant="";
-    assignedCar.status=result.requires_attention?"attention":"free"
-   }else{
-    assignedCar.tenant=driverProfileDisplayName();
-    assignedCar.status="active"
-   }
-   save()
-  }
-
+  if(assignedCar&&result?.mileage!=null)assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),Number(result.mileage));
   $("#vehicleHandoverDialog").close();
   toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
+  await window.FleetPilotCloud.checkCloudForUpdates?.();
   await renderDriverPortal()
  }catch(error){handoverMessage(error.message||String(error),"error")}
 };
@@ -2440,7 +2438,7 @@ function maybeShowCriticalAlert(force=false){
  const last=localStorage.getItem(ALERT_KEY);
  if(!force&&last===today())return;
  $("#criticalAlertTitle").textContent=`Требуют внимания — ${new Set(alerts.map(x=>x.carId)).size} авто`;
- $("#criticalAlertList").innerHTML=alerts.map(x=>`<button type="button" onclick="openCar('${x.carId}');$('#criticalAlertDialog').close()">${x.text}<span>›</span></button>`).join("");
+ $("#criticalAlertList").innerHTML=alerts.map(x=>`<button type="button" onclick="$('#criticalAlertDialog').close();openSmartEntity('${x.type||'vehicle'}','${x.entityId||''}','${x.carId}')">${x.text}<span>›</span></button>`).join("");
  dialog.showModal()
 }
 
@@ -3973,7 +3971,7 @@ function renderDesktopEvents(){
  const root=$("#desktopEventFeed");if(!root)return;
  const events=allEvents().filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
  root.innerHTML=events.length?events.map(e=>`<button type="button" class="desktop-event ${e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openCar('${e.carId}')">
-  <span>${eventIcon(e.type)}</span><div><strong>${e.title}</strong><small>${e.car}</small></div><time>${e.days===0?"Сегодня":e.days===1?"Завтра":`${e.days} дн.`}</time>
+  <button type="button" class="smart-event-button" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><span>${eventIcon(e.type)}</span><div><strong>${e.title}</strong><small>${e.car}</small></div><time>${e.days===0?"Сегодня":e.days===1?"Завтра":`${e.days} дн.`}</time></button>
  </button>`).join(""):`<div class="command-empty">Ближайших событий нет</div>`
 }
 
@@ -4679,7 +4677,7 @@ function renderPayments(){
   return `<article class="list-item"><div class="top"><div><h3>${model(c).brand} ${model(c).model} · ${c.plate}</h3><p>${p.tenant||c.tenant||"Без арендатора"} · ${paymentTimingText(p.timing||c.paymentTiming||"advance")} · ${p.referenceWeek||p.week||isoWeek(p.from)} · ${date(p.from)} — ${date(p.to)} · поступило ${date(p.date)}</p></div><strong>${money(p.received)}</strong></div><p>Ожидалось ${money(p.expected)} · Осталось ${money(rest)}</p>${allocation?`<p class="payment-allocation">Распределение: ${allocation}</p>`:""}<span class="badge ${s}">${paymentStatusText(s)}</span><div class="item-actions"><button class="btn" onclick="editPayment('${p.id}')">Редактировать</button><button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button></div></article>`
  }).join("")||`<div class="card">Оплат пока нет</div>`
 }
-function renderExpenses(){const active=db.expenses.filter(x=>x.status==="planned"),sum=active.reduce((s,x)=>s+x.amount,0);$("#expenseSummary").innerHTML=[["Запланировано",active.length],["Плановая сумма",money(sum)],["Оплачено",db.expenses.filter(x=>x.status==="paid").length],["Отменено",db.expenses.filter(x=>x.status==="cancelled").length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#expenseList").innerHTML=[...db.expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{const c=car(x.carId);return `<article class="list-item"><div class="top"><div><h3>${x.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(x.date)}</p></div><strong>${money(x.amount)}</strong></div><p>${expenseCategoryText(x.category)} · ${x.note||""}</p><span class="badge ${x.status==="paid"?"paid":""}">${expenseStatusText(x.status)}</span><div class="item-actions"><button class="btn" onclick="editExpense('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Плановых расходов нет</div>`}
+function renderExpenses(){const active=db.expenses.filter(x=>x.status==="planned"),sum=active.reduce((s,x)=>s+x.amount,0);$("#expenseSummary").innerHTML=[["Запланировано",active.length],["Плановая сумма",money(sum)],["Оплачено",db.expenses.filter(x=>x.status==="paid").length],["Отменено",db.expenses.filter(x=>x.status==="cancelled").length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#expenseList").innerHTML=[...db.expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{const c=car(x.carId);return `<article class="list-item" data-expense-id="${x.id}"><div class="top"><div><h3>${x.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(x.date)}</p></div><strong>${money(x.amount)}</strong></div><p>${expenseCategoryText(x.category)} · ${x.note||""}</p><span class="badge ${x.status==="paid"?"paid":""}">${expenseStatusText(x.status)}</span><div class="item-actions"><button class="btn" onclick="editExpense('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Плановых расходов нет</div>`}
 function addMonthsIso(dateValue,months){const d=new Date(dateValue+"T12:00:00");d.setMonth(d.getMonth()+months);return d.toISOString().slice(0,10)}
 function buildInsuranceInstallments(total,count,firstDate,frequency,existing=[]){
  const step=frequency==="quarterly"?3:1;
@@ -4741,6 +4739,55 @@ function rebuildInsuranceInstallmentDraft(preserve=true){
  documentInstallmentDraft=buildInsuranceInstallments(Number($("#documentCost").value||0),Math.max(2,Number($("#documentInstallmentCount").value||4)),$("#documentFirstInstallment").value||today(),$("#documentInstallmentFrequency").value,preserve?documentInstallmentDraft:[]);
  renderInsuranceInstallmentEditor()
 }
+let smartNavigationTarget=null;
+function clearSmartHighlight(){
+ document.querySelectorAll('.smart-target-highlight').forEach(el=>el.classList.remove('smart-target-highlight'))
+}
+function highlightSmartTarget(selector){
+ clearSmartHighlight();
+ const target=document.querySelector(selector);
+ if(!target)return false;
+ target.classList.add('smart-target-highlight');
+ target.scrollIntoView({behavior:'smooth',block:'center'});
+ setTimeout(()=>target.classList.remove('smart-target-highlight'),5000);
+ return true
+}
+function openSmartEntity(type,entityId,carId=''){
+ smartNavigationTarget={type,entityId:String(entityId||''),carId:String(carId||'')};
+ if(type==='repair'){
+  showPage('repairsPage');
+  setTimeout(()=>{
+   renderRepairs();
+   if(!highlightSmartTarget(`[data-repair-id="${CSS.escape(String(entityId))}"]`)){
+    const row=db.repairs.find(x=>String(x.id)===String(entityId));
+    if(row)openRepairDialog('',row.id)
+   }
+  },80);return
+ }
+ if(type==='driver_request'){
+  selectedWorkspaceRepairCarId=String(carId||'');
+  showPage('repairsPage');
+  setTimeout(async()=>{
+   await renderWorkspaceRepairRequests();
+   highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(entityId))}"]`)
+  },80);return
+ }
+ if(type==='document'||type==='insurance'||type==='inspection'){
+  showPage('documentsPage');
+  setTimeout(()=>{
+   renderDocuments();
+   if(!highlightSmartTarget(`[data-document-id="${CSS.escape(String(entityId))}"]`)){
+    const row=db.documents.find(x=>String(x.id)===String(entityId));if(row)openDocumentDialog('',row.id)
+   }
+  },80);return
+ }
+ if(type==='expense'){
+  showPage('expensesPage');
+  setTimeout(()=>{renderExpenses();highlightSmartTarget(`[data-expense-id="${CSS.escape(String(entityId))}"]`)},80);return
+ }
+ if(carId){showPage('fleetPage');setTimeout(()=>openCar(String(carId)),60)}
+}
+window.openSmartEntity=openSmartEntity;
 function allEvents(){
  const result=[];
  for(const c of cityFilteredCars()){
@@ -4748,11 +4795,11 @@ function allEvents(){
   if(c.insurance)result.push({date:c.insurance,carId:c.id,title:"Окончание страховки",type:"insurance",car:m.brand+" "+m.model+" · "+c.plate});
   if(c.inspection)result.push({date:c.inspection,carId:c.id,title:"Техосмотр",type:"inspection",car:m.brand+" "+m.model+" · "+c.plate});
  }
- for(const r of db.repairs.filter(x=>x.status!=="done"))result.push({date:r.date,carId:r.carId,title:r.title,type:"repair",car:model(car(r.carId)).brand+" "+model(car(r.carId)).model+" · "+car(r.carId).plate});
- for(const x of db.expenses.filter(x=>x.status==="planned"))result.push({date:x.date,carId:x.carId,title:x.title,type:"expense",car:model(car(x.carId)).brand+" "+model(car(x.carId)).model+" · "+car(x.carId).plate,amount:x.amount});
+ for(const r of db.repairs.filter(x=>x.status!=="done"))result.push({date:r.date,carId:r.carId,entityId:r.id,title:r.title,type:"repair",car:model(car(r.carId)).brand+" "+model(car(r.carId)).model+" · "+car(r.carId).plate});
+ for(const x of db.expenses.filter(x=>x.status==="planned"))result.push({date:x.date,carId:x.carId,entityId:x.id,title:x.title,type:"expense",car:model(car(x.carId)).brand+" "+model(car(x.carId)).model+" · "+car(x.carId).plate,amount:x.amount});
  for(const d of db.documents){
   for(const i of d.installments||[])if(!i.paid)result.push({date:i.due,carId:d.carId,title:`${d.title}: рата ${i.number}`,type:"installment",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate,amount:i.amount});
-  if(d.expiry)result.push({date:d.expiry,carId:d.carId,title:`Документ: ${d.title}`,type:"document",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate});
+  if(d.expiry)result.push({date:d.expiry,carId:d.carId,entityId:d.id,title:`Документ: ${d.title}`,type:d.type||"document",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate});
  }
  return result.filter(x=>x.date).map(x=>({...x,days:days(x.date)}))
 }
@@ -4768,7 +4815,7 @@ function renderCalendar(){
   ["Всего в периоде",events.length],
   ["Просрочено",overdue]
  ].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
- $("#calendarList").innerHTML=events.length?events.map(e=>`<article class="calendar-item ${e.days<=7?"urgent":e.days<=30?"soon":""}">
+ $("#calendarList").innerHTML=events.length?events.map(e=>`<article class="calendar-item ${e.days<=7?"urgent":e.days<=30?"soon":""}" role="button" tabindex="0" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
   <div class="calendar-date"><strong>${date(e.date)}</strong><small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div>
   <div class="calendar-icon">${eventIcon(e.type)}</div>
   <div><h3>${e.title}</h3><p>${e.car}${e.amount?` · ${money(e.amount)}`:""}</p></div>
@@ -4781,7 +4828,7 @@ function renderDocuments(){
  $("#documentList").innerHTML=db.documents.map(d=>{
   const c=car(d.carId),left=d.expiry?days(d.expiry):null,s=installmentSummary(d);
   const installmentBlock=d.type==="insurance"&&d.paymentMode==="installments"?`<div class="insurance-summary"><span>Оплачено ${money(s.paid)}</span><span>Осталось ${money(s.left)}</span><span>${s.next?`Следующая: ${date(s.next.due)}`:"Все раты оплачены"}</span></div>${Math.abs(s.difference)>.01?`<div class="insurance-card-warning">Сумма рат отличается от стоимости на ${money(Math.abs(s.difference))}</div>`:""}<div class="installment-list">${(d.installments||[]).map(x=>`<button class="installment ${x.paid?"paid":""}" onclick="toggleInsuranceInstallment('${d.id}','${x.id}')"><span>Рата ${x.number}</span><strong>${money(x.amount)}</strong><small>${date(x.due)} · ${x.paid?`Оплачено ${money(x.paidAmount||x.amount)}`:"Ожидает"}</small></button>`).join("")}</div>`:"";
-  return `<article class="doc-card"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${installmentBlock}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`
+  return `<article class="doc-card" data-document-id="${d.id}"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${installmentBlock}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`
  }).join("")||`<div class="card">Документов нет</div>`
 }
 function carTabButton(carId,key,label,activeTab){
@@ -5283,4 +5330,14 @@ window.addEventListener("pageshow",()=>{
 
 document.addEventListener("DOMContentLoaded",()=>{
  requestAnimationFrame(updateGpsBadgesOnly)
+});
+
+window.addEventListener("fleetpilot:assignments-changed",async()=>{
+ if(["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
+  await loadWorkspaceDriverAssignments();renderFleet();if($("#companyPage")?.classList.contains("active"))renderEnterprisePage()
+ }else if(enterpriseCurrentRole()==="driver")renderDriverPortal()
+});
+window.addEventListener("fleetpilot:repair-requests-changed",async()=>{
+ await loadFleetServiceAlerts({rerender:true});
+ if($("#repairsPage")?.classList.contains("active"))renderWorkspaceRepairRequests()
 });
