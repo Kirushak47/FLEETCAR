@@ -4,22 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V11.3.2 Light CRM Menu</title>
+  <title>FleetPilot V11.3.2 Professional Modules</title>
   <link rel="manifest" href="manifest.webmanifest?v=113200">
   <link rel="stylesheet" href="styles.css?v=113200">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-
-<script>
-(function(){
-  try {
-    localStorage.setItem("fleetpilot.theme", "light");
-    localStorage.setItem("theme", "light");
-  } catch (error) {}
-  document.documentElement.setAttribute("data-theme", "light");
-  document.documentElement.setAttribute("data-theme-mode", "light");
-  document.documentElement.style.colorScheme = "light";
-})();
-</script>
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -37,6 +25,8 @@
       <button type="button" data-desktop-page="calendarPage"><span>□</span>Календарь</button>
       <button type="button" data-desktop-page="companyPage" data-role-nav="owner,coordinator"><span>♟</span>Компания</button>
       <button type="button" data-desktop-page="dataPage" data-role-nav="owner,coordinator"><span>⤓</span>Данные</button>
+      <button type="button" data-desktop-page="driverPortalPage" data-role-nav="driver"><span>◉</span>Мой автомобиль</button>
+      <button type="button" data-desktop-page="driverProfilePage" data-role-nav="driver"><span>◎</span>Мой профиль</button>
       <button type="button" data-desktop-page="analyticsPage"><span>▥</span>Аналитика</button><button type="button" data-desktop-page="documentsPage" class="desktop-nav-item">
       <span>▤</span><b>Документы</b>
     </button>
@@ -48,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V11.3.2 Light CRM Menu</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V11.3.2 Professional Modules</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -140,6 +130,19 @@
           <button type="button" id="desktopAddCar" class="btn primary">+ Автомобиль</button>
         </div>
       </div>
+
+      <section id="fleetDriverRequestsPanel" class="fleet-driver-requests-panel" hidden>
+        <div class="fleet-driver-requests-head">
+          <div class="fleet-driver-requests-icon">🔧</div>
+          <div>
+            <span class="eyebrow">Заявки водителей</span>
+            <h3 id="fleetDriverRequestsTitle"></h3>
+            <p id="fleetDriverRequestsText"></p>
+          </div>
+          <button type="button" id="fleetDriverRequestsRefresh" class="btn">Обновить</button>
+        </div>
+        <div id="fleetDriverRequestsList" class="fleet-driver-requests-list"></div>
+      </section>
 
       <section class="desktop-command-center" aria-label="FleetPilot Command Center">
         <div class="desktop-view-switcher" role="tablist" aria-label="Вид автопарка">
@@ -449,13 +452,7 @@
     </section>
 
     <section id="repairsPage" class="page" data-advanced-page="true">
-      <section class="driver-service-inbox">
-        <div class="driver-card-head">
-          <div><span class="eyebrow">Driver Portal</span><h3>Заявки водителей</h3></div>
-          <button type="button" id="refreshWorkspaceRepairRequests" class="btn">Обновить</button>
-        </div>
-        <div id="workspaceRepairRequestsList" class="workspace-request-list"></div>
-      </section>
+      <div id="workspaceRepairRequestsList" hidden></div>
 
       <div class="section-head"><div><span class="eyebrow">Техническая часть</span><h2>Ремонты</h2></div><button id="addRepair" class="btn primary">+ Ремонт</button></div>
       <div id="repairSummary" class="summary-grid compact"></div>
@@ -463,16 +460,60 @@
     </section>
 
     <section id="paymentsPage" class="page">
-      <div class="section-head"><div><span class="eyebrow">Аренда</span><h2>Оплаты аренды</h2></div><button id="addPayment" class="btn primary">+ Оплата</button></div>
-      <div id="paymentSummary" class="summary-grid compact"></div>
-
-      <div id="paymentList" class="list"></div>
+      <div class="section-head professional-page-head">
+        <div><span class="eyebrow">Финансовый контроль</span><h2>Аренда и оплаты</h2><p>Ожидаемые платежи, поступления и задолженность по автомобилям.</p></div>
+        <button id="addPayment" class="btn primary">+ Добавить оплату</button>
+      </div>
+      <div id="paymentSummary" class="professional-kpi-grid"></div>
+      <div class="professional-toolbar">
+        <input id="paymentSearch" type="search" placeholder="Поиск по автомобилю или водителю">
+        <select id="paymentStatusFilter">
+          <option value="all">Все статусы</option>
+          <option value="paid">Оплачено</option>
+          <option value="partial">Частично</option>
+          <option value="unpaid">Не оплачено</option>
+        </select>
+      </div>
+      <section class="professional-panel">
+        <div class="professional-panel-head"><div><span class="eyebrow">Журнал</span><h3>История оплат</h3></div><span id="paymentVisibleCount" class="professional-counter">0</span></div>
+        <div id="paymentList" class="professional-list"></div>
+      </section>
     </section>
 
     <section id="expensesPage" class="page">
-      <div class="section-head"><div><span class="eyebrow">Будущие расходы</span><h2>Плановые расходы</h2></div><button id="addExpense" class="btn primary">+ Расход</button></div>
-      <div id="expenseSummary" class="summary-grid compact"></div>
-      <div id="expenseList" class="list"></div>
+      <div class="section-head professional-page-head">
+        <div><span class="eyebrow">Финансовый контроль</span><h2>Расходы автопарка</h2><p>Плановые и фактические расходы по автомобилям и категориям.</p></div>
+        <button id="addExpense" class="btn primary">+ Добавить расход</button>
+      </div>
+      <div id="expenseSummary" class="professional-kpi-grid"></div>
+      <div class="professional-toolbar professional-toolbar-3">
+        <input id="expenseSearch" type="search" placeholder="Поиск по расходу или автомобилю">
+        <select id="expenseStatusFilter">
+          <option value="all">Все статусы</option>
+          <option value="planned">Запланировано</option>
+          <option value="paid">Оплачено</option>
+          <option value="cancelled">Отменено</option>
+        </select>
+        <select id="expenseCategoryFilter">
+          <option value="all">Все категории</option>
+          <option value="repair">Ремонт</option>
+          <option value="insurance">Страховка</option>
+          <option value="inspection">Техосмотр</option>
+          <option value="tires">Шины</option>
+          <option value="leasing">Лизинг</option>
+          <option value="other">Другое</option>
+        </select>
+      </div>
+      <div class="professional-split-layout">
+        <section class="professional-panel">
+          <div class="professional-panel-head"><div><span class="eyebrow">Операции</span><h3>Список расходов</h3></div><span id="expenseVisibleCount" class="professional-counter">0</span></div>
+          <div id="expenseList" class="professional-list"></div>
+        </section>
+        <aside class="professional-panel professional-side-panel">
+          <div class="professional-panel-head"><div><span class="eyebrow">Структура</span><h3>По категориям</h3></div></div>
+          <div id="expenseCategoryBreakdown" class="expense-category-breakdown"></div>
+        </aside>
+      </div>
     </section>
 
     <section id="documentsPage" class="page">
@@ -483,16 +524,35 @@
 
     
     <section id="calendarPage" class="page" data-advanced-page="true">
-      <div class="section-head">
-        <div><span class="eyebrow">Все ближайшие события</span><h2>Календарь автопарка</h2></div>
-        <select id="calendarRange">
-          <option value="30">30 дней</option>
-          <option value="90" selected>90 дней</option>
-          <option value="365">Год</option>
-        </select>
+      <div class="section-head professional-page-head">
+        <div><span class="eyebrow">Планирование</span><h2>Календарь автопарка</h2><p>Страховки, техосмотры, сервисы, платежи и другие сроки.</p></div>
+        <div class="calendar-professional-toolbar">
+          <select id="calendarRange">
+            <option value="30">30 дней</option>
+            <option value="90" selected>90 дней</option>
+            <option value="365">Год</option>
+          </select>
+          <select id="calendarTypeFilter">
+            <option value="all">Все события</option>
+            <option value="insurance">Страховка</option>
+            <option value="inspection">Техосмотр</option>
+            <option value="repair">Сервис</option>
+            <option value="expense">Расходы</option>
+            <option value="payment">Платежи</option>
+          </select>
+        </div>
       </div>
-      <div id="calendarSummary" class="summary-grid compact"></div>
-      <div id="calendarList" class="calendar-list"></div>
+      <div id="calendarSummary" class="professional-kpi-grid"></div>
+      <div class="professional-split-layout calendar-professional-layout">
+        <section class="professional-panel">
+          <div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3>Ближайшие события</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div>
+          <div id="calendarList" class="calendar-professional-list"></div>
+        </section>
+        <aside class="professional-panel professional-side-panel">
+          <div class="professional-panel-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div>
+          <div id="calendarMonthOverview" class="calendar-month-overview"></div>
+        </aside>
+      </div>
     </section>
 
     <section id="analyticsPage" class="page" data-advanced-page="true">

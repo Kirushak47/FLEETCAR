@@ -8,6 +8,3 @@ node_modules
 node_modules/**
 _redirects
 _headers
-supabase*.sql
-README_ORIGINAL.md
-CLOUDFLARE_PAGES_SETUP.md

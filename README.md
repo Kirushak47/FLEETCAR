@@ -1,15 +1,14 @@
-# FleetPilot V11.3.2 — Light CRM Menu
+# FleetPilot V11.3.2 — Professional Modules
 
-Safe first update based directly on the stable V11.3.1 rollback.
+Based directly on the user-provided working rollback archive.
 
-Changes:
-- permanent light appearance;
-- theme controls hidden without removing required DOM bindings;
-- driver-only desktop items “Мой автомобиль” and “Мой профиль” removed;
-- white professional CRM sidebar;
-- corrected icon and label alignment;
-- clean active navigation state;
-- no changes to Service, maps, Supabase, finance, documents, or synchronization;
+Included:
+- theme behavior is completely untouched;
+- active driver repair requests moved from Service to Fleet;
+- request panel is hidden when there are no active requests;
+- request opens the existing repair workflow;
+- professional Rent/Payments screen with search and status filters;
+- professional Expenses screen with search, filters and category structure;
+- professional Calendar agenda with type filters and month overview;
+- maps, Supabase schema, synchronization and calculations are unchanged;
 - no SQL required.
-
-Deploy and test this version before adding the next functional stage.
