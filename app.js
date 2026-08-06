@@ -1,3 +1,23 @@
+(function(){
+  const forceLight=()=>{
+    if(document.documentElement.getAttribute("data-theme")!=="light"){
+      document.documentElement.setAttribute("data-theme","light");
+    }
+    document.documentElement.style.colorScheme="light";
+    try{
+      if(localStorage.getItem("fleetpilot.theme")!=="light")localStorage.setItem("fleetpilot.theme","light");
+      if(localStorage.getItem("theme")!=="light")localStorage.setItem("theme","light");
+    }catch(e){}
+  };
+  forceLight();
+  window.addEventListener("DOMContentLoaded",()=>{
+    forceLight();
+    document.querySelectorAll(
+      ".theme-switcher,[data-theme-switcher],#themeSwitcher,#themeToggle,.theme-toggle,.settings-theme-row,.dark-mode-control"
+    ).forEach(el=>el.remove());
+  },{once:true});
+})();
+
 
 (function(){
   const forceLight=()=>{
@@ -13,7 +33,6 @@
     forceLight();
     document.querySelectorAll(".theme-switcher,[data-theme-switcher],#themeSwitcher,#themeToggle,.theme-toggle,.settings-theme-row,.dark-mode-control").forEach(el=>el.remove());
   });
-  new MutationObserver(forceLight).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme","class"]});
 })();
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];

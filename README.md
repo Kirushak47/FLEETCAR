@@ -1,17 +1,10 @@
+# FleetPilot V12.3.1 — Click Fix
 
-# FleetPilot V12.3 — Fleet Requests + White Sidebar
-
-Production:
-https://fleetpilot.balyshevy.workers.dev/
-
-No new Supabase SQL is required.
-
-Included:
-- driver repair requests displayed directly in Fleet;
-- compact orange request panel above fleet controls;
-- each request opens the exact Service record;
-- white professional CRM sidebar;
-- lighter active-navigation style;
-- permanent light theme;
-- all V12.1/V12.2 stabilization fixes preserved;
+Critical fix:
+- removed recursive light-theme MutationObserver;
+- restored buttons, navigation, forms and dialogs;
+- permanent light theme remains enabled;
+- driver requests in Fleet remain enabled;
+- white sidebar remains enabled;
+- no SQL required;
 - no `_redirects`.

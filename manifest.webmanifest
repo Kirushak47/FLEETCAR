@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V12.3 Fleet Requests Cloud Beta",
+  "name": "FleetPilot V12.3.1 Click Fix Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=123000",
+  "start_url": "./?v=123100",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
