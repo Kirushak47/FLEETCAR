@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V12.6.3 Leaflet Runtime Fix Cloud Beta",
+  "name": "FleetPilot V11.3.1 Stable Rollback Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=126300",
+  "start_url": "./?v=113110",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

@@ -1,51 +1,3 @@
-
-function safeInvalidateMap(mapInstance){
- try{
-  if(mapInstance && typeof mapInstance.invalidateSize==="function"){
-   mapInstance.invalidateSize({pan:false})
-  }
- }catch(error){
-  console.warn("Map resize skipped",error)
- }
-}
-
-(function(){
-  const forceLight=()=>{
-    if(document.documentElement.getAttribute("data-theme")!=="light"){
-      document.documentElement.setAttribute("data-theme","light");
-    }
-    document.documentElement.style.colorScheme="light";
-    try{
-      if(localStorage.getItem("fleetpilot.theme")!=="light")localStorage.setItem("fleetpilot.theme","light");
-      if(localStorage.getItem("theme")!=="light")localStorage.setItem("theme","light");
-    }catch(e){}
-  };
-  forceLight();
-  window.addEventListener("DOMContentLoaded",()=>{
-    forceLight();
-    document.querySelectorAll(
-      ".theme-switcher,[data-theme-switcher],#themeSwitcher,#themeToggle,.theme-toggle,.settings-theme-row,.dark-mode-control"
-    ).forEach(el=>el.remove());
-  },{once:true});
-})();
-
-
-(function(){
-  const forceLight=()=>{
-    document.documentElement.setAttribute("data-theme","light");
-    document.documentElement.style.colorScheme="light";
-    try{
-      localStorage.setItem("fleetpilot.theme","light");
-      localStorage.setItem("theme","light");
-    }catch(e){}
-  };
-  forceLight();
-  window.addEventListener("DOMContentLoaded",()=>{
-    forceLight();
-    document.querySelectorAll(".theme-switcher,[data-theme-switcher],#themeSwitcher,#themeToggle,.theme-toggle,.settings-theme-row,.dark-mode-control").forEach(el=>el.remove());
-  });
-})();
-
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const DATA_KEY="fleetpilot.data.v1",META_KEY="fleetpilot.meta.v1",today=()=>new Date().toISOString().slice(0,10),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
 const addDays=(d,n)=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
@@ -1092,79 +1044,14 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
 }
-
-function renderFleetDriverRequestsPanel(){
- const panel=$("#fleetDriverRequestsPanel");
- const list=$("#fleetDriverRequestsList");
- if(!panel||!list)return;
-
- const active=(workspaceRepairAlerts||[])
-  .filter(row=>!["done","rejected","cancelled"].includes(row.status))
-  .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
-
- if(!active.length){
-  panel.hidden=true;
-  list.innerHTML="";
-  return
- }
- panel.hidden=false;
-
- const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
- $("#fleetDriverRequestsTitle").textContent=`${active.length} ${active.length===1?"активная заявка":"активных заявок"}`;
- $("#fleetDriverRequestsText").textContent=`Автомобилей с обращениями: ${cars.size}`;
-
- list.innerHTML=active.slice(0,6).map(row=>{
-  const c=car(row.car_id);
-  const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate}`:"Автомобиль";
-  const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||"Неисправность";
-  const status=DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status;
-  return `<button type="button" class="fleet-driver-request-item" data-fleet-request-id="${row.id}" onclick="openFleetDriverRequest('${row.id}')">
-   <span class="fleet-driver-request-dot"></span>
-   <div>
-    <strong>${vehicle}</strong>
-    <small>${category} · ${status}</small>
-    <p>${row.description||"Без описания"}</p>
-   </div>
-   <em>${row.mileage?km(row.mileage):""}</em>
-  </button>`
- }).join("");
-
- if(active.length>6){
-  list.insertAdjacentHTML("beforeend",`<button type="button" class="fleet-driver-request-more" onclick="openAllFleetDriverRequests()">Ещё ${active.length-6} заявок →</button>`)
- }
-}
-
-function openFleetDriverRequest(requestId){
- const request=(workspaceRepairAlerts||[]).find(row=>String(row.id)===String(requestId));
- if(!request)return toast("Заявка не найдена");
- selectedWorkspaceRepairCarId=request.car_id||null;
- showPage("repairsPage");
- renderWorkspaceRepairRequests();
- requestAnimationFrame(()=>highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(request.id))}"]`))
-}
-
-function openAllFleetDriverRequests(){
- selectedWorkspaceRepairCarId=null;
- showPage("repairsPage");
- renderWorkspaceRepairRequests()
-}
 async function loadFleetServiceAlerts({rerender=false}={}){
- const requestPanel=$("#fleetDriverRequestsPanel");
- if(requestPanel)requestPanel.hidden=true;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  updateServiceRequestsSummaryBanner();
-  renderFleetDriverRequestsPanel();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
  }catch(error){
-  workspaceRepairAlerts=[];
-  const panel=$("#fleetDriverRequestsPanel");
-  const list=$("#fleetDriverRequestsList");
-  if(panel)panel.hidden=true;
-  if(list)list.innerHTML="";
   console.warn("Fleet service alerts failed",error);
   return[]
  }
@@ -1192,9 +1079,6 @@ function clearWorkspaceRepairCarFilter(){
 window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
 window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
-
-function updateServiceRequestsSummaryBanner(){}
-
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
@@ -1204,7 +1088,6 @@ async function renderWorkspaceRepairRequests(){
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  updateServiceRequestsSummaryBanner();
   const allRows=workspaceRepairAlerts;
   const rows=selectedWorkspaceRepairCarId
    ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
@@ -1233,30 +1116,8 @@ async function renderWorkspaceRepairRequests(){
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
    const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
-   const requestId=select.dataset.requestStatus;
-   const requestedStatus=select.value;
-
-   if(requestedStatus==="repair"){
-    if(request)openRepairFromDriverRequest(request);
-    select.value=request?.status||"new";
-    return
-   }
-
-   select.disabled=true;
-   try{
-    await window.FleetPilotCloud.updateDriverRepairRequest(requestId,requestedStatus,"");
-    await loadFleetServiceAlerts({rerender:false});
-    showPage("repairsPage");
-    await renderWorkspaceRepairRequests();
-    requestAnimationFrame(()=>{
-     showPage("repairsPage");
-     highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(requestId))}"]`)
-    });
-    toast("Статус заявки обновлён")
-   }catch(error){
-    select.value=request?.status||"new";
-    toast(error.message||String(error))
-   }finally{select.disabled=false}
+   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
+   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
@@ -1281,19 +1142,6 @@ function driverAssignmentControl(member){
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
  </select>`
 }
-const LAST_PAGE_KEY="fleetpilot.last.page.v1";
-function rememberFleetPilotPage(id){
- const transient=new Set(["searchPage","carPage","driverPortalPage","driverProfilePage"]);
- if(id&&document.getElementById(id)&&!transient.has(id)){
-  localStorage.setItem(LAST_PAGE_KEY,id)
- }
-}
-function restoreLastFleetPilotPage(){
- const saved=localStorage.getItem(LAST_PAGE_KEY)||"dashboardPage";
- const allowed=document.getElementById(saved)&&enterpriseCanOpen(saved)?saved:"dashboardPage";
- requestAnimationFrame(()=>showPage(allowed))
-}
-
 function showPage(id){
  applyEnterpriseAccess();
  if(!enterpriseCanOpen(id)){
@@ -1304,17 +1152,17 @@ function showPage(id){
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
-const globalSearchButton=$("#globalSearchButton");if(globalSearchButton)globalSearchButton.onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput")?.focus(),50)};
-const closeGlobalSearch=$("#closeGlobalSearch");if(closeGlobalSearch)closeGlobalSearch.onclick=()=>showPage("dashboardPage");const globalSearchInput=$("#globalSearchInput");if(globalSearchInput)globalSearchInput.oninput=renderGlobalSearch;
-const exportActivityLog=$("#exportActivityLog");if(exportActivityLog)exportActivityLog.onclick=exportActivityCsv;
+$("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
+$("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
+$("#exportActivityLog").onclick=exportActivityCsv;
 ["activitySearch","activityTypeFilter","activityPeriodFilter"].forEach(id=>{
  const element=$("#"+id);
  if(element)element.addEventListener(id==="activitySearch"?"input":"change",renderActivityJournal)
-});const createManualSnapshot=$("#createManualSnapshot");if(createManualSnapshot)createManualSnapshot.onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
-const closeFileViewer=$("#closeFileViewer");if(closeFileViewer)closeFileViewer.onclick=()=>$("#fileViewerDialog")?.close();const fileViewerDialog=$("#fileViewerDialog");if(fileViewerDialog)fileViewerDialog.addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
+});$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
+$("#closeFileViewer").onclick=()=>$("#fileViewerDialog").close();$("#fileViewerDialog").addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
 
-const customizeDashboard=$("#customizeDashboard");if(customizeDashboard)customizeDashboard.onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
-const openDashboardSettings=$("#openDashboardSettings");if(openDashboardSettings)openDashboardSettings.onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+$("#customizeDashboard").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+$("#openDashboardSettings").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
 $$(".mode-switcher button").forEach(b=>b.onclick=()=>setUiMode(b.dataset.uiMode));
 $("#dashboardSettingsForm").onsubmit=e=>{
  e.preventDefault();
@@ -1323,7 +1171,7 @@ $("#dashboardSettingsForm").onsubmit=e=>{
  settings.visible=rows.filter(x=>x.querySelector("input").checked).map(x=>x.dataset.blockId);
  saveUxSettings(settings);$("#dashboardSettingsDialog").close();renderFleet();toast("Главная настроена")
 };
-const resetDashboardSettings=$("#resetDashboardSettings");if(resetDashboardSettings)resetDashboardSettings.onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
+$("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
 
 
 ["quickServiceExpiry","quickServiceMileage","quickServiceOilInterval","quickServiceCost"].forEach(id=>{
@@ -1526,12 +1374,6 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
-
-
-
-const fleetDriverRequestsOpenAll=$("#fleetDriverRequestsOpenAll");
-if(fleetDriverRequestsOpenAll)fleetDriverRequestsOpenAll.onclick=openAllFleetDriverRequests;
-
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;
 const driverRepairForm=$("#driverRepairForm");
@@ -1618,8 +1460,7 @@ $$("[data-desktop-page]").forEach(button=>{
 });
 $("#desktopAddCar").onclick=()=>openCarDialog();
 $("#desktopSearchButton").onclick=()=>$("#fleetSearch")?.focus();
-const desktopThemeToggle=$("#desktopThemeToggle");
-if(desktopThemeToggle)desktopThemeToggle.remove();
+$("#desktopThemeToggle").onclick=()=>toggleTheme();
 $("#desktopSettingsButton").onclick=()=>showPage("morePage");
 
 
@@ -1636,17 +1477,8 @@ $("#testGpsConnection").onclick=testGpsConnection;
 $("#gpsSetupForm").onsubmit=saveGpsConnection;
 $("#closeGpsMapping").onclick=()=>$("#gpsMappingDialog").close();
 $("#saveGpsMapping").onclick=saveGpsMapping;
-
-const dashboardCustomizeWindows=$("#dashboardCustomizeWindows");
-if(dashboardCustomizeWindows)dashboardCustomizeWindows.onclick=()=>{
- renderControlWindowsOptions();
- $("#controlWindowsDialog")?.showModal()
-};
-
-const customizeControlWindows=$("#customizeControlWindows");
-if(customizeControlWindows)customizeControlWindows.onclick=openControlWindowsDialog;
-const showAllControlWindows=$("#showAllControlWindows");
-if(showAllControlWindows)showAllControlWindows.onclick=()=>{
+$("#customizeControlWindows").onclick=openControlWindowsDialog;
+$("#showAllControlWindows").onclick=()=>{
  const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));
  saveControlWindowSettings(settings);
  renderControlWindowsOptions();
@@ -1664,23 +1496,12 @@ $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALER
 
 
 document.addEventListener("DOMContentLoaded",()=>{
- localStorage.setItem(THEME_KEY,"light");
- applyTheme("light");
-
- const dashboard=document.getElementById("dashboardPage");
- if(dashboard){
-  document.querySelectorAll(".page").forEach(page=>page.classList.toggle("active",page.id==="dashboardPage"));
-  syncDesktopNavigation("dashboardPage");
-  requestAnimationFrame(()=>{
-   try{renderOwnerDashboard()}catch(error){console.warn("Dashboard startup render failed",error)}
-  });
- }
-
+ applyTheme();
  if(window.innerWidth>=1100){
   setTimeout(scheduleInitialFleetBoot,0)
  }
 });
-window.addEventListener("pageshow",()=>applyTheme("light"));
+window.addEventListener("pageshow",()=>applyTheme());
 window.addEventListener("pageshow",()=>{if(gpsDemoEnabled())startGpsDemoMovement()});
 
 $$("[data-fleet-view]").forEach(button=>button.onclick=()=>{
@@ -1731,8 +1552,8 @@ $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page==
  renderMobileGpsMap({fit:true});
  updateGpsCountdownUi();
  requestAnimationFrame(()=>{
-  safeInvalidateMap(mobileFleetMap);
-  setTimeout(()=>safeInvalidateMap(mobileFleetMap),180)
+  mobileFleetMap?.invalidateSize({pan:false});
+  setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),180)
  })
 }if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -2574,8 +2395,7 @@ function renderControlWindowsOptions(){
 }
 function openControlWindowsDialog(){
  renderControlWindowsOptions();
- const dialog=$("#controlWindowsDialog");
- if(dialog&&!dialog.open)dialog.showModal()
+ $("#controlWindowsDialog").showModal()
 }
 window.hideControlWindow=hideControlWindow;
 
@@ -2907,7 +2727,7 @@ function scheduleDesktopLiveRefresh(options={}){
 
   syncDesktopSelection();
   requestAnimationFrame(()=>{
-   safeInvalidateMap(leafletFleetMap);
+   leafletFleetMap?.invalidateSize({pan:false});
   })
  })
 }
@@ -3896,7 +3716,7 @@ function ensureMobileFleetMap(){
   maxZoom:19,minZoom:4,attribution:"&copy; OpenStreetMap"
  }).addTo(mobileFleetMap);
  mobileFleetLayer=L.layerGroup().addTo(mobileFleetMap);
- [50,180,400].forEach(delay=>setTimeout(()=>safeInvalidateMap(mobileFleetMap),delay));
+ [50,180,400].forEach(delay=>setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),delay));
  return mobileFleetMap
 }
 
@@ -4244,8 +4064,9 @@ function forceInitialFleetRender(){
  const fleetGrid=$("#fleetGrid");
  const carsBlock=fleetGrid?.closest("[data-dashboard-block='cars']");
 
- // Prepare fleet data in the background without changing the user's current page.
- const currentPage=$(".page.active")?.id||localStorage.getItem(LAST_PAGE_KEY)||"dashboardPage";
+ // Make the fleet page and the list visible before rendering.
+ $$(".page").forEach(page=>page.classList.toggle("active",page.id==="fleetPage"));
+ if(fleetPage)fleetPage.classList.add("active");
 
  document.documentElement.dataset.desktopFleetView="list";
  localStorage.setItem(DESKTOP_VIEW_KEY,"list");
@@ -4330,7 +4151,7 @@ function initializeDesktopCommandCenter(){
    if(view==="list"&&carsBlock){carsBlock.classList.remove("desktop-command-hidden");carsBlock.style.removeProperty("display")}
    safeDesktopRender("events second pass",renderDesktopEvents);
    safeDesktopRender("insights second pass",renderDesktopInsights);
-   safeInvalidateMap(leafletFleetMap)
+   leafletFleetMap?.invalidateSize({pan:false})
   })
  })
 }
@@ -4964,41 +4785,7 @@ function renderPayments(){
   return `<article class="list-item"><div class="top"><div><h3>${model(c).brand} ${model(c).model} · ${c.plate}</h3><p>${p.tenant||c.tenant||"Без арендатора"} · ${paymentTimingText(p.timing||c.paymentTiming||"advance")} · ${p.referenceWeek||p.week||isoWeek(p.from)} · ${date(p.from)} — ${date(p.to)} · поступило ${date(p.date)}</p></div><strong>${money(p.received)}</strong></div><p>Ожидалось ${money(p.expected)} · Осталось ${money(rest)}</p>${allocation?`<p class="payment-allocation">Распределение: ${allocation}</p>`:""}<span class="badge ${s}">${paymentStatusText(s)}</span><div class="item-actions"><button class="btn" onclick="editPayment('${p.id}')">Редактировать</button><button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button></div></article>`
  }).join("")||`<div class="card">Оплат пока нет</div>`
 }
-function renderExpenses(){
- const search=String($("#expenseSearch")?.value||"").trim().toLowerCase();
- const statusFilter=$("#expenseStatusFilter")?.value||"all";
- const categoryFilter=$("#expenseCategoryFilter")?.value||"all";
- const rows=[...db.expenses].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
- const visible=rows.filter(x=>{
-  const c=car(x.carId),label=`${x.title} ${x.note||""} ${model(c).brand} ${model(c).model} ${c?.plate||""}`.toLowerCase();
-  return(!search||label.includes(search))&&(statusFilter==="all"||x.status===statusFilter)&&(categoryFilter==="all"||x.category===categoryFilter)
- });
- const planned=rows.filter(x=>x.status==="planned"),paid=rows.filter(x=>x.status==="paid");
- const plannedSum=planned.reduce((s,x)=>s+Number(x.amount||0),0),paidSum=paid.reduce((s,x)=>s+Number(x.amount||0),0);
- $("#expenseSummary").innerHTML=[
-  ["Запланировано",planned.length, money(plannedSum),"planned"],
-  ["Оплачено",paid.length,money(paidSum),"paid"],
-  ["Средний расход",rows.length?money(rows.reduce((s,x)=>s+Number(x.amount||0),0)/rows.length):money(0),"за запись"],
-  ["Всего записей",rows.length,"в журнале","total"]
- ].map(([label,value,note,kind])=>`<article class="expense-kpi ${kind||""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
- $("#expenseVisibleCount").textContent=String(visible.length);
- $("#expenseList").innerHTML=visible.map(x=>{
-  const c=car(x.carId),m=model(c);
-  return `<article class="expense-row" data-expense-id="${x.id}">
-   <div class="expense-row-icon">${x.category==="repair"?"🔧":x.category==="insurance"?"🛡":x.category==="inspection"?"📋":x.category==="tires"?"◉":x.category==="leasing"?"₿":"•"}</div>
-   <div class="expense-row-main"><strong>${x.title}</strong><span>${m.brand} ${m.model} · ${c?.plate||"Без номера"}</span><small>${date(x.date)}${x.note?` · ${x.note}`:""}</small></div>
-   <div class="expense-row-status"><span class="expense-status ${x.status}">${expenseStatusText(x.status)}</span><b>${money(x.amount)}</b></div>
-   <div class="expense-row-actions"><button class="btn" onclick="editExpense('${x.id}')">Изменить</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div>
-  </article>`
- }).join("")||`<div class="expense-empty-state">Расходов по выбранным фильтрам нет.</div>`;
- const categories=["repair","insurance","inspection","tires","leasing","other"];
- const total=rows.reduce((s,x)=>s+Number(x.amount||0),0);
- $("#expenseCategoryBreakdown").innerHTML=categories.map(category=>{
-  const amount=rows.filter(x=>x.category===category).reduce((s,x)=>s+Number(x.amount||0),0);
-  const percent=total?Math.round(amount/total*100):0;
-  return `<div class="expense-category-row"><div><span>${expenseCategoryText(category)}</span><b>${money(amount)}</b></div><div class="expense-category-track"><i style="width:${percent}%"></i></div><small>${percent}%</small></div>`
- }).join("")
-}
+function renderExpenses(){const active=db.expenses.filter(x=>x.status==="planned"),sum=active.reduce((s,x)=>s+x.amount,0);$("#expenseSummary").innerHTML=[["Запланировано",active.length],["Плановая сумма",money(sum)],["Оплачено",db.expenses.filter(x=>x.status==="paid").length],["Отменено",db.expenses.filter(x=>x.status==="cancelled").length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#expenseList").innerHTML=[...db.expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{const c=car(x.carId);return `<article class="list-item" data-expense-id="${x.id}"><div class="top"><div><h3>${x.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(x.date)}</p></div><strong>${money(x.amount)}</strong></div><p>${expenseCategoryText(x.category)} · ${x.note||""}</p><span class="badge ${x.status==="paid"?"paid":""}">${expenseStatusText(x.status)}</span><div class="item-actions"><button class="btn" onclick="editExpense('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Плановых расходов нет</div>`}
 function addMonthsIso(dateValue,months){const d=new Date(dateValue+"T12:00:00");d.setMonth(d.getMonth()+months);return d.toISOString().slice(0,10)}
 function buildInsuranceInstallments(total,count,firstDate,frequency,existing=[]){
  const step=frequency==="quarterly"?3:1;
@@ -5128,38 +4915,19 @@ function eventsForCar(carId){return allEvents().filter(x=>x.carId===carId)}
 function eventIcon(type){return{insurance:"🛡️",inspection:"🔍",repair:"🔧",expense:"💰",installment:"💳",document:"📄"}[type]||"📅"}
 function renderCalendar(){
  const range=Number($("#calendarRange")?.value||90);
- const typeFilter=$("#calendarTypeFilter")?.value||"all";
- const all=allEvents();
- const events=all.filter(x=>x.days>=0&&x.days<=range&&(typeFilter==="all"||x.type===typeFilter)).sort((a,b)=>a.date.localeCompare(b.date));
- const overdue=all.filter(x=>x.days<0).length;
+ const events=allEvents().filter(x=>x.days>=0&&x.days<=range).sort((a,b)=>a.date.localeCompare(b.date));
+ const overdue=allEvents().filter(x=>x.days<0).length;
  $("#calendarSummary").innerHTML=[
-  ["Сегодня",events.filter(x=>x.days===0).length,"today"],
-  ["7 дней",events.filter(x=>x.days<=7).length,"week"],
-  ["30 дней",events.filter(x=>x.days<=30).length,"month"],
-  ["Просрочено",overdue,"overdue"]
- ].map(([label,value,kind])=>`<article class="calendar-kpi ${kind}"><span>${label}</span><strong>${value}</strong></article>`).join("");
- $("#calendarVisibleCount").textContent=String(events.length);
- const grouped=new Map();
- events.forEach(event=>{
-  const key=(event.date||"").slice(0,7);
-  if(!grouped.has(key))grouped.set(key,[]);
-  grouped.get(key).push(event)
- });
- $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([month,items])=>{
-  const monthLabel=new Date(month+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
-  return `<section class="calendar-month-group"><h4>${monthLabel}</h4>${items.map(e=>`<article class="calendar-agenda-row ${e.days<=7?"urgent":e.days<=30?"soon":""}" role="button" tabindex="0" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
-   <div class="calendar-agenda-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div>
-   <div class="calendar-agenda-icon">${eventIcon(e.type)}</div>
-   <div class="calendar-agenda-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div>
-   <b>›</b>
-  </article>`).join("")}</section>`
- }).join(""):`<div class="calendar-empty-state">На выбранный период событий нет.</div>`;
- const nextMonths=[0,1,2,3].map(offset=>{
-  const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);
-  const key=d.toISOString().slice(0,7),count=all.filter(x=>(x.date||"").startsWith(key)).length;
-  return `<div class="calendar-month-card"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>${count===1?"событие":"событий"}</small></div>`
- });
- $("#calendarMonthOverview").innerHTML=nextMonths.join("")
+  ["Ближайшие 7 дней",events.filter(x=>x.days<=7).length],
+  ["Ближайшие 30 дней",events.filter(x=>x.days<=30).length],
+  ["Всего в периоде",events.length],
+  ["Просрочено",overdue]
+ ].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+ $("#calendarList").innerHTML=events.length?events.map(e=>`<article class="calendar-item ${e.days<=7?"urgent":e.days<=30?"soon":""}" role="button" tabindex="0" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
+  <div class="calendar-date"><strong>${date(e.date)}</strong><small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div>
+  <div class="calendar-icon">${eventIcon(e.type)}</div>
+  <div><h3>${e.title}</h3><p>${e.car}${e.amount?` · ${money(e.amount)}`:""}</p></div>
+ </article>`).join(""):`<div class="card">На выбранный период событий нет</div>`;
 }
 
 function renderDocuments(){
@@ -5201,22 +4969,7 @@ function renderCarProfile(id,activeTab="info"){
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
   <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
  </div>`;
- const documents=`<div class="detail-tab-grid">
-  <div class="card">
-   <div class="section-head"><div><span class="eyebrow">Documents Center</span><h3>Документы автомобиля</h3></div><button class="btn primary" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>
-   <div class="v12-car-documents-grid">
-    ${docs.map(d=>`<article class="v12-car-document" data-document-id="${d.id}">
-     <div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · ${d.expiry?`до ${date(d.expiry)}`:"без срока"}</small></div>
-     <b>${money(d.cost)}</b>
-     <div class="v12-car-document-actions">
-      ${d.fileId?`<button class="btn primary" onclick="openDocumentAttachment('${d.fileId}','${d.title.replaceAll("'","\\'")}')">Открыть</button><button class="btn" onclick="downloadDocumentAttachment('${d.fileId}')">Скачать</button>`:"<span class='v12-no-file'>Файл не прикреплён</span>"}
-      <button class="btn" onclick="editDocument('${d.id}')">Редактировать</button>
-     </div>
-    </article>`).join("")||'<div class="driver-empty-state">Документов пока нет.</div>'}
-   </div>
-  </div>
-  <div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div>
- </div>`;
+ const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
@@ -5650,7 +5403,7 @@ $("#repairForm").onsubmit=async e=>{
   }catch(error){console.warn(error)}
  }
 
- const destination="repairsPage";
+ const destination=(pageBeforeSave==="repairsPage"||obj.linkedRequestId)?"repairsPage":pageBeforeSave;
  requestAnimationFrame(()=>{
   showPage(destination);
   if(destination==="repairsPage"){
@@ -5686,11 +5439,7 @@ $("#paymentTo").onchange=recalculateExpectedPayment;
 $("#paymentAutoExpected").onchange=recalculateExpectedPayment;
 $("#openAttention").onclick=()=>showPage("attentionPage");
 $("#backFromAttention").onclick=()=>showPage("fleetPage");
-$("#calendarRange").onchange=renderCalendar;
-$("#calendarTypeFilter").onchange=renderCalendar;
-$("#expenseSearch").oninput=renderExpenses;
-$("#expenseStatusFilter").onchange=renderExpenses;
-$("#expenseCategoryFilter").onchange=renderExpenses;$("#analyticsPeriod").onchange=renderAnalytics;$("#analyticsMonth").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none");if(show&&!documentInstallmentDraft.length)rebuildInsuranceInstallmentDraft(false)}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
+$("#calendarRange").onchange=renderCalendar;$("#analyticsPeriod").onchange=renderAnalytics;$("#analyticsMonth").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none");if(show&&!documentInstallmentDraft.length)rebuildInsuranceInstallmentDraft(false)}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
 $("#profitPeriod").onchange=renderProfitability;
 $("#taxMethod").onchange=syncTaxMethodFields;
 $("#taxVat").onchange=syncTaxMethodFields;
@@ -5847,11 +5596,6 @@ window.addEventListener("fleetpilot:assignments-changed",async()=>{
  }else if(enterpriseCurrentRole()==="driver")renderDriverPortal()
 });
 window.addEventListener("fleetpilot:repair-requests-changed",async()=>{
- const wasService=$("#repairsPage")?.classList.contains("active");
- await loadFleetServiceAlerts({rerender:!wasService});
- if(wasService){
-  showPage("repairsPage");
-  await renderWorkspaceRepairRequests();
-  requestAnimationFrame(()=>showPage("repairsPage"))
- }
+ await loadFleetServiceAlerts({rerender:true});
+ if($("#repairsPage")?.classList.contains("active"))renderWorkspaceRepairRequests()
 });
