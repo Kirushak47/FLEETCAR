@@ -1290,21 +1290,20 @@ function showPage(id){
   id="dashboardPage"
  }
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
- rememberFleetPilotPage(id);
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
-$("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
-$("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
-$("#exportActivityLog").onclick=exportActivityCsv;
+const globalSearchButton=$("#globalSearchButton");if(globalSearchButton)globalSearchButton.onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput")?.focus(),50)};
+const closeGlobalSearch=$("#closeGlobalSearch");if(closeGlobalSearch)closeGlobalSearch.onclick=()=>showPage("dashboardPage");const globalSearchInput=$("#globalSearchInput");if(globalSearchInput)globalSearchInput.oninput=renderGlobalSearch;
+const exportActivityLog=$("#exportActivityLog");if(exportActivityLog)exportActivityLog.onclick=exportActivityCsv;
 ["activitySearch","activityTypeFilter","activityPeriodFilter"].forEach(id=>{
  const element=$("#"+id);
  if(element)element.addEventListener(id==="activitySearch"?"input":"change",renderActivityJournal)
-});$("#createManualSnapshot").onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
-$("#closeFileViewer").onclick=()=>$("#fileViewerDialog").close();$("#fileViewerDialog").addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
+});const createManualSnapshot=$("#createManualSnapshot");if(createManualSnapshot)createManualSnapshot.onclick=async()=>{await writeAutoBackup(new Date().toISOString(),"Ручной снимок");toast("Снимок создан")};
+const closeFileViewer=$("#closeFileViewer");if(closeFileViewer)closeFileViewer.onclick=()=>$("#fileViewerDialog")?.close();const fileViewerDialog=$("#fileViewerDialog");if(fileViewerDialog)fileViewerDialog.addEventListener("close",()=>{if(activeFileUrl){URL.revokeObjectURL(activeFileUrl);activeFileUrl=""}});
 
-$("#customizeDashboard").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
-$("#openDashboardSettings").onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+const customizeDashboard=$("#customizeDashboard");if(customizeDashboard)customizeDashboard.onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
+const openDashboardSettings=$("#openDashboardSettings");if(openDashboardSettings)openDashboardSettings.onclick=()=>{renderDashboardSettings();$("#dashboardSettingsDialog").showModal()};
 $$(".mode-switcher button").forEach(b=>b.onclick=()=>setUiMode(b.dataset.uiMode));
 $("#dashboardSettingsForm").onsubmit=e=>{
  e.preventDefault();
@@ -1313,7 +1312,7 @@ $("#dashboardSettingsForm").onsubmit=e=>{
  settings.visible=rows.filter(x=>x.querySelector("input").checked).map(x=>x.dataset.blockId);
  saveUxSettings(settings);$("#dashboardSettingsDialog").close();renderFleet();toast("Главная настроена")
 };
-$("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
+const resetDashboardSettings=$("#resetDashboardSettings");if(resetDashboardSettings)resetDashboardSettings.onclick=()=>{localStorage.removeItem(UX_KEY);renderDashboardSettings();applyUxSettings();toast("Настройки сброшены")};
 
 
 ["quickServiceExpiry","quickServiceMileage","quickServiceOilInterval","quickServiceCost"].forEach(id=>{
@@ -1656,7 +1655,16 @@ $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALER
 document.addEventListener("DOMContentLoaded",()=>{
  localStorage.setItem(THEME_KEY,"light");
  applyTheme("light");
- restoreLastFleetPilotPage();
+
+ const dashboard=document.getElementById("dashboardPage");
+ if(dashboard){
+  document.querySelectorAll(".page").forEach(page=>page.classList.toggle("active",page.id==="dashboardPage"));
+  syncDesktopNavigation("dashboardPage");
+  requestAnimationFrame(()=>{
+   try{renderOwnerDashboard()}catch(error){console.warn("Dashboard startup render failed",error)}
+  });
+ }
+
  if(window.innerWidth>=1100){
   setTimeout(scheduleInitialFleetBoot,0)
  }

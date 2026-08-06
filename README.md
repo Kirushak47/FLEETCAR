@@ -1,14 +1,11 @@
+# FleetPilot V12.6.2 — White Screen Fix
 
-# FleetPilot V12.6.1 — Navigation & Requests Fix
-
-Fixed:
-- Dashboard block settings button works again.
-- Block visibility changes apply immediately.
-- Current page is remembered after refresh.
-- Desktop boot no longer forces Fleet page.
-- Theme button and theme controls are fully removed.
-- Light theme is forced permanently.
-- Driver request panel is hidden before data loads.
-- Request panel appears only when real active driver requests exist.
-- Failed request loading no longer leaves “Загрузка заявок…” visible.
-- No SQL required.
+Critical emergency fix:
+- removed unsafe early showPage() call;
+- safe startup always opens the Dashboard;
+- background Fleet initialization no longer changes the active page;
+- optional removed buttons no longer crash initialization;
+- light theme remains permanent;
+- request panel remains hidden until a real active request exists;
+- core files use network-first service-worker loading to avoid stale broken JavaScript;
+- no SQL required.
