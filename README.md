@@ -1,12 +1,7 @@
-# FleetPilot V12.5 — Unified Dashboard
+# FleetPilot V12.6 — Calendar & Expenses
 
-Changes:
-- Tasks, TOP cars, activity log and GPS moved from Fleet to the main dashboard.
-- Fleet page no longer repeats those operational blocks.
-- Dark navy owner-dashboard container removed.
-- All dashboard cards use one light SaaS style.
-- Duplicate GPS, events and TOP-profit widgets are hidden.
-- Attention widget remains as the unique risk-control block.
-- Dashboard customization opens from the main dashboard.
-- Driver-request panel remains only in Fleet and only when active requests exist.
+- Removed manager menu items “Мой автомобиль” and “Мой профиль”.
+- Removed all theme-selection controls; FleetPilot stays light.
+- Redesigned Calendar with agenda grouping, filters and month overview.
+- Redesigned Expenses with search, filters, structured rows and category breakdown.
 - No SQL required.

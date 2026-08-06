@@ -4919,7 +4919,41 @@ function renderPayments(){
   return `<article class="list-item"><div class="top"><div><h3>${model(c).brand} ${model(c).model} · ${c.plate}</h3><p>${p.tenant||c.tenant||"Без арендатора"} · ${paymentTimingText(p.timing||c.paymentTiming||"advance")} · ${p.referenceWeek||p.week||isoWeek(p.from)} · ${date(p.from)} — ${date(p.to)} · поступило ${date(p.date)}</p></div><strong>${money(p.received)}</strong></div><p>Ожидалось ${money(p.expected)} · Осталось ${money(rest)}</p>${allocation?`<p class="payment-allocation">Распределение: ${allocation}</p>`:""}<span class="badge ${s}">${paymentStatusText(s)}</span><div class="item-actions"><button class="btn" onclick="editPayment('${p.id}')">Редактировать</button><button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button></div></article>`
  }).join("")||`<div class="card">Оплат пока нет</div>`
 }
-function renderExpenses(){const active=db.expenses.filter(x=>x.status==="planned"),sum=active.reduce((s,x)=>s+x.amount,0);$("#expenseSummary").innerHTML=[["Запланировано",active.length],["Плановая сумма",money(sum)],["Оплачено",db.expenses.filter(x=>x.status==="paid").length],["Отменено",db.expenses.filter(x=>x.status==="cancelled").length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#expenseList").innerHTML=[...db.expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{const c=car(x.carId);return `<article class="list-item" data-expense-id="${x.id}"><div class="top"><div><h3>${x.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(x.date)}</p></div><strong>${money(x.amount)}</strong></div><p>${expenseCategoryText(x.category)} · ${x.note||""}</p><span class="badge ${x.status==="paid"?"paid":""}">${expenseStatusText(x.status)}</span><div class="item-actions"><button class="btn" onclick="editExpense('${x.id}')">Редактировать</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Плановых расходов нет</div>`}
+function renderExpenses(){
+ const search=String($("#expenseSearch")?.value||"").trim().toLowerCase();
+ const statusFilter=$("#expenseStatusFilter")?.value||"all";
+ const categoryFilter=$("#expenseCategoryFilter")?.value||"all";
+ const rows=[...db.expenses].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+ const visible=rows.filter(x=>{
+  const c=car(x.carId),label=`${x.title} ${x.note||""} ${model(c).brand} ${model(c).model} ${c?.plate||""}`.toLowerCase();
+  return(!search||label.includes(search))&&(statusFilter==="all"||x.status===statusFilter)&&(categoryFilter==="all"||x.category===categoryFilter)
+ });
+ const planned=rows.filter(x=>x.status==="planned"),paid=rows.filter(x=>x.status==="paid");
+ const plannedSum=planned.reduce((s,x)=>s+Number(x.amount||0),0),paidSum=paid.reduce((s,x)=>s+Number(x.amount||0),0);
+ $("#expenseSummary").innerHTML=[
+  ["Запланировано",planned.length, money(plannedSum),"planned"],
+  ["Оплачено",paid.length,money(paidSum),"paid"],
+  ["Средний расход",rows.length?money(rows.reduce((s,x)=>s+Number(x.amount||0),0)/rows.length):money(0),"за запись"],
+  ["Всего записей",rows.length,"в журнале","total"]
+ ].map(([label,value,note,kind])=>`<article class="expense-kpi ${kind||""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+ $("#expenseVisibleCount").textContent=String(visible.length);
+ $("#expenseList").innerHTML=visible.map(x=>{
+  const c=car(x.carId),m=model(c);
+  return `<article class="expense-row" data-expense-id="${x.id}">
+   <div class="expense-row-icon">${x.category==="repair"?"🔧":x.category==="insurance"?"🛡":x.category==="inspection"?"📋":x.category==="tires"?"◉":x.category==="leasing"?"₿":"•"}</div>
+   <div class="expense-row-main"><strong>${x.title}</strong><span>${m.brand} ${m.model} · ${c?.plate||"Без номера"}</span><small>${date(x.date)}${x.note?` · ${x.note}`:""}</small></div>
+   <div class="expense-row-status"><span class="expense-status ${x.status}">${expenseStatusText(x.status)}</span><b>${money(x.amount)}</b></div>
+   <div class="expense-row-actions"><button class="btn" onclick="editExpense('${x.id}')">Изменить</button><button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button></div>
+  </article>`
+ }).join("")||`<div class="expense-empty-state">Расходов по выбранным фильтрам нет.</div>`;
+ const categories=["repair","insurance","inspection","tires","leasing","other"];
+ const total=rows.reduce((s,x)=>s+Number(x.amount||0),0);
+ $("#expenseCategoryBreakdown").innerHTML=categories.map(category=>{
+  const amount=rows.filter(x=>x.category===category).reduce((s,x)=>s+Number(x.amount||0),0);
+  const percent=total?Math.round(amount/total*100):0;
+  return `<div class="expense-category-row"><div><span>${expenseCategoryText(category)}</span><b>${money(amount)}</b></div><div class="expense-category-track"><i style="width:${percent}%"></i></div><small>${percent}%</small></div>`
+ }).join("")
+}
 function addMonthsIso(dateValue,months){const d=new Date(dateValue+"T12:00:00");d.setMonth(d.getMonth()+months);return d.toISOString().slice(0,10)}
 function buildInsuranceInstallments(total,count,firstDate,frequency,existing=[]){
  const step=frequency==="quarterly"?3:1;
@@ -5049,19 +5083,38 @@ function eventsForCar(carId){return allEvents().filter(x=>x.carId===carId)}
 function eventIcon(type){return{insurance:"🛡️",inspection:"🔍",repair:"🔧",expense:"💰",installment:"💳",document:"📄"}[type]||"📅"}
 function renderCalendar(){
  const range=Number($("#calendarRange")?.value||90);
- const events=allEvents().filter(x=>x.days>=0&&x.days<=range).sort((a,b)=>a.date.localeCompare(b.date));
- const overdue=allEvents().filter(x=>x.days<0).length;
+ const typeFilter=$("#calendarTypeFilter")?.value||"all";
+ const all=allEvents();
+ const events=all.filter(x=>x.days>=0&&x.days<=range&&(typeFilter==="all"||x.type===typeFilter)).sort((a,b)=>a.date.localeCompare(b.date));
+ const overdue=all.filter(x=>x.days<0).length;
  $("#calendarSummary").innerHTML=[
-  ["Ближайшие 7 дней",events.filter(x=>x.days<=7).length],
-  ["Ближайшие 30 дней",events.filter(x=>x.days<=30).length],
-  ["Всего в периоде",events.length],
-  ["Просрочено",overdue]
- ].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
- $("#calendarList").innerHTML=events.length?events.map(e=>`<article class="calendar-item ${e.days<=7?"urgent":e.days<=30?"soon":""}" role="button" tabindex="0" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
-  <div class="calendar-date"><strong>${date(e.date)}</strong><small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div>
-  <div class="calendar-icon">${eventIcon(e.type)}</div>
-  <div><h3>${e.title}</h3><p>${e.car}${e.amount?` · ${money(e.amount)}`:""}</p></div>
- </article>`).join(""):`<div class="card">На выбранный период событий нет</div>`;
+  ["Сегодня",events.filter(x=>x.days===0).length,"today"],
+  ["7 дней",events.filter(x=>x.days<=7).length,"week"],
+  ["30 дней",events.filter(x=>x.days<=30).length,"month"],
+  ["Просрочено",overdue,"overdue"]
+ ].map(([label,value,kind])=>`<article class="calendar-kpi ${kind}"><span>${label}</span><strong>${value}</strong></article>`).join("");
+ $("#calendarVisibleCount").textContent=String(events.length);
+ const grouped=new Map();
+ events.forEach(event=>{
+  const key=(event.date||"").slice(0,7);
+  if(!grouped.has(key))grouped.set(key,[]);
+  grouped.get(key).push(event)
+ });
+ $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([month,items])=>{
+  const monthLabel=new Date(month+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+  return `<section class="calendar-month-group"><h4>${monthLabel}</h4>${items.map(e=>`<article class="calendar-agenda-row ${e.days<=7?"urgent":e.days<=30?"soon":""}" role="button" tabindex="0" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
+   <div class="calendar-agenda-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div>
+   <div class="calendar-agenda-icon">${eventIcon(e.type)}</div>
+   <div class="calendar-agenda-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div>
+   <b>›</b>
+  </article>`).join("")}</section>`
+ }).join(""):`<div class="calendar-empty-state">На выбранный период событий нет.</div>`;
+ const nextMonths=[0,1,2,3].map(offset=>{
+  const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);
+  const key=d.toISOString().slice(0,7),count=all.filter(x=>(x.date||"").startsWith(key)).length;
+  return `<div class="calendar-month-card"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>${count===1?"событие":"событий"}</small></div>`
+ });
+ $("#calendarMonthOverview").innerHTML=nextMonths.join("")
 }
 
 function renderDocuments(){
@@ -5588,7 +5641,11 @@ $("#paymentTo").onchange=recalculateExpectedPayment;
 $("#paymentAutoExpected").onchange=recalculateExpectedPayment;
 $("#openAttention").onclick=()=>showPage("attentionPage");
 $("#backFromAttention").onclick=()=>showPage("fleetPage");
-$("#calendarRange").onchange=renderCalendar;$("#analyticsPeriod").onchange=renderAnalytics;$("#analyticsMonth").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none");if(show&&!documentInstallmentDraft.length)rebuildInsuranceInstallmentDraft(false)}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
+$("#calendarRange").onchange=renderCalendar;
+$("#calendarTypeFilter").onchange=renderCalendar;
+$("#expenseSearch").oninput=renderExpenses;
+$("#expenseStatusFilter").onchange=renderExpenses;
+$("#expenseCategoryFilter").onchange=renderExpenses;$("#analyticsPeriod").onchange=renderAnalytics;$("#analyticsMonth").onchange=renderAnalytics;function syncInsuranceFields(){const show=$("#documentType").value==="insurance"&&$("#documentPaymentMode").value==="installments";$$(".insurance-installment-field").forEach(x=>x.style.display=show?"grid":"none");if(show&&!documentInstallmentDraft.length)rebuildInsuranceInstallmentDraft(false)}$("#documentType").onchange=syncInsuranceFields;$("#documentPaymentMode").onchange=syncInsuranceFields;
 $("#profitPeriod").onchange=renderProfitability;
 $("#taxMethod").onchange=syncTaxMethodFields;
 $("#taxVat").onchange=syncTaxMethodFields;
