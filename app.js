@@ -1062,11 +1062,67 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
 }
+
+function renderFleetDriverRequestsPanel(){
+ const panel=$("#fleetDriverRequestsPanel");
+ const list=$("#fleetDriverRequestsList");
+ if(!panel||!list)return;
+
+ const active=(workspaceRepairAlerts||[])
+  .filter(row=>!["done","rejected","cancelled"].includes(row.status))
+  .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+
+ panel.hidden=active.length===0;
+ if(!active.length){
+  list.innerHTML="";
+  return
+ }
+
+ const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
+ $("#fleetDriverRequestsTitle").textContent=`${active.length} ${active.length===1?"активная заявка":"активных заявок"}`;
+ $("#fleetDriverRequestsText").textContent=`Автомобилей с обращениями: ${cars.size}`;
+
+ list.innerHTML=active.slice(0,6).map(row=>{
+  const c=car(row.car_id);
+  const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate}`:"Автомобиль";
+  const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||"Неисправность";
+  const status=DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status;
+  return `<button type="button" class="fleet-driver-request-item" data-fleet-request-id="${row.id}" onclick="openFleetDriverRequest('${row.id}')">
+   <span class="fleet-driver-request-dot"></span>
+   <div>
+    <strong>${vehicle}</strong>
+    <small>${category} · ${status}</small>
+    <p>${row.description||"Без описания"}</p>
+   </div>
+   <em>${row.mileage?km(row.mileage):""}</em>
+  </button>`
+ }).join("");
+
+ if(active.length>6){
+  list.insertAdjacentHTML("beforeend",`<button type="button" class="fleet-driver-request-more" onclick="openAllFleetDriverRequests()">Ещё ${active.length-6} заявок →</button>`)
+ }
+}
+
+function openFleetDriverRequest(requestId){
+ const request=(workspaceRepairAlerts||[]).find(row=>String(row.id)===String(requestId));
+ if(!request)return toast("Заявка не найдена");
+ selectedWorkspaceRepairCarId=request.car_id||null;
+ showPage("repairsPage");
+ renderWorkspaceRepairRequests();
+ requestAnimationFrame(()=>highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(request.id))}"]`))
+}
+
+function openAllFleetDriverRequests(){
+ selectedWorkspaceRepairCarId=null;
+ showPage("repairsPage");
+ renderWorkspaceRepairRequests()
+}
 async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
   updateServiceRequestsSummaryBanner();
+  renderFleetDriverRequestsPanel();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
@@ -1435,6 +1491,10 @@ if(serviceRequestsSummaryOpen)serviceRequestsSummaryOpen.onclick=()=>{
  renderWorkspaceRepairRequests();
  requestAnimationFrame(()=>document.querySelector(".driver-service-inbox")?.scrollIntoView({behavior:"smooth",block:"start"}))
 };
+
+
+const fleetDriverRequestsOpenAll=$("#fleetDriverRequestsOpenAll");
+if(fleetDriverRequestsOpenAll)fleetDriverRequestsOpenAll.onclick=openAllFleetDriverRequests;
 
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;

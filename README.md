@@ -1,4 +1,4 @@
-# FleetPilot V12.2 — Cloudflare Light
+# FleetPilot V12.3 — Fleet Requests + White Sidebar
 
 Production:
 https://fleetpilot.balyshevy.workers.dev/
@@ -6,15 +6,11 @@ https://fleetpilot.balyshevy.workers.dev/
 No new Supabase SQL is required.
 
 Included:
-- full V12 desktop redesign;
-- all V12.1 stabilization fixes;
+- driver repair requests displayed directly in Fleet;
+- compact orange request panel above fleet controls;
+- each request opens the exact Service record;
+- white professional CRM sidebar;
+- lighter active-navigation style;
 - permanent light theme;
-- dark theme controls removed;
-- `_redirects` removed;
-- `.assetsignore` added for Cloudflare Workers Static Assets.
-
-Deployment:
-1. Replace repository files.
-2. Commit changes.
-3. Wait for Cloudflare deployment.
-4. Refresh with Ctrl+F5.
+- all V12.1/V12.2 stabilization fixes preserved;
+- no `_redirects`.
