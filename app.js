@@ -1042,60 +1042,7 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
  return `<button type="button" class="car-service-alert-icon ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Активных заявок: ${rows.length}"><span>🔧</span><b>${rows.length}</b></button>`
 }
 function renderFleetServiceAlertIndicators(){
- const active=activeWorkspaceRepairAlerts();
- const affectedCars=new Set(active.map(row=>String(row.car_id)));
- const total=active.length;
-
- for(const id of ["desktopFleetServiceAlertBadge","mobileFleetServiceAlertBadge"]){
-  const badge=$("#"+id);
-  if(!badge)continue;
-  badge.hidden=!total;
-  badge.textContent=String(total)
- }
-
- const strip=$("#fleetServiceAlertStrip");
- if(strip){
-  strip.hidden=!total;
-  strip.innerHTML=total?`
-   <button type="button" onclick="openAllFleetServiceAlerts()">
-    <span class="fleet-service-strip-icon">🔧</span>
-    <div><strong>${total} ${total===1?"заявка":"заявок"} от водителей</strong>
-    <small>Автомобилей с активными заявками: ${affectedCars.size}</small></div>
-    <b>Открыть сервис →</b>
-   </button>`:""
- }
-
- document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove());
-
- for(const carId of affectedCars){
-  const rows=repairAlertsForCar(carId);
-  const level=repairAlertLevel(rows);
-  const carSelectors=[`[data-fleet-car-id="${CSS.escape(carId)}"]`,`[data-board-car="${CSS.escape(carId)}"]`,`[data-car-id="${CSS.escape(carId)}"]`];
-  const targets=[];
-  for(const selector of carSelectors){
-   document.querySelectorAll(selector).forEach(card=>targets.push(card.querySelector('.hero-card-controls')||card))
-  }
-
-  targets.forEach(target=>{
-   if(target.querySelector(`[data-car-service-alert="${CSS.escape(carId)}"]`))return;
-   const button=document.createElement("button");
-   button.type="button";
-   button.className=`car-service-alert-icon ${level} dynamic-service-alert`;
-   button.dataset.carServiceAlert=carId;
-   button.title=level==="critical"
-    ?`Срочная заявка водителя (${rows.length})`
-    :`Активная заявка водителя (${rows.length})`;
-   button.setAttribute("aria-label",button.title);
-   button.innerHTML=`<span>🔧</span><b>${rows.length}</b>`;
-   button.onclick=event=>{
-    event.stopPropagation();
-    openFleetServiceAlert(carId)
-   };
-
-   if(target.matches(".hero-card-controls"))target.prepend(button);
-   else target.append(button)
-  })
- }
+ document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
 }
 async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
@@ -2199,19 +2146,30 @@ function financialDataForVisibleCars(period){
  const payments=db.payments.filter(p=>allowed.has(p.carId));
  const grossRevenue=payments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"received"),0);
  const expectedRevenue=payments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"expected"),0);
- const repairs=db.repairs.filter(r=>allowed.has(r.carId)&&r.status==="done"&&inPeriod(r.completedDate||r.date,bounds));
- const paidExpenses=db.expenses.filter(x=>allowed.has(x.carId)&&x.status==="paid"&&!x.linkedRepairId&&inPeriod(x.date,bounds));
- const repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
- const otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
+
+ normalizeRepairExpenseLinks();
+ const paidExpenses=db.expenses.filter(x=>allowed.has(x.carId)&&x.status==="paid"&&inPeriod(x.date,bounds));
+ const linkedRepairIds=new Set(paidExpenses.map(x=>x.linkedRepairId).filter(Boolean));
+ const legacyRepairs=db.repairs.filter(r=>allowed.has(r.carId)&&r.status==="done"&&!r.linkedExpenseId&&!linkedRepairIds.has(r.id)&&inPeriod(r.completedDate||r.date,bounds));
+ const repairGross=
+  paidExpenses.filter(x=>x.category==="repair").reduce((s,x)=>s+Number(x.amount||0),0)+
+  legacyRepairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
+ const otherGross=paidExpenses.filter(x=>x.category!=="repair").reduce((s,x)=>s+Number(x.amount||0),0);
  const grossCosts=repairGross+otherGross;
+
  const tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
- const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue,deductInputVat=vatPayer&&tax.deductVatCosts,netCosts=deductInputVat?grossCosts/vatFactor:grossCosts;
+ const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue;
+ const deductInputVat=vatPayer&&tax.deductVatCosts;
+ const netCosts=deductInputVat?grossCosts/vatFactor:grossCosts;
  const vatDue=noTaxes?0:Math.max(0,(vatPayer?grossRevenue-netRevenue:0)-(deductInputVat?grossCosts-netCosts:0));
  const profitBeforePit=netRevenue-netCosts;
  let pit=0;
  if(tax.method==="ryczalt"&&!noTaxes)pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);
  else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);
- else if(tax.method==="scale"&&!noTaxes){const taxable=Math.max(0,profitBeforePit);pit=bounds.months===1?Math.max(0,taxable*.12-300):(taxable<=120000?Math.max(0,taxable*.12-3600):10800+(taxable-120000)*.32)}
+ else if(tax.method==="scale"&&!noTaxes){
+  const taxable=Math.max(0,profitBeforePit);
+  pit=bounds.months===1?Math.max(0,taxable*.12-300):(taxable<=120000?Math.max(0,taxable*.12-3600):10800+(taxable-120000)*.32)
+ }
  const allCars=Math.max(1,fleetCars().filter(c=>!c.archived).length);
  const visibleCars=cityFilteredCars().filter(c=>!c.archived).length;
  const contributions=noTaxes?0:Number(tax.monthlyContributions||0)*bounds.months*(visibleCars/allCars);
@@ -4555,7 +4513,6 @@ ${fleetServiceBadgeMarkup(c.id,true)}
     <div class="desktop-kpi profit ${monthProfit<0?"negative":""}"><strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong><small>Прибыль за месяц</small></div>
   </div>
   <div class="desktop-today-card ${nextEvent&&nextEvent.days<=14?"warning":""}" ${nextEvent?`role="button" tabindex="0" onclick="event.stopPropagation();openSmartEntity('${nextEvent.type}','${nextEvent.entityId||""}','${c.id}')"`:""}>
-    ${fleetServiceBadgeMarkup(c.id,true)}
     <small>Сегодня</small>
     <strong>${nextEvent?nextEvent.title:"Автомобиль не требует внимания"}</strong>
     <span>${nextEvent?`${nextEvent.days} дн.`:"Все основные показатели в норме"}</span>
@@ -4685,16 +4642,68 @@ function inPeriod(dateValue,bounds){
  const d=new Date(dateValue+"T12:00:00");
  return(!bounds.from||d>=bounds.from)&&(!bounds.to||d<=bounds.to)
 }
+
+function normalizeRepairExpenseLinks(){
+ const expenseByRepair=new Map();
+ for(const expense of db.expenses){
+  if(!expense.linkedRepairId)continue;
+  if(!expenseByRepair.has(expense.linkedRepairId)){
+   expenseByRepair.set(expense.linkedRepairId,expense)
+  }else{
+   const keeper=expenseByRepair.get(expense.linkedRepairId);
+   // Prefer the paid/newer meaningful record and remove only an obvious generated duplicate.
+   const keeperScore=(keeper.status==="paid"?2:0)+Number(keeper.amount||0);
+   const expenseScore=(expense.status==="paid"?2:0)+Number(expense.amount||0);
+   if(expenseScore>keeperScore){
+    expenseByRepair.set(expense.linkedRepairId,expense)
+   }
+  }
+ }
+ const keepIds=new Set([...expenseByRepair.values()].map(x=>x.id));
+ db.expenses=db.expenses.filter(expense=>{
+  if(!expense.linkedRepairId)return true;
+  const keeper=expenseByRepair.get(expense.linkedRepairId);
+  return !keeper||keeper.id===expense.id
+ });
+ for(const repair of db.repairs){
+  const expense=repair.linkedExpenseId
+   ?db.expenses.find(x=>x.id===repair.linkedExpenseId)
+   :db.expenses.find(x=>x.linkedRepairId===repair.id);
+  if(expense){
+   repair.linkedExpenseId=expense.id;
+   expense.linkedRepairId=repair.id;
+   expense.financeSource="expense"
+  }
+ }
+}
+function financialExpenseRows(bounds,carId=null){
+ normalizeRepairExpenseLinks();
+ const paidExpenses=db.expenses.filter(x=>
+  (!carId||x.carId===carId)&&x.status==="paid"&&inPeriod(x.date,bounds)
+ );
+ const linkedRepairIds=new Set(paidExpenses.map(x=>x.linkedRepairId).filter(Boolean));
+ const legacyRepairs=db.repairs.filter(r=>
+  (!carId||r.carId===carId)&&
+  r.status==="done"&&
+  !linkedRepairIds.has(r.id)&&
+  !r.linkedExpenseId&&
+  inPeriod(r.completedDate||r.date,bounds)
+ );
+ return{paidExpenses,legacyRepairs}
+}
 function financialData(period,carId=null){
  const bounds=periodBounds(period);
  const scopedPayments=db.payments.filter(p=>!carId||p.carId===carId);
  const grossRevenue=scopedPayments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"received"),0);
  const expectedRevenue=scopedPayments.reduce((sum,p)=>sum+allocatedPaymentAmount(p,bounds,"expected"),0);
 
- const repairs=db.repairs.filter(r=>(!carId||r.carId===carId)&&r.status==="done"&&inPeriod(r.completedDate||r.date,bounds));
- const paidExpenses=db.expenses.filter(x=>(!carId||x.carId===carId)&&x.status==="paid"&&!x.linkedRepairId&&inPeriod(x.date,bounds));
- const repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
- const otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
+ const {paidExpenses,legacyRepairs}=financialExpenseRows(bounds,carId);
+ const repairExpenses=paidExpenses.filter(x=>x.category==="repair");
+ const otherExpenses=paidExpenses.filter(x=>x.category!=="repair");
+ const repairGross=
+  repairExpenses.reduce((s,x)=>s+Number(x.amount||0),0)+
+  legacyRepairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
+ const otherGross=otherExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
  const grossCosts=repairGross+otherGross;
 
  const tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
@@ -4711,7 +4720,11 @@ function financialData(period,carId=null){
  else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);
  else if(tax.method==="scale"&&!noTaxes){
   const taxable=Math.max(0,profitBeforePit);
-  pit=bounds.months===1?Math.max(0,taxable*.12-(carId?300/Math.max(1,fleetCars().length):300)):(taxable<=120000?Math.max(0,taxable*.12-(carId?3600/Math.max(1,fleetCars().length):3600)):10800+(taxable-120000)*.32)
+  pit=bounds.months===1
+   ?Math.max(0,taxable*.12-(carId?300/Math.max(1,fleetCars().length):300))
+   :(taxable<=120000
+     ?Math.max(0,taxable*.12-(carId?3600/Math.max(1,fleetCars().length):3600))
+     :10800+(taxable-120000)*.32)
  }
 
  const contributions=noTaxes?0:fixedContributionShare(carId,bounds);
@@ -4741,6 +4754,7 @@ function syncTaxMethodFields(){
  }
 }
 function renderProfitability(){
+ normalizeRepairExpenseLinks();
  const period=$("#profitPeriod")?.value||"month",tax=taxSettings(),data=financialData(period);
  $("#profitSummary").innerHTML=[
   ["Доход за дни периода",money(data.grossRevenue),"good"],
@@ -5159,20 +5173,74 @@ function currentConfirmedMileage(carId){
 }
 function createOrUpdateRepairFromExpense(expense){
  if(expense.category!=="repair"||!$("#expenseCreateRepair")?.checked)return null;
+
  let repair=expense.linkedRepairId?db.repairs.find(r=>r.id===expense.linkedRepairId):null;
+ if(!repair){
+  // Recover an existing reverse link before creating a new technical record.
+  repair=db.repairs.find(r=>r.linkedExpenseId===expense.id)||null
+ }
  const mileage=Math.max(currentConfirmedMileage(expense.carId),Number($("#expenseRepairMileage").value||0));
- if(!repair){repair={id:uid()};db.repairs.push(repair)}
- Object.assign(repair,{carId:expense.carId,title:expense.title,date:expense.date,mileage,planned:Number(expense.amount||0),actual:expense.status==="paid"?Number(expense.amount||0):Number(repair.actual||0),paidAmount:expense.status==="paid"?Number(expense.amount||0):Number(repair.paidAmount||0),paymentStatus:$("#expensePaymentStatus").value||"paid",status:$("#expenseRepairStatus").value||"done",service:$("#expenseRepairService").value.trim(),note:expense.note,linkedExpenseId:expense.id,linkedRequestId:repair.linkedRequestId||"",completedDate:$("#expenseRepairStatus").value==="done"?expense.date:repair.completedDate||"",warrantyUntil:repair.warrantyUntil||""});
+ if(!repair){
+  repair={id:uid(),linkedExpenseId:expense.id};
+  db.repairs.push(repair)
+ }
+
+ Object.assign(repair,{
+  carId:expense.carId,
+  title:expense.title,
+  date:expense.date,
+  mileage,
+  planned:Number(expense.amount||0),
+  actual:expense.status==="paid"?Number(expense.amount||0):Number(repair.actual||0),
+  paidAmount:expense.status==="paid"?Number(expense.amount||0):Number(repair.paidAmount||0),
+  paymentStatus:$("#expensePaymentStatus").value||"paid",
+  status:$("#expenseRepairStatus").value||"done",
+  service:$("#expenseRepairService").value.trim(),
+  note:expense.note,
+  linkedExpenseId:expense.id,
+  linkedRequestId:repair.linkedRequestId||"",
+  completedDate:$("#expenseRepairStatus").value==="done"?expense.date:repair.completedDate||"",
+  warrantyUntil:repair.warrantyUntil||""
+ });
+
  expense.linkedRepairId=repair.id;
- const c=car(expense.carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
+ expense.financeSource="expense";
+ const c=car(expense.carId);
+ if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
  return repair
 }
 function syncLinkedExpenseFromRepair(repair){
  const amount=Number(repair.actual||0);
- if(!(repair.status==="done"&&amount>0&&["paid","partial","driver"].includes(repair.paymentStatus)))return;
+ const shouldCreate=repair.status==="done"&&amount>0&&["paid","partial","driver"].includes(repair.paymentStatus);
+
  let expense=repair.linkedExpenseId?db.expenses.find(x=>x.id===repair.linkedExpenseId):null;
- if(!expense){expense={id:uid()};db.expenses.push(expense);repair.linkedExpenseId=expense.id}
- Object.assign(expense,{carId:repair.carId,title:repair.title,category:"repair",date:repair.completedDate||repair.date||today(),amount,status:repair.paymentStatus==="paid"?"paid":"planned",note:repair.note||"",linkedRepairId:repair.id})
+ if(!expense){
+  expense=db.expenses.find(x=>x.linkedRepairId===repair.id)||null
+ }
+
+ if(!shouldCreate){
+  // Keep an already entered expense, but never create a new one for a planned/unpaid repair.
+  return expense||null
+ }
+
+ if(!expense){
+  expense={id:uid()};
+  db.expenses.push(expense)
+ }
+
+ Object.assign(expense,{
+  carId:repair.carId,
+  title:repair.title,
+  category:"repair",
+  date:repair.completedDate||repair.date||today(),
+  amount,
+  status:repair.paymentStatus==="paid"?"paid":"planned",
+  note:repair.note||"",
+  linkedRepairId:repair.id,
+  financeSource:"expense"
+ });
+ repair.linkedExpenseId=expense.id;
+ return expense
 }
 function openRepairFromDriverRequest(request){
  const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
@@ -5207,7 +5275,22 @@ function openDepositDialog(carId="",id=""){if(!requireFleetCar())return;const ro
 function deleteDeposit(id){if(!confirm("Удалить этот платёж кауции?"))return;const row=db.deposits.find(x=>x.id===id);db.deposits=db.deposits.filter(x=>x.id!==id);logActivity("Удалён платёж кауции","Кауция",row?money(row.amount):"",row?.carId);save();if(selectedCarId)openCar(selectedCarId,"finance")}
 window.openDamageDialog=openDamageDialog;window.editDamage=editDamage;window.deleteDamage=deleteDamage;window.openDamageViewer=openDamageViewer;window.removePendingDamagePhoto=removePendingDamagePhoto;window.toggleInsuranceInstallment=toggleInsuranceInstallment;window.openDocumentAttachment=openDocumentAttachment;window.downloadDocumentAttachment=downloadDocumentAttachment;window.restoreBackupById=restoreBackupById;window.openQuickService=openQuickService;window.toggleFavorite=toggleFavorite;window.toggleArchive=toggleArchive;window.openCarQuickMenu=openCarQuickMenu;window.openCar=openCar;window.openDepositDialog=openDepositDialog;window.deleteDeposit=deleteDeposit;window.openMileage=openMileage;window.openCarDialog=openCarDialog;window.openRepairDialog=openRepairDialog;window.openPaymentDialog=openPaymentDialog;window.openExpenseDialog=openExpenseDialog;window.openDocumentDialog=openDocumentDialog;
 window.editRepair=id=>openRepairDialog("",id);window.editPayment=id=>openPaymentDialog("",id);window.editExpense=id=>openExpenseDialog("",id);window.editDocument=id=>openDocumentDialog("",id);
-window.deleteRepair=id=>{if(confirm("Удалить ремонт?")){db.repairs=db.repairs.filter(x=>x.id!==id);save();renderRepairs()}};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=async id=>{if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
+window.deleteRepair=id=>{
+ const repair=db.repairs.find(x=>x.id===id);if(!repair)return;
+ const expense=repair.linkedExpenseId?db.expenses.find(x=>x.id===repair.linkedExpenseId):db.expenses.find(x=>x.linkedRepairId===id);
+ let removeExpense=false;
+ if(expense){
+  removeExpense=confirm(`Ремонт связан с расходом ${money(expense.amount)}.\n\nOK — удалить ремонт и расход.\nОтмена — удалить только техническую запись.`);
+ }else if(!confirm("Удалить ремонт?"))return;
+ if(expense&&!removeExpense){
+  expense.linkedRepairId="";
+  expense.financeSource="expense"
+ }
+ if(expense&&removeExpense)db.expenses=db.expenses.filter(x=>x.id!==expense.id);
+ db.repairs=db.repairs.filter(x=>x.id!==id);
+ save();renderRepairs();renderExpenses();renderFleet();renderProfitability();
+ toast(removeExpense?"Ремонт и расход удалены":"Техническая запись удалена")
+};window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses()}};window.deleteDocument=async id=>{if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
 $("#carModelKey").onchange=toggleCustomModelFields;
 $("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,favorite:old?.favorite||false,archived:old?.archived||false,modelKey:$("#carModelKey").value==="__custom__"?"__custom__":$("#carModelKey").value,customBrand:$("#carModelKey").value==="__custom__"?$("#carCustomBrand").value.trim():"",customModel:$("#carModelKey").value==="__custom__"?$("#carCustomModel").value.trim():"",year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),city:normalizedCity($("#carCity").value),weeklyRent:Number($("#carWeeklyRent").value),paymentTiming:$("#carPaymentTiming").value,depositTarget:Number($("#carDepositTarget").value||0),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
 

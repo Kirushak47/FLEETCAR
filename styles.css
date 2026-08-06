@@ -7398,3 +7398,21 @@ html[data-theme="dark"] .driver-profile-history-row{
  .driver-profile-service-alert{grid-template-columns:46px 1fr}
  .driver-profile-service-alert button{grid-column:1/-1}
 }
+
+.repair-linked-finance-info{
+ display:grid;
+ gap:4px;
+ padding:12px;
+ border:1px solid #bbf7d0;
+ border-radius:13px;
+ background:#f0fdf4;
+ color:#166534;
+}
+.repair-linked-finance-info strong,
+.repair-linked-finance-info span{display:block}
+.repair-linked-finance-info span{font-size:9px}
+html[data-theme="dark"] .repair-linked-finance-info{
+ border-color:#166534;
+ background:#10251a;
+ color:#bbf7d0;
+}
