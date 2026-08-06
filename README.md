@@ -1,20 +1,15 @@
-# FleetPilot V11.3.1 — Stable Rollback
+# FleetPilot V11.3.2 — Light CRM Menu
 
-This is the clean rollback package based on the last stable Finance & Service Fix build.
+Safe first update based directly on the stable V11.3.1 rollback.
 
-Production:
-https://fleetpilot.balyshevy.workers.dev/
+Changes:
+- permanent light appearance;
+- theme controls hidden without removing required DOM bindings;
+- driver-only desktop items “Мой автомобиль” and “Мой профиль” removed;
+- white professional CRM sidebar;
+- corrected icon and label alignment;
+- clean active navigation state;
+- no changes to Service, maps, Supabase, finance, documents, or synchronization;
+- no SQL required.
 
-Important:
-- Existing Supabase project and data are preserved.
-- No SQL must be executed.
-- `_redirects` is removed.
-- `.assetsignore` is included for Cloudflare Workers Static Assets.
-- No V12 redesign or experimental patches are included.
-
-Deploy:
-1. Delete the current repository files except `.git`.
-2. Upload the contents of this package.
-3. Commit once.
-4. Wait for Cloudflare deployment.
-5. Open the site with `?v=113110` and hard-refresh.
+Deploy and test this version before adding the next functional stage.

@@ -1,12 +1,12 @@
-const CACHE="fleetpilot-v11-3-1-stable-rollback";
+const CACHE="fleetpilot-v11-3-2-light-crm-menu";
 const ASSETS=[
   "./",
   "./index.html",
-  "./styles.css?v=113110",
-  "./app.js?v=113110",
-  "./cloud-config.js?v=113110",
-  "./cloud.js?v=113110",
-  "./manifest.webmanifest?v=113110"
+  "./styles.css?v=113200",
+  "./app.js?v=113200",
+  "./cloud-config.js?v=113200",
+  "./cloud.js?v=113200",
+  "./manifest.webmanifest?v=113200"
 ];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));

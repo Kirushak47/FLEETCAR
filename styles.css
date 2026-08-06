@@ -7416,3 +7416,231 @@ html[data-theme="dark"] .repair-linked-finance-info{
  background:#10251a;
  color:#bbf7d0;
 }
+
+
+/* =========================================================
+   FleetPilot V11.3.2 — safe light CRM menu
+   Functional logic remains unchanged from stable V11.3.1.
+   ========================================================= */
+
+html,
+html[data-theme="light"],
+html[data-theme="dark"]{
+ color-scheme:light!important;
+ background:#f6f7fb!important;
+}
+
+#desktopThemeToggle,
+.appearance-panel,
+.theme-switcher,
+[data-theme-mode]{
+ display:none!important;
+}
+
+@media(min-width:1100px){
+ :root{
+  --crm-bg:#f6f7fb;
+  --crm-card:#ffffff;
+  --crm-line:#e8ebf2;
+  --crm-text:#141a2a;
+  --crm-muted:#70798d;
+  --crm-primary:#5b4df5;
+  --crm-primary-soft:#f0efff;
+ }
+
+ body,
+ .app,
+ main{
+  background:var(--crm-bg)!important;
+  color:var(--crm-text)!important;
+ }
+
+ .ambient-background{
+  display:none!important;
+ }
+
+ .desktop-sidebar{
+  width:236px!important;
+  padding:18px 12px!important;
+  background:#fff!important;
+  border-right:1px solid var(--crm-line)!important;
+  box-shadow:none!important;
+ }
+
+ .desktop-brand{
+  min-height:58px!important;
+  margin:0 0 15px!important;
+  padding:4px 12px 16px!important;
+  border-bottom:1px solid #f0f1f5!important;
+ }
+
+ .desktop-brand-mark{
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  height:38px!important;
+  border-radius:11px!important;
+  background:linear-gradient(135deg,#6858ff,#5141e8)!important;
+  color:#fff!important;
+  font-size:19px!important;
+  font-weight:950!important;
+  box-shadow:0 8px 20px rgba(91,77,245,.22)!important;
+ }
+
+ .desktop-brand strong{
+  color:#141a2a!important;
+  font-size:14px!important;
+  font-weight:900!important;
+ }
+
+ .desktop-brand small{
+  color:#9299a8!important;
+  font-size:8px!important;
+ }
+
+ .desktop-sidebar-nav{
+  display:grid!important;
+  gap:4px!important;
+ }
+
+ .desktop-sidebar-nav button{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:26px minmax(0,1fr)!important;
+  align-items:center!important;
+  justify-content:stretch!important;
+  column-gap:10px!important;
+  width:100%!important;
+  min-height:43px!important;
+  margin:0!important;
+  padding:0 13px!important;
+  border:0!important;
+  border-radius:10px!important;
+  background:transparent!important;
+  color:#5e687c!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  text-align:left!important;
+  line-height:1.15!important;
+  box-shadow:none!important;
+  transform:none!important;
+ }
+
+ .desktop-sidebar-nav button > span{
+  display:grid!important;
+  place-items:center!important;
+  width:26px!important;
+  min-width:26px!important;
+  height:26px!important;
+  margin:0!important;
+  padding:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:inherit!important;
+  font-size:15px!important;
+  line-height:1!important;
+ }
+
+ .desktop-sidebar-nav button > b{
+  font:inherit!important;
+  color:inherit!important;
+ }
+
+ .desktop-sidebar-nav button:hover{
+  background:#f7f8fb!important;
+  color:#343c50!important;
+ }
+
+ .desktop-sidebar-nav button.active{
+  background:var(--crm-primary-soft)!important;
+  color:var(--crm-primary)!important;
+ }
+
+ .desktop-sidebar-nav button.active::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:9px;
+  bottom:9px;
+  width:3px;
+  border-radius:0 4px 4px 0;
+  background:var(--crm-primary);
+ }
+
+ .desktop-sidebar-nav button.active > span{
+  background:#fff!important;
+  box-shadow:0 5px 13px rgba(91,77,245,.13)!important;
+ }
+
+ .desktop-sidebar-footer{
+  border-top:1px solid #f0f1f5!important;
+  padding-top:12px!important;
+ }
+
+ .desktop-sidebar-footer button{
+  min-height:40px!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#687286!important;
+  font-size:10px!important;
+  font-weight:800!important;
+ }
+
+ .desktop-sidebar-footer button:hover{
+  background:#f7f8fb!important;
+  color:#343c50!important;
+ }
+
+ .topbar{
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid var(--crm-line)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(14px);
+ }
+
+ .topbar h1{
+  color:var(--crm-text)!important;
+ }
+
+ .page,
+ .card,
+ .summary-card,
+ dialog .modal{
+  color:var(--crm-text);
+ }
+
+ html[data-theme="dark"] body,
+ html[data-theme="dark"] .app,
+ html[data-theme="dark"] main,
+ html[data-theme="dark"] .page{
+  background:var(--crm-bg)!important;
+  color:var(--crm-text)!important;
+ }
+
+ html[data-theme="dark"] .card,
+ html[data-theme="dark"] .summary-card,
+ html[data-theme="dark"] .topbar,
+ html[data-theme="dark"] dialog .modal{
+  background:#fff!important;
+  border-color:var(--crm-line)!important;
+  color:var(--crm-text)!important;
+ }
+
+ html[data-theme="dark"] input,
+ html[data-theme="dark"] select,
+ html[data-theme="dark"] textarea{
+  background:#fff!important;
+  border-color:#dfe3eb!important;
+  color:var(--crm-text)!important;
+ }
+}
+
+@media(max-width:1099px){
+ #desktopThemeToggle,
+ .appearance-panel,
+ .theme-switcher,
+ [data-theme-mode]{
+  display:none!important;
+ }
+}
