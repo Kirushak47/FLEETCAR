@@ -1116,35 +1116,8 @@ async function renderWorkspaceRepairRequests(){
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
    const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
-   const requestedStatus=select.value;
-   const requestId=select.dataset.requestStatus;
-
-   if(requestedStatus==="repair"){
-    if(request)openRepairFromDriverRequest(request);
-    select.value=request?.status||"new";
-    return
-   }
-
-   select.disabled=true;
-   try{
-    await window.FleetPilotCloud.updateDriverRepairRequest(requestId,requestedStatus,"");
-    toast("Статус заявки обновлён");
-
-    // Обновляем данные без перехода в автопарк.
-    await loadFleetServiceAlerts({rerender:false});
-    showPage("repairsPage");
-    await renderWorkspaceRepairRequests();
-
-    requestAnimationFrame(()=>{
-     showPage("repairsPage");
-     highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(requestId))}"]`)
-    })
-   }catch(error){
-    select.value=request?.status||"new";
-    toast(error.message||String(error))
-   }finally{
-    select.disabled=false
-   }
+   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
+   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
@@ -5430,7 +5403,7 @@ $("#repairForm").onsubmit=async e=>{
   }catch(error){console.warn(error)}
  }
 
- const destination="repairsPage";
+ const destination=(pageBeforeSave==="repairsPage"||obj.linkedRequestId)?"repairsPage":pageBeforeSave;
  requestAnimationFrame(()=>{
   showPage(destination);
   if(destination==="repairsPage"){
@@ -5622,19 +5595,7 @@ window.addEventListener("fleetpilot:assignments-changed",async()=>{
   await loadWorkspaceDriverAssignments();renderFleet();if($("#companyPage")?.classList.contains("active"))renderEnterprisePage()
  }else if(enterpriseCurrentRole()==="driver")renderDriverPortal()
 });
-
-function preserveServicePageDuring(callback){
- const wasService=$("#repairsPage")?.classList.contains("active");
- const result=callback();
- if(wasService)requestAnimationFrame(()=>showPage("repairsPage"));
- return result
-}
 window.addEventListener("fleetpilot:repair-requests-changed",async()=>{
- const wasService=$("#repairsPage")?.classList.contains("active");
- await loadFleetServiceAlerts({rerender:!wasService});
- if(wasService){
-  showPage("repairsPage");
-  await renderWorkspaceRepairRequests();
-  requestAnimationFrame(()=>showPage("repairsPage"))
- }
+ await loadFleetServiceAlerts({rerender:true});
+ if($("#repairsPage")?.classList.contains("active"))renderWorkspaceRepairRequests()
 });
