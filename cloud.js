@@ -1136,6 +1136,27 @@ async function updateDriverMileage(mileage,source="driver_manual"){
  if(error)throw error;
  return Array.isArray(data)?data[0]||null:data||null
 }
-window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,linkDriverRequestRepair,getMyWorkspaceNotifications,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,updateDriverMileage,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
+
+async function getDriverServiceFeed(){
+ if(!client||!membership)return[];
+ const {data,error}=await client.rpc("get_driver_service_feed");
+ if(error)throw error;
+ return data||[]
+}
+async function notifyAssignedDriverService(repair){
+ if(!client||!membership)return null;
+ const {data,error}=await client.rpc("notify_assigned_driver_service",{
+  car_id_value:String(repair.carId),
+  repair_id_value:String(repair.id),
+  repair_title_value:String(repair.title||"Сервис"),
+  repair_date_value:repair.date||null,
+  repair_status_value:String(repair.status||"planned"),
+  repair_note_value:String(repair.note||"").trim()||null,
+  repair_mileage_value:Number(repair.mileage||0)
+ });
+ if(error)throw error;
+ return data
+}
+window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,linkDriverRequestRepair,getMyWorkspaceNotifications,getDriverServiceFeed,notifyAssignedDriverService,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,updateDriverMileage,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

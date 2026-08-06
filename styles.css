@@ -7270,3 +7270,37 @@ html[data-theme="dark"] .payment-allocation{
 @keyframes smartTargetPulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.15)}50%{box-shadow:0 0 0 12px rgba(99,102,241,.18)}}
 .smart-event-button{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;border:0;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer}
 .calendar-item{cursor:pointer}
+
+
+/* FleetPilot V11.2 — driver service plan and guaranteed vehicle alerts */
+.driver-service-plan-count{
+ display:grid;place-items:center;min-width:30px;height:30px;padding:0 9px;border-radius:999px;
+ background:#eef2ff;color:#4338ca;font-weight:900;font-size:10px
+}
+.driver-service-plan-row{
+ display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px;border:1px solid #e5e7eb;
+ border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.05)
+}
+.driver-service-plan-row+.driver-service-plan-row{margin-top:9px}
+.driver-service-plan-row.urgent{border-color:#fdba74;background:#fff7ed}
+.driver-service-plan-row.overdue{border-color:#fca5a5;background:#fef2f2}
+.driver-service-plan-row.soon{border-color:#fde68a;background:#fffbeb}
+.driver-service-plan-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#eef2ff;font-size:20px}
+.driver-service-plan-title{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.driver-service-plan-title span{padding:5px 8px;border-radius:999px;background:#e2e8f0;font-size:8px;font-weight:900}
+.driver-service-plan-main p{margin:6px 0;color:#64748b;font-size:10px}
+.driver-service-plan-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.driver-service-plan-meta span,.driver-service-plan-meta b{font-size:8px}
+.driver-service-plan-meta b{margin-left:auto;color:#c2410c}
+.desktop-today-card{position:relative}
+.desktop-inline-service-alert{position:absolute!important;top:8px;right:8px;z-index:5}
+html[data-theme="dark"] .driver-service-plan-row{border-color:rgba(255,255,255,.08);background:#111827}
+html[data-theme="dark"] .driver-service-plan-row.urgent,
+html[data-theme="dark"] .driver-service-plan-row.soon,
+html[data-theme="dark"] .driver-service-plan-row.overdue{background:#1f2937}
+@media(max-width:600px){
+ .driver-service-plan-row{grid-template-columns:40px 1fr}
+ .driver-service-plan-icon{width:40px;height:40px}
+ .driver-service-plan-title{align-items:flex-start;flex-direction:column}
+ .driver-service-plan-meta b{margin-left:0}
+}

@@ -872,6 +872,36 @@ async function renderDriverRepairRequests(){
    </article>`).join("")||'<div class="driver-empty-state">Заявок пока нет.</div>'
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
+
+async function renderDriverServiceFeed(){
+ const root=$("#driverTasksList"),count=$("#driverServicePlanCount");
+ if(!root)return;
+ root.innerHTML='<div class="driver-empty-state">Загрузка сервисного плана…</div>';
+ try{
+  const rows=await window.FleetPilotCloud.getDriverServiceFeed();
+  if(count)count.textContent=String(rows.length);
+  root.innerHTML=rows.map(row=>{
+   const due=row.date?days(row.date):null;
+   const urgency=due!=null&&due<0?"overdue":due!=null&&due<=3?"urgent":due!=null&&due<=14?"soon":"normal";
+   const statusLabel=repairStatusText(row.status);
+   return `<article class="driver-service-plan-row ${urgency}">
+    <div class="driver-service-plan-icon">🔧</div>
+    <div class="driver-service-plan-main">
+      <div class="driver-service-plan-title"><strong>${row.title||"Сервис"}</strong><span>${statusLabel}</span></div>
+      <p>${row.note||"Запланированное обслуживание автомобиля"}</p>
+      <div class="driver-service-plan-meta">
+        <span>📅 ${row.date?date(row.date):"Дата уточняется"}</span>
+        <span>🧭 ${row.mileage?km(row.mileage):"Пробег не указан"}</span>
+        ${due!=null?`<b>${due<0?`Просрочено ${Math.abs(due)} дн.`:due===0?"Сегодня":`Через ${due} дн.`}</b>`:""}
+      </div>
+    </div>
+   </article>`
+  }).join("")||'<div class="driver-empty-state">Запланированных сервисных работ нет.</div>'
+ }catch(error){
+  if(count)count.textContent="!";
+  root.innerHTML=`<div class="driver-empty-state">${error.message||"Не удалось загрузить сервисный план"}</div>`
+ }
+}
 async function renderDriverNotifications(){
  const root=$("#driverNotificationsList");if(!root)return;
  try{
@@ -893,7 +923,7 @@ async function renderDriverPortal(){
   renderDriverVehicleCard();
   renderDriverDocuments();
   renderDriverProfile();
-  await Promise.all([renderDriverRepairRequests(),renderDriverNotifications()]);
+  await Promise.all([renderDriverRepairRequests(),renderDriverNotifications(),renderDriverServiceFeed()]);
   driverPortalMessage("")
  }catch(error){
   driverPortalMessage(error.message||String(error),"error")
@@ -958,6 +988,13 @@ function repairAlertLevel(rows){
  if(rows.some(row=>row.urgency==="service"))return"service";
  return"normal"
 }
+
+function fleetServiceBadgeMarkup(carId,desktop=false){
+ const rows=repairAlertsForCar(carId);
+ if(!rows.length)return"";
+ const level=repairAlertLevel(rows);
+ return `<button type="button" class="car-service-alert-icon ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Активных заявок: ${rows.length}"><span>🔧</span><b>${rows.length}</b></button>`
+}
 function renderFleetServiceAlertIndicators(){
  const active=activeWorkspaceRepairAlerts();
  const affectedCars=new Set(active.map(row=>String(row.car_id)));
@@ -1018,7 +1055,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  if(rerender&&typeof renderFleet==="function")renderFleet();
+  if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
  }catch(error){
@@ -4332,6 +4369,7 @@ function renderFleet(){
  <div class="hero-top">
   <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
+   ${fleetServiceBadgeMarkup(c.id)}
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
     const gps=gpsStatusForCar(c);
@@ -4461,7 +4499,8 @@ function renderFleet(){
     <span class="desktop-kpi-divider"></span>
     <div class="desktop-kpi profit ${monthProfit<0?"negative":""}"><strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong><small>Прибыль за месяц</small></div>
   </div>
-  <div class="desktop-today-card ${nextEvent&&nextEvent.days<=14?"warning":""}">
+  <div class="desktop-today-card ${nextEvent&&nextEvent.days<=14?"warning":""}" ${nextEvent?`role="button" tabindex="0" onclick="event.stopPropagation();openSmartEntity('${nextEvent.type}','${nextEvent.entityId||""}','${c.id}')"`:""}>
+    ${fleetServiceBadgeMarkup(c.id,true)}
     <small>Сегодня</small>
     <strong>${nextEvent?nextEvent.title:"Автомобиль не требует внимания"}</strong>
     <span>${nextEvent?`${nextEvent.days} дн.`:"Все основные показатели в норме"}</span>
@@ -5158,7 +5197,11 @@ $("#quickServiceForm").onsubmit=e=>{
 $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
 $("#expenseCategory").onchange=syncExpenseRepairFields;
 $("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
-$("#repairForm").onsubmit=async e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),carId=$("#repairCarId").value,mileage=Number($("#repairMileage").value||0),minimum=currentConfirmedMileage(carId);if(mileage<minimum)return toast(`Пробег не может быть меньше ${km(minimum)}`);const status=$("#repairStatus").value,actual=Number($("#repairActual").value||0),paymentStatus=$("#repairPaymentStatus").value;if(status==="done"&&actual<=0&&paymentStatus!=="warranty")return toast("Укажите фактическую сумму или выберите гарантию");const obj={id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage,planned:Number($("#repairPlanned").value||0),actual,status,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),warrantyUntil:$("#repairWarrantyUntil").value,linkedRequestId:$("#repairLinkedRequestId").value,linkedExpenseId:$("#repairLinkedExpenseId").value};old?Object.assign(old,obj):db.repairs.push(obj);const c=car(carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;if(c&&["repair","parts","service"].includes(status))c.status="repair";if(c&&status==="done"&&c.status==="repair")c.status="free";syncLinkedExpenseFromRepair(obj);if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();renderExpenses();if(obj.linkedRequestId){try{await window.FleetPilotCloud.linkDriverRequestRepair(obj.linkedRequestId,obj.id,status==="done"?"done":"repair",`Ремонт: ${obj.title} · пробег ${obj.mileage} км`);await loadFleetServiceAlerts({rerender:true})}catch(error){console.warn(error)}}toast("Ремонт сохранён")};
+$("#repairForm").onsubmit=async e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),carId=$("#repairCarId").value,mileage=Number($("#repairMileage").value||0),minimum=currentConfirmedMileage(carId);if(mileage<minimum)return toast(`Пробег не может быть меньше ${km(minimum)}`);const status=$("#repairStatus").value,actual=Number($("#repairActual").value||0),paymentStatus=$("#repairPaymentStatus").value;if(status==="done"&&actual<=0&&paymentStatus!=="warranty")return toast("Укажите фактическую сумму или выберите гарантию");const obj={id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage,planned:Number($("#repairPlanned").value||0),actual,status,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),warrantyUntil:$("#repairWarrantyUntil").value,linkedRequestId:$("#repairLinkedRequestId").value,linkedExpenseId:$("#repairLinkedExpenseId").value};old?Object.assign(old,obj):db.repairs.push(obj);const c=car(carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;if(c&&["repair","parts","service"].includes(status))c.status="repair";if(c&&status==="done"&&c.status==="repair")c.status="free";syncLinkedExpenseFromRepair(obj);if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();renderExpenses();
+ try{
+  if(["planned","parts","service","repair","done"].includes(obj.status))await window.FleetPilotCloud.notifyAssignedDriverService(obj)
+ }catch(error){console.warn("Driver service notification",error)}
+ if(obj.linkedRequestId){try{await window.FleetPilotCloud.linkDriverRequestRepair(obj.linkedRequestId,obj.id,status==="done"?"done":"repair",`Ремонт: ${obj.title} · пробег ${obj.mileage} км`);await loadFleetServiceAlerts({rerender:true})}catch(error){console.warn(error)}}toast("Ремонт сохранён")};
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};
 $("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот расчётный период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),from=$("#paymentFrom").value,obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),timing:$("#paymentTiming").value,referenceWeek:$("#paymentReferenceWeek").value.trim(),from,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,accrualMonth:$("#paymentAccrualMonth").value||monthFromDate(from),week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));logActivity(old?"Изменена оплата":"Добавлена оплата","Аренда",`${money(obj.received)} · ${obj.accrualMonth}`,obj.carId);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
 $("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim(),linkedRepairId:old?.linkedRepairId||""};old?Object.assign(old,obj):db.expenses.push(obj);const linked=createOrUpdateRepairFromExpense(obj);if(!old)addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,expenseStatusText(obj.status));logActivity(old?"Изменён расход":"Добавлен расход","Расходы",`${obj.title} · ${money(obj.amount)}`,obj.carId);save();$("#expenseDialog").close();renderExpenses();renderRepairs();toast(linked?"Расход и ремонт сохранены":"Расход сохранён")};
