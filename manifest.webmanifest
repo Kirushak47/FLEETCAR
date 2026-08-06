@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V11.3.1 Finance Service Fix Cloud Beta",
+  "name": "FleetPilot V11.3.2 Service Navigation Fix Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113100",
+  "start_url": "./?v=113200",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
