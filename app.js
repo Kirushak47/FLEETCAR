@@ -1091,13 +1091,12 @@ function renderFleetDriverRequestsPanel(){
   .filter(row=>!["done","rejected","cancelled"].includes(row.status))
   .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
 
- panel.hidden=false;
  if(!active.length){
-  $("#fleetDriverRequestsTitle").textContent="0 заявок от водителей";
-  $("#fleetDriverRequestsText").textContent="Автомобилей с активными заявками: 0";
-  list.innerHTML='<div class="fleet-driver-request-empty"><span>✓</span><div><strong>Активных заявок нет</strong><small>Новые обращения водителей появятся здесь автоматически.</small></div></div>';
+  panel.hidden=true;
+  list.innerHTML="";
   return
  }
+ panel.hidden=false;
 
  const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
  $("#fleetDriverRequestsTitle").textContent=`${active.length} ${active.length===1?"активная заявка":"активных заявок"}`;
@@ -1605,6 +1604,13 @@ $("#testGpsConnection").onclick=testGpsConnection;
 $("#gpsSetupForm").onsubmit=saveGpsConnection;
 $("#closeGpsMapping").onclick=()=>$("#gpsMappingDialog").close();
 $("#saveGpsMapping").onclick=saveGpsMapping;
+
+const dashboardCustomizeWindows=$("#dashboardCustomizeWindows");
+if(dashboardCustomizeWindows)dashboardCustomizeWindows.onclick=()=>{
+ renderControlWindowOptions();
+ $("#controlWindowsDialog")?.showModal()
+};
+
 $("#customizeControlWindows").onclick=openControlWindowsDialog;
 $("#showAllControlWindows").onclick=()=>{
  const settings=Object.fromEntries(CONTROL_WINDOWS.map(item=>[item.id,true]));

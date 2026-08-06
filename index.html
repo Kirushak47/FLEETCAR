@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V12.4 SaaS Dashboard</title>
-  <link rel="manifest" href="manifest.webmanifest?v=124000">
-  <link rel="stylesheet" href="styles.css?v=124000">
+  <title>FleetPilot V12.5 Unified Dashboard</title>
+  <link rel="manifest" href="manifest.webmanifest?v=125000">
+  <link rel="stylesheet" href="styles.css?v=125000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 
 <script>
@@ -49,7 +49,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V12.4 SaaS Dashboard</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V12.5 Unified Dashboard</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -80,8 +80,38 @@
           <div class="owner-skeleton-card"></div><div class="owner-skeleton-card"></div>
         </div>
 
+        <section class="dashboard-operations-section">
+          <div class="dashboard-section-title">
+            <div><span class="eyebrow">Оперативная работа</span><h3>Сегодня и эффективность</h3></div>
+            <button type="button" id="dashboardCustomizeWindows" class="btn">Настроить блоки</button>
+          </div>
+
+
+        <section class="control-center-grid">
+          <article class="control-center-card control-tasks-card" data-control-window="tasks">
+            <div class="control-card-head"><div><span>Сегодня нужно сделать</span><h3>Задачи</h3></div><div class="control-head-actions"><button id="addQuickTask" type="button">+ Задача</button><button type="button" class="control-hide-button" onclick="hideControlWindow('tasks')" title="Скрыть окно">×</button></div></div>
+            <div id="todayTaskList" class="today-task-list"></div>
+          </article>
+
+          <article class="control-center-card" data-control-window="efficiency">
+            <div class="control-card-head"><div><span>Эффективность</span><h3>ТОП автомобилей</h3></div><div class="control-head-actions"><button id="openAnalyticsFromTop" type="button">Аналитика</button><button type="button" class="control-hide-button" onclick="hideControlWindow('efficiency')" title="Скрыть окно">×</button></div></div>
+            <div id="topProfitCars" class="top-profit-cars"></div>
+          </article>
+
+          <article class="control-center-card" data-control-window="activity">
+            <div class="control-card-head"><div><span>Последние изменения</span><h3>Журнал действий</h3></div><div class="control-head-actions"><button id="clearActivityFeed" type="button">Очистить</button><button type="button" class="control-hide-button" onclick="hideControlWindow('activity')" title="Скрыть окно">×</button></div></div>
+            <div id="desktopActivityFeed" class="desktop-activity-feed"></div>
+          </article>
+
+          <article class="control-center-card gps-ready-card" data-control-window="gps">
+            <div class="control-card-head"><div><span>Телематика</span><h3>GPS-ready</h3></div><button type="button" class="control-hide-button" onclick="hideControlWindow('gps')" title="Скрыть окно">×</button></div>
+            <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong id="desktopGpsReadyStatus">GPS</strong><small>Следующее обновление через <b id="gpsSyncCountdown">—</b> сек.</small></div></div>
+          </article>
+        </section>
+        </section>
+
         <div id="ownerDashboardGrid" class="owner-dashboard-grid">
-          <article class="owner-dashboard-widget owner-gps-widget" data-owner-widget="gps">
+          <article class="owner-dashboard-widget owner-gps-widget owner-dashboard-duplicate" data-owner-widget="gps">
   <div class="owner-widget-head">
     <div><span>Телематика</span><h3>GPS автопарка</h3></div>
     <div class="owner-widget-actions">
@@ -92,7 +122,7 @@
   <div id="ownerGpsStatus" class="owner-gps-status"></div>
 </article>
 
-          <article class="owner-dashboard-widget" data-owner-widget="events">
+          <article class="owner-dashboard-widget owner-dashboard-duplicate" data-owner-widget="events">
             <div class="owner-widget-head">
               <div><span>Что изменилось</span><h3>Последние события</h3></div>
               <button type="button" data-hide-owner-widget="events">×</button>
@@ -100,7 +130,7 @@
             <div id="ownerRecentEvents" class="owner-widget-list"></div>
           </article>
 
-          <article class="owner-dashboard-widget" data-owner-widget="profit">
+          <article class="owner-dashboard-widget owner-dashboard-duplicate" data-owner-widget="profit">
             <div class="owner-widget-head">
               <div><span>Эффективность</span><h3>ТОП-5 по прибыли</h3></div>
               <button type="button" data-hide-owner-widget="profit">×</button>
@@ -162,31 +192,9 @@
           <button type="button" data-fleet-view="table">▤ Таблица</button>
           <button type="button" data-fleet-view="map">⌖ Карта</button>
         </div>
-        <button type="button" id="customizeControlWindows" class="customize-control-windows">Настроить</button>
+        <button type="button" id="customizeControlWindows" class="customize-control-windows fleet-hidden-control-settings" hidden>Настроить</button>
 
         <div id="desktopCommandKpis" class="desktop-command-kpis"></div>
-
-        <section class="control-center-grid">
-          <article class="control-center-card control-tasks-card" data-control-window="tasks">
-            <div class="control-card-head"><div><span>Сегодня нужно сделать</span><h3>Задачи</h3></div><div class="control-head-actions"><button id="addQuickTask" type="button">+ Задача</button><button type="button" class="control-hide-button" onclick="hideControlWindow('tasks')" title="Скрыть окно">×</button></div></div>
-            <div id="todayTaskList" class="today-task-list"></div>
-          </article>
-
-          <article class="control-center-card" data-control-window="efficiency">
-            <div class="control-card-head"><div><span>Эффективность</span><h3>ТОП автомобилей</h3></div><div class="control-head-actions"><button id="openAnalyticsFromTop" type="button">Аналитика</button><button type="button" class="control-hide-button" onclick="hideControlWindow('efficiency')" title="Скрыть окно">×</button></div></div>
-            <div id="topProfitCars" class="top-profit-cars"></div>
-          </article>
-
-          <article class="control-center-card" data-control-window="activity">
-            <div class="control-card-head"><div><span>Последние изменения</span><h3>Журнал действий</h3></div><div class="control-head-actions"><button id="clearActivityFeed" type="button">Очистить</button><button type="button" class="control-hide-button" onclick="hideControlWindow('activity')" title="Скрыть окно">×</button></div></div>
-            <div id="desktopActivityFeed" class="desktop-activity-feed"></div>
-          </article>
-
-          <article class="control-center-card gps-ready-card" data-control-window="gps">
-            <div class="control-card-head"><div><span>Телематика</span><h3>GPS-ready</h3></div><button type="button" class="control-hide-button" onclick="hideControlWindow('gps')" title="Скрыть окно">×</button></div>
-            <div class="gps-ready-body"><span class="gps-ready-icon">⌖</span><div><strong id="desktopGpsReadyStatus">GPS</strong><small>Следующее обновление через <b id="gpsSyncCountdown">—</b> сек.</small></div></div>
-          </article>
-        </section>
 
         <div class="desktop-command-layout">
           <section class="desktop-command-main">
@@ -1596,7 +1604,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=124000"></script>
-<script src="cloud.js?v=124000"></script>
-<script src="app.js?v=124000"></script>
+<script src="cloud-config.js?v=125000"></script>
+<script src="cloud.js?v=125000"></script>
+<script src="app.js?v=125000"></script>
 </body></html>

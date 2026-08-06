@@ -8957,3 +8957,194 @@ html[data-theme="dark"] .service-requests-summary-banner span{color:#b45309!impo
   display:flex;align-items:center;gap:9px;padding:10px;border-radius:10px;background:#fff
  }
 }
+
+
+/* =========================================================
+   FleetPilot V12.5 — unified dashboard blocks
+   ========================================================= */
+@media(min-width:1100px){
+ .owner-dashboard{
+  display:grid!important;
+  gap:16px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+ }
+
+ .owner-dashboard-kpis{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:10px!important;
+  padding:0!important;
+  background:transparent!important;
+ }
+
+ .owner-kpi-card{
+  min-height:104px!important;
+  padding:15px!important;
+  border:1px solid #e8ebf3!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:#101828!important;
+  box-shadow:0 7px 22px rgba(26,34,56,.035)!important;
+ }
+
+ .owner-kpi-icon{
+  background:#f0efff!important;
+  color:#5b4df5!important;
+ }
+
+ .owner-kpi-card small{color:#7d8698!important}
+ .owner-kpi-card strong{color:#101828!important}
+ .owner-kpi-card p{color:#9aa1af!important}
+
+ .dashboard-operations-section{
+  display:grid;
+  gap:12px;
+ }
+
+ .dashboard-section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+ }
+
+ .dashboard-section-title h3{
+  margin:3px 0 0;
+  font-size:17px;
+  color:#101828;
+  letter-spacing:-.03em;
+ }
+
+ .dashboard-operations-section .control-center-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+  margin:0!important;
+ }
+
+ .dashboard-operations-section .control-center-card{
+  min-height:220px!important;
+  padding:17px!important;
+  border:1px solid #e8ebf3!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:#101828!important;
+  box-shadow:0 7px 22px rgba(26,34,56,.035)!important;
+ }
+
+ .dashboard-operations-section .control-center-card .control-card-head{
+  min-height:48px;
+ }
+
+ .dashboard-operations-section .today-task-list,
+ .dashboard-operations-section .top-profit-cars,
+ .dashboard-operations-section .desktop-activity-feed{
+  max-height:250px;
+  overflow:auto;
+ }
+
+ .dashboard-operations-section .gps-ready-card{
+  min-height:160px!important;
+ }
+
+ .owner-dashboard-grid{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:14px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+ }
+
+ .owner-dashboard-widget{
+  min-height:0!important;
+  padding:17px!important;
+  border:1px solid #e8ebf3!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:#101828!important;
+  box-shadow:0 7px 22px rgba(26,34,56,.035)!important;
+ }
+
+ .owner-dashboard-duplicate{
+  display:none!important;
+ }
+
+ .owner-attention-widget{
+  display:block!important;
+ }
+
+ .owner-widget-head{
+  margin-bottom:12px!important;
+  padding-bottom:11px!important;
+  border-bottom:1px solid #f0f1f5!important;
+ }
+
+ .owner-widget-head span{color:#9aa1af!important}
+ .owner-widget-head h3{color:#101828!important}
+
+ .owner-list-row{
+  border-color:#e9ecf2!important;
+  background:#fbfcfe!important;
+  color:#101828!important;
+ }
+
+ .owner-list-row:hover{
+  background:#f7f7ff!important;
+  border-color:#dcd9ff!important;
+ }
+
+ .fleet-hidden-control-settings{
+  display:none!important;
+ }
+
+ #fleetPage .control-center-grid{
+  display:none!important;
+ }
+
+ .dashboard-quick-actions{
+  margin-top:0!important;
+  border:1px solid #e8ebf3!important;
+  background:#fff!important;
+  box-shadow:0 7px 22px rgba(26,34,56,.035)!important;
+ }
+
+ .dashboard-quick-buttons button{
+  border:1px solid #e8ebf3!important;
+  background:#f8f9fc!important;
+  color:#596276!important;
+ }
+
+ .dashboard-quick-buttons button:hover{
+  background:#f0efff!important;
+  color:#5b4df5!important;
+  border-color:#dedaff!important;
+ }
+}
+
+@media(max-width:1099px){
+ .dashboard-operations-section{
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+ }
+ .dashboard-section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+ }
+ .dashboard-operations-section .control-center-grid{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+ }
+ .owner-dashboard-duplicate{display:none!important}
+ #fleetPage .control-center-grid{display:none!important}
+}

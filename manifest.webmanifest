@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V12.4 SaaS Dashboard Cloud Beta",
+  "name": "FleetPilot V12.5 Unified Dashboard Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=124000",
+  "start_url": "./?v=125000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"
