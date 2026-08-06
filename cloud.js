@@ -1157,6 +1157,17 @@ async function notifyAssignedDriverService(repair){
  if(error)throw error;
  return data
 }
+
+async function updateStaffVehicleMileage(carId,mileage,source="service"){
+ if(!client||!membership)throw new Error("Workspace недоступен");
+ const {data,error}=await client.rpc("update_vehicle_mileage_by_staff",{
+  car_id_value:String(carId),
+  mileage_value:Number(mileage||0),
+  source_value:String(source||"service")
+ });
+ if(error)throw error;
+ return Array.isArray(data)?data[0]||null:data||null
+}
 window.FleetPilotCloud={start,signOut,changePasswordDirect,schedulePush,pushNow,pullNow,checkCloudForUpdates,startRealtimeSync,saveRecoveryPassword,openProfile,showLogin,showRegister,refreshAdmin,enterpriseList,enterpriseInvite,enterpriseUpdateMember,enterpriseCancelInvite,getRolePermissions,saveRolePermissions,resetRolePermissions,updateWorkspaceSettings,getWorkspaceActivity,logWorkspaceActivity,getDriverPortalContext,submitDriverRepairRequest,getMyDriverRepairRequests,getWorkspaceDriverRepairRequests,updateDriverRepairRequest,linkDriverRequestRepair,getMyWorkspaceNotifications,getDriverServiceFeed,notifyAssignedDriverService,getDriverAssignments,assignDriverVehicle,getCloudFleetVersions,restoreCloudFleetVersion,getDriverHandoverState,submitVehicleHandover,getVehicleHandoverHistory,updateDriverMileage,createWorkspace,acceptPendingInvite,getPendingWorkspaceInvite,platformOverview,get session(){return session},get profile(){return profile},get workspace(){return workspace},get membership(){return membership},get role(){return enterpriseRole()},get isWorkspaceOwner(){return owner()},get isPlatformAdmin(){return isPlatformAdmin()},get isOwner(){return owner()}};
 document.addEventListener("DOMContentLoaded",start)
 })();

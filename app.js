@@ -873,13 +873,15 @@ async function renderDriverRepairRequests(){
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
 
+let driverServiceFeedRows=[];
 async function renderDriverServiceFeed(){
  const root=$("#driverTasksList"),count=$("#driverServicePlanCount");
  if(!root)return;
  root.innerHTML='<div class="driver-empty-state">Загрузка сервисного плана…</div>';
  try{
   const rows=await window.FleetPilotCloud.getDriverServiceFeed();
-  if(count)count.textContent=String(rows.length);
+  driverServiceFeedRows=rows;
+  if(count)count.textContent=String(rows.filter(row=>row.status!=="done").length);
   root.innerHTML=rows.map(row=>{
    const due=row.date?days(row.date):null;
    const urgency=due!=null&&due<0?"overdue":due!=null&&due<=3?"urgent":due!=null&&due<=14?"soon":"normal";
@@ -896,7 +898,8 @@ async function renderDriverServiceFeed(){
       </div>
     </div>
    </article>`
-  }).join("")||'<div class="driver-empty-state">Запланированных сервисных работ нет.</div>'
+  }).join("")||'<div class="driver-empty-state">Запланированных сервисных работ нет.</div>';
+  renderDriverProfileService()
  }catch(error){
   if(count)count.textContent="!";
   root.innerHTML=`<div class="driver-empty-state">${error.message||"Не удалось загрузить сервисный план"}</div>`
@@ -935,6 +938,48 @@ function driverProfileDisplayName(){
  const savedName=localStorage.getItem(`fleetpilot.profile.name.v2.${window.FleetPilotCloud?.session?.user?.id||"guest"}`);
  return savedName||profile.full_name||profile.name||profile.email?.split("@")[0]||"Пользователь FleetPilot"
 }
+
+function renderDriverProfileService(){
+ const history=$("#driverProfileServiceHistory");
+ const alert=$("#driverProfileServiceAlert");
+ const active=driverServiceFeedRows
+  .filter(row=>row.status!=="done"&&row.status!=="cancelled")
+  .sort((a,b)=>(a.date||"9999-12-31").localeCompare(b.date||"9999-12-31"));
+ const completed=driverServiceFeedRows
+  .filter(row=>row.status==="done")
+  .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+
+ if(alert){
+  const first=active[0];
+  alert.hidden=!first;
+  if(first){
+   const due=first.date?days(first.date):null;
+   $("#driverProfileServiceAlertTitle").textContent=first.title||"Запланирован сервис";
+   $("#driverProfileServiceAlertText").textContent=[
+    first.date?date(first.date):"Дата уточняется",
+    first.mileage?km(first.mileage):"",
+    due===0?"Сегодня":due!=null&&due<0?`Просрочено на ${Math.abs(due)} дн.`:due!=null?`Через ${due} дн.`:"",
+    first.note||""
+   ].filter(Boolean).join(" · ")
+  }
+ }
+
+ if(history){
+  const rows=[...active,...completed].slice(0,20);
+  history.innerHTML=rows.map(row=>`
+   <article class="driver-profile-history-row ${row.status==="done"?"completed":"active"}">
+    <span class="driver-profile-history-dot"></span>
+    <div>
+     <div class="driver-profile-history-title">
+      <strong>${row.title||"Сервис"}</strong>
+      <em>${repairStatusText(row.status)}</em>
+     </div>
+     <p>${row.note||"Без дополнительного комментария"}</p>
+     <small>${row.date?date(row.date):"Дата не указана"}${row.mileage?` · ${km(row.mileage)}`:""}</small>
+    </div>
+   </article>`).join("")||'<div class="driver-empty-state">Истории обслуживания пока нет.</div>'
+ }
+}
 function renderDriverProfile(){
  if(enterpriseCurrentRole()!=="driver")return;
 
@@ -956,7 +1001,8 @@ function renderDriverProfile(){
  if($("#driverProfileWorkspace"))$("#driverProfileWorkspace").textContent=workspaceName;
  if($("#driverProfileCity"))$("#driverProfileCity").textContent=city;
  if($("#driverProfileVehicle"))$("#driverProfileVehicle").textContent=vehicleName;
- if($("#driverProfileAvatar"))$("#driverProfileAvatar").textContent=(name.trim()[0]||"F").toUpperCase()
+ if($("#driverProfileAvatar"))$("#driverProfileAvatar").textContent=(name.trim()[0]||"F").toUpperCase();
+ renderDriverProfileService()
 }
 async function openDriverRepairDialog(){
  if(!driverPortalContext)await renderDriverPortal();
@@ -1019,7 +1065,7 @@ function renderFleetServiceAlertIndicators(){
    </button>`:""
  }
 
- document.querySelectorAll("[data-car-service-alert]").forEach(node=>node.remove());
+ document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove());
 
  for(const carId of affectedCars){
   const rows=repairAlertsForCar(carId);
@@ -1034,7 +1080,7 @@ function renderFleetServiceAlertIndicators(){
    if(target.querySelector(`[data-car-service-alert="${CSS.escape(carId)}"]`))return;
    const button=document.createElement("button");
    button.type="button";
-   button.className=`car-service-alert-icon ${level}`;
+   button.className=`car-service-alert-icon ${level} dynamic-service-alert`;
    button.dataset.carServiceAlert=carId;
    button.title=level==="critical"
     ?`Срочная заявка водителя (${rows.length})`
@@ -1311,6 +1357,13 @@ if(changePasswordForm)changePasswordForm.onsubmit=async event=>{
  }catch(error){
   setMessage(error.message||String(error),"error")
  }
+};
+
+const driverOpenServicePlan=$("#driverOpenServicePlan");
+if(driverOpenServicePlan)driverOpenServicePlan.onclick=()=>{
+ showPage("driverPortalPage");
+ setDriverBottomNavActive("vehicle");
+ requestAnimationFrame(()=>document.querySelector('[data-driver-anchor="service"]')?.scrollIntoView({behavior:"smooth",block:"start"}))
 };
 
 const openDriverProfilePage=$("#openDriverProfilePage");
@@ -2837,7 +2890,8 @@ function renderDesktopBoard(){
   return`<section class="desktop-board-column">
     <div class="desktop-board-column-head"><strong>${statusText(status)}</strong><span>${cars.length}</span></div>
     <div class="desktop-board-dropzone" data-board-drop="${status}">
-      ${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="desktop-board-car health-${h.level}" draggable="true" data-board-car="${c.id}" onclick="openCar('${c.id}')">
+      ${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="desktop-board-car health-${h.level}" draggable="true" data-board-car="${c.id}" data-fleet-car-id="${c.id}" onclick="openCar('${c.id}')">
+        ${fleetServiceBadgeMarkup(c.id,true)}
         <div><strong>${m.brand} ${m.model}</strong><small>${c.plate}${c.city?` · ${c.city}`:""}</small></div>
         <span>${h.items.length?h.items[0].value:"OK"}</span>
       </article>`}).join("")||`<div class="desktop-board-empty">Нет автомобилей</div>`}
@@ -4438,7 +4492,8 @@ function renderFleet(){
  <strong>${nextEvent?`${nextEvent.title} · ${nextEvent.days} дн.`:"Нет запланированных событий"}</strong>
 </div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
-<div class="desktop-fleet-row health-${health.level}" data-command-car="${c.id}">
+<div class="desktop-fleet-row health-${health.level}" data-command-car="${c.id}" data-fleet-car-id="${c.id}">
+${fleetServiceBadgeMarkup(c.id,true)}
 <label class="desktop-list-check" onclick="event.stopPropagation()"><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"><span></span></label>
   <span class="desktop-row-accent"></span>
   <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
@@ -4603,7 +4658,7 @@ function renderFleet(){
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
  requestAnimationFrame(updateGpsBadgesOnly);
 }
-function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
+function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item" data-repair-id="${r.id}"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
 
 function taxSettings(){
  db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:0,deductVatCosts:true};
@@ -5022,7 +5077,8 @@ function openMileage(id){const c=car(id);$("#mileageCarId").value=id;$("#newMile
 function openRepairDialog(carId="",id=""){
  if(!requireFleetCar())return;
  const r=id?db.repairs.find(v=>v.id===id):null,selected=r?.carId||carId||fleetCars()[0]?.id||"";
- $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=r?.mileage||currentConfirmedMileage(selected);$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Связанная заявка водителя</strong><span>${r.note||""}</span>`:"";$("#repairNote").value=r?.note||"";
+ const latestMileage=currentConfirmedMileage(selected);
+ $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=Math.max(Number(r?.mileage||0),latestMileage);$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Связанная заявка водителя</strong><span>${r.note||""}</span>`:"";$("#repairNote").value=r?.note||"";
  $("#repairDialog").showModal()
 }
 function openPaymentDialog(carId="",id=""){
@@ -5197,11 +5253,87 @@ $("#quickServiceForm").onsubmit=e=>{
 $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
 $("#expenseCategory").onchange=syncExpenseRepairFields;
 $("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
-$("#repairForm").onsubmit=async e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),carId=$("#repairCarId").value,mileage=Number($("#repairMileage").value||0),minimum=currentConfirmedMileage(carId);if(mileage<minimum)return toast(`Пробег не может быть меньше ${km(minimum)}`);const status=$("#repairStatus").value,actual=Number($("#repairActual").value||0),paymentStatus=$("#repairPaymentStatus").value;if(status==="done"&&actual<=0&&paymentStatus!=="warranty")return toast("Укажите фактическую сумму или выберите гарантию");const obj={id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage,planned:Number($("#repairPlanned").value||0),actual,status,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),warrantyUntil:$("#repairWarrantyUntil").value,linkedRequestId:$("#repairLinkedRequestId").value,linkedExpenseId:$("#repairLinkedExpenseId").value};old?Object.assign(old,obj):db.repairs.push(obj);const c=car(carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;if(c&&["repair","parts","service"].includes(status))c.status="repair";if(c&&status==="done"&&c.status==="repair")c.status="free";syncLinkedExpenseFromRepair(obj);if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();renderExpenses();
+$("#repairCarId").onchange=()=>{$("#repairMileage").value=currentConfirmedMileage($("#repairCarId").value)};
+$("#repairForm").onsubmit=async e=>{
+ e.preventDefault();
+ const pageBeforeSave=$(".page.active")?.id||"repairsPage";
+ const id=$("#repairId").value||uid();
+ const old=db.repairs.find(x=>x.id===id);
+ const carId=$("#repairCarId").value;
+ const mileage=Number($("#repairMileage").value||0);
+ const minimum=currentConfirmedMileage(carId);
+ if(mileage<minimum)return toast(`Пробег не может быть меньше ${km(minimum)}`);
+
+ const status=$("#repairStatus").value;
+ const actual=Number($("#repairActual").value||0);
+ const paymentStatus=$("#repairPaymentStatus").value;
+ if(status==="done"&&actual<=0&&paymentStatus!=="warranty")return toast("Укажите фактическую сумму или выберите гарантию");
+
+ const obj={
+  id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,
+  mileage,planned:Number($("#repairPlanned").value||0),actual,status,
+  service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),
+  paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),
+  completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),
+  warrantyUntil:$("#repairWarrantyUntil").value,
+  linkedRequestId:$("#repairLinkedRequestId").value,
+  linkedExpenseId:$("#repairLinkedExpenseId").value
+ };
+
  try{
-  if(["planned","parts","service","repair","done"].includes(obj.status))await window.FleetPilotCloud.notifyAssignedDriverService(obj)
+  await window.FleetPilotCloud.updateStaffVehicleMileage(
+   carId,mileage,
+   obj.linkedRequestId?"driver_request_service":obj.title.toLowerCase().includes("масл")?"oil_service":"service"
+  )
+ }catch(error){
+  return toast(error.message||"Не удалось обновить пробег автомобиля")
+ }
+
+ old?Object.assign(old,obj):db.repairs.push(obj);
+ const c=car(carId);
+ if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
+ if(c&&["repair","parts","service"].includes(status))c.status="repair";
+ if(c&&status==="done"&&c.status==="repair")c.status="free";
+
+ syncLinkedExpenseFromRepair(obj);
+ if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
+ logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);
+ save();
+ $("#repairDialog").close();
+ renderRepairs();
+ renderExpenses();
+ renderFleet();
+
+ try{
+  if(["planned","parts","service","repair","done"].includes(obj.status)){
+   await window.FleetPilotCloud.notifyAssignedDriverService(obj)
+  }
  }catch(error){console.warn("Driver service notification",error)}
- if(obj.linkedRequestId){try{await window.FleetPilotCloud.linkDriverRequestRepair(obj.linkedRequestId,obj.id,status==="done"?"done":"repair",`Ремонт: ${obj.title} · пробег ${obj.mileage} км`);await loadFleetServiceAlerts({rerender:true})}catch(error){console.warn(error)}}toast("Ремонт сохранён")};
+
+ if(obj.linkedRequestId){
+  try{
+   await window.FleetPilotCloud.linkDriverRequestRepair(
+    obj.linkedRequestId,obj.id,status==="done"?"done":"repair",
+    `Ремонт: ${obj.title} · пробег ${obj.mileage} км`
+   );
+   await loadFleetServiceAlerts({rerender:true})
+  }catch(error){console.warn(error)}
+ }
+
+ const destination=(pageBeforeSave==="repairsPage"||obj.linkedRequestId)?"repairsPage":pageBeforeSave;
+ requestAnimationFrame(()=>{
+  showPage(destination);
+  if(destination==="repairsPage"){
+   setTimeout(()=>{
+    const row=document.querySelector(`[data-repair-id="${CSS.escape(obj.id)}"]`);
+    row?.scrollIntoView({behavior:"smooth",block:"center"});
+    row?.classList.add("smart-entity-highlight");
+    setTimeout(()=>row?.classList.remove("smart-entity-highlight"),2800)
+   },80)
+  }
+ });
+ toast("Ремонт и пробег сохранены")
+};
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};
 $("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот расчётный период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),from=$("#paymentFrom").value,obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),timing:$("#paymentTiming").value,referenceWeek:$("#paymentReferenceWeek").value.trim(),from,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,accrualMonth:$("#paymentAccrualMonth").value||monthFromDate(from),week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));logActivity(old?"Изменена оплата":"Добавлена оплата","Аренда",`${money(obj.received)} · ${obj.accrualMonth}`,obj.carId);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
 $("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim(),linkedRepairId:old?.linkedRepairId||""};old?Object.assign(old,obj):db.expenses.push(obj);const linked=createOrUpdateRepairFromExpense(obj);if(!old)addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,expenseStatusText(obj.status));logActivity(old?"Изменён расход":"Добавлен расход","Расходы",`${obj.title} · ${money(obj.amount)}`,obj.carId);save();$("#expenseDialog").close();renderExpenses();renderRepairs();toast(linked?"Расход и ремонт сохранены":"Расход сохранён")};
