@@ -1,14 +1,12 @@
-# FleetPilot V11.3.2 — Professional Modules
+# FleetPilot V11.3.3 — Dashboard & Service
 
-Based directly on the user-provided working rollback archive.
+Based on the confirmed working V11.3.2 Professional Modules build.
 
-Included:
-- theme behavior is completely untouched;
-- active driver repair requests moved from Service to Fleet;
-- request panel is hidden when there are no active requests;
-- request opens the existing repair workflow;
-- professional Rent/Payments screen with search and status filters;
-- professional Expenses screen with search, filters and category structure;
-- professional Calendar agenda with type filters and month overview;
-- maps, Supabase schema, synchronization and calculations are unchanged;
-- no SQL required.
+Changes:
+- Fleet shows only a compact active-request summary.
+- The compact Fleet block is hidden when there are no active requests.
+- Full driver request list is displayed in Service.
+- Service has unified KPI cards, request cards and professional repair rows.
+- Main dashboard cards use the same professional style as Calendar, Expenses and Rent.
+- Theme behavior, maps, Supabase and financial calculations are untouched.
+- No SQL required.

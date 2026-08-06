@@ -7497,3 +7497,190 @@ html[data-theme="dark"] .repair-linked-finance-info{
  .fleet-driver-requests-head{grid-template-columns:42px minmax(0,1fr)}
  .fleet-driver-requests-head .btn{grid-column:1/-1}
 }
+
+
+/* FleetPilot V11.3.3 — unified dashboard and service */
+.dashboard-page-head,
+.professional-page-head{
+ margin-bottom:14px!important;
+}
+.dashboard-page-head h2,
+.professional-page-head h2{
+ letter-spacing:-.035em;
+}
+.owner-dashboard{
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+.owner-dashboard-kpis{
+ display:grid!important;
+ grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:10px!important;
+ padding:0!important;
+ background:transparent!important;
+}
+.owner-kpi-card,
+.owner-kpi{
+ min-height:100px!important;
+ padding:15px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.owner-dashboard-grid{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:14px!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+}
+.owner-dashboard-widget{
+ min-height:220px!important;
+ padding:16px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.owner-widget-head{
+ margin-bottom:11px!important;
+ padding-bottom:10px!important;
+ border-bottom:1px solid var(--line,#eef0f4)!important;
+}
+.dashboard-quick-actions{
+ margin-top:14px!important;
+ padding:16px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.dashboard-quick-buttons button{
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:10px!important;
+ background:transparent!important;
+}
+
+.fleet-driver-requests-list[hidden]{display:none!important}
+.fleet-driver-requests-panel{
+ padding:0!important;
+}
+.fleet-driver-requests-head{
+ min-height:82px;
+}
+.fleet-driver-requests-head h3{
+ font-size:16px!important;
+}
+
+.service-page-actions{
+ display:flex;
+ gap:8px;
+ align-items:center;
+}
+.service-requests-panel{
+ margin-bottom:14px;
+}
+.service-request-list{
+ display:grid;
+ gap:8px;
+}
+.service-request-card{
+ display:grid;
+ grid-template-columns:9px minmax(0,1fr) minmax(180px,auto);
+ gap:11px;
+ align-items:start;
+ padding:13px;
+ border:1px solid var(--line,#e7eaf0);
+ border-radius:13px;
+ background:color-mix(in srgb,var(--card,#fff) 97%,#f5f7fb);
+}
+.service-request-urgency{
+ width:8px;
+ height:8px;
+ margin-top:6px;
+ border-radius:50%;
+ background:#f59e0b;
+ box-shadow:0 0 0 4px rgba(245,158,11,.10);
+}
+.service-request-card.urgency-high .service-request-urgency,
+.service-request-card.urgency-urgent .service-request-urgency,
+.service-request-card.urgency-critical .service-request-urgency{
+ background:#ef4444;
+ box-shadow:0 0 0 4px rgba(239,68,68,.10);
+}
+.service-request-main h4{
+ margin:5px 0;
+ font-size:13px;
+}
+.service-request-main p{
+ margin:5px 0;
+ color:var(--muted,#667085);
+ font-size:9px;
+ line-height:1.45;
+}
+.service-request-main small{
+ color:var(--muted,#98a0af);
+ font-size:8px;
+}
+.service-request-title{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ flex-wrap:wrap;
+}
+.service-request-title strong{
+ font-size:10px;
+}
+.service-request-title span{
+ display:inline-flex;
+ padding:4px 7px;
+ border-radius:999px;
+ background:rgba(91,77,245,.10);
+ color:#5b4df5;
+ font-size:8px;
+ font-weight:900;
+}
+.service-request-controls{
+ display:grid;
+ gap:8px;
+ min-width:190px;
+}
+.service-request-controls select{
+ min-height:36px;
+}
+.service-request-controls .btn{
+ min-height:34px;
+}
+.service-repairs-panel{
+ margin-top:14px;
+}
+.service-repair-kpis{
+ margin-bottom:14px;
+}
+.service-repair-row{
+ grid-template-columns:42px minmax(0,1fr) auto auto!important;
+}
+
+@media(max-width:1099px){
+ .owner-dashboard-kpis,
+ .owner-dashboard-grid{
+  grid-template-columns:1fr!important;
+ }
+ .service-page-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+ }
+ .service-request-card{
+  grid-template-columns:9px minmax(0,1fr);
+ }
+ .service-request-controls{
+  grid-column:2;
+  min-width:0;
+ }
+}
