@@ -1068,24 +1068,9 @@ function renderFleetDriverRequestsPanel(){
  $("#fleetDriverRequestsTitle").textContent=`${rows.length} ${rows.length===1?"активная заявка":"активных заявок"}`;
  $("#fleetDriverRequestsText").textContent=`Автомобилей с обращениями: ${cars.size}`;
 
- list.innerHTML=rows.map(row=>{
-  const c=car(row.car_id);
-  const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate}`:"Автомобиль";
-  const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
-  const status=DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status||"Новая";
-  return `<article class="fleet-driver-request-card" data-fleet-driver-request="${row.id}">
-   <div class="fleet-driver-request-status"></div>
-   <div class="fleet-driver-request-main">
-    <strong>${vehicle}</strong>
-    <span>${category} · ${status}</span>
-    <p>${row.description||"Без описания"}</p>
-    <small>${row.driver_email||"Водитель"}${row.mileage?` · ${km(row.mileage)}`:""}</small>
-   </div>
-   <div class="fleet-driver-request-actions">
-    <button type="button" class="btn primary" onclick="openRepairFromFleetRequest('${row.id}')">Открыть</button>
-   </div>
-  </article>`
- }).join("")
+ list.innerHTML="";
+ $("#fleetDriverRequestsTitle").textContent=`Активных заявок: ${rows.length}`;
+ $("#fleetDriverRequestsText").textContent=`Автомобилей с обращениями: ${cars.size}`
 }
 
 function openRepairFromFleetRequest(requestId){
@@ -1428,8 +1413,12 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
-const fleetDriverRequestsRefresh=$("#fleetDriverRequestsRefresh");
-if(fleetDriverRequestsRefresh)fleetDriverRequestsRefresh.onclick=()=>loadFleetServiceAlerts({rerender:false});
+const fleetDriverRequestsOpenService=$("#fleetDriverRequestsOpenService");
+if(fleetDriverRequestsOpenService)fleetDriverRequestsOpenService.onclick=()=>{
+ selectedWorkspaceRepairCarId=null;
+ showPage("repairsPage");
+ renderWorkspaceRepairRequests()
+};
 
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;

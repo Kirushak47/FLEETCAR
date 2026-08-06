@@ -7497,3 +7497,78 @@ html[data-theme="dark"] .repair-linked-finance-info{
  .fleet-driver-requests-head{grid-template-columns:42px minmax(0,1fr)}
  .fleet-driver-requests-head .btn{grid-column:1/-1}
 }
+
+
+/* FleetPilot V11.3.3.1 — safe Dashboard & Service styling */
+.fleet-driver-requests-list[hidden]{display:none!important}
+.fleet-driver-requests-head{min-height:82px}
+.service-page-actions{display:flex;gap:8px;align-items:center}
+.service-requests-panel{margin-bottom:14px}
+.service-repairs-panel{margin-top:14px}
+
+#repairsPage .workspace-request-list{display:grid;gap:8px}
+#repairsPage .workspace-request-row{
+ padding:13px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:13px!important;
+ background:var(--card,#fff)!important;
+ box-shadow:0 5px 16px rgba(22,31,52,.035)!important;
+}
+#repairsPage .workspace-request-row strong,
+#repairsPage .workspace-request-row span,
+#repairsPage .workspace-request-row small{display:block}
+#repairsPage .workspace-request-row span{margin-top:5px;color:var(--muted,#667085)}
+#repairsPage .workspace-request-row small{margin-top:6px;color:var(--muted,#98a0af)}
+#repairsPage .workspace-request-row select{min-width:180px}
+
+.owner-dashboard{
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+.owner-dashboard-kpis{
+ display:grid!important;
+ grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:10px!important;
+ padding:0!important;
+ background:transparent!important;
+}
+.owner-kpi,
+.owner-kpi-card{
+ min-height:100px!important;
+ padding:15px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.owner-dashboard-grid{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:14px!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+}
+.owner-dashboard-widget{
+ padding:16px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.dashboard-quick-actions{
+ margin-top:14px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+
+@media(max-width:1099px){
+ .service-page-actions{display:grid;grid-template-columns:1fr 1fr}
+ .owner-dashboard-kpis,.owner-dashboard-grid{grid-template-columns:1fr!important}
+}

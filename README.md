@@ -1,14 +1,10 @@
-# FleetPilot V11.3.2 — Professional Modules
+# FleetPilot V11.3.3.1 — Cars Restore
 
-Based directly on the user-provided working rollback archive.
+Built directly from the confirmed working V11.3.2 version.
 
-Included:
-- theme behavior is completely untouched;
-- active driver repair requests moved from Service to Fleet;
-- request panel is hidden when there are no active requests;
-- request opens the existing repair workflow;
-- professional Rent/Payments screen with search and status filters;
-- professional Expenses screen with search, filters and category structure;
-- professional Calendar agenda with type filters and month overview;
-- maps, Supabase schema, synchronization and calculations are unchanged;
-- no SQL required.
+- Original car list rendering and Fleet logic are untouched.
+- Compact request summary remains in Fleet.
+- Full request list is shown in Service.
+- Dashboard and Service receive CSS-only professional styling.
+- Theme, maps, Supabase, synchronization and finance calculations are unchanged.
+- No SQL required.
