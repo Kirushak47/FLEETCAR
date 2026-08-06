@@ -7416,3 +7416,97 @@ html[data-theme="dark"] .repair-linked-finance-info{
  background:#10251a;
  color:#bbf7d0;
 }
+
+
+/* FleetPilot V11.4 — unified vehicle status panel */
+.vehicle-status-panel{
+ display:flex;
+ flex-wrap:wrap;
+ gap:6px;
+ margin-top:9px;
+ position:relative;
+ z-index:3
+}
+.vehicle-status-panel.compact{margin-top:6px;gap:5px}
+.vehicle-status-panel.compact.ok span{
+ display:inline-flex;
+ padding:5px 8px;
+ border-radius:999px;
+ background:#dcfce7;
+ color:#166534;
+ font-size:8px;
+ font-weight:900
+}
+.vehicle-status-chip{
+ display:inline-flex;
+ align-items:center;
+ gap:5px;
+ min-height:28px;
+ padding:5px 9px;
+ border:1px solid transparent;
+ border-radius:999px;
+ cursor:pointer;
+ font:inherit;
+ transition:transform .16s ease,box-shadow .16s ease
+}
+.vehicle-status-chip:hover{
+ transform:translateY(-1px);
+ box-shadow:0 6px 16px rgba(15,23,42,.10)
+}
+.vehicle-status-chip span{font-size:12px}
+.vehicle-status-chip b{font-size:8px;white-space:nowrap}
+.vehicle-status-chip.danger{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+.vehicle-status-chip.critical{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+.vehicle-status-chip.warning{background:#fef3c7;border-color:#fde68a;color:#92400e}
+.vehicle-status-chip.info{background:#dbeafe;border-color:#bfdbfe;color:#1d4ed8}
+.vehicle-status-chip.repair{background:#ede9fe;border-color:#ddd6fe;color:#6d28d9}
+.vehicle-status-chip.normal{background:#e0f2fe;border-color:#bae6fd;color:#0369a1}
+.desktop-board-car .vehicle-status-panel{max-width:100%;margin-top:7px}
+.desktop-board-car .vehicle-status-chip{padding:4px 7px;min-height:24px}
+.desktop-board-car .vehicle-status-chip b{font-size:7px}
+.desktop-table-car-link .vehicle-status-panel{margin-top:5px}
+.hero-card .vehicle-status-panel{padding:0 2px}
+html[data-theme="dark"] .vehicle-status-chip.danger,
+html[data-theme="dark"] .vehicle-status-chip.critical{background:#3b1518;border-color:#7f1d1d;color:#fecaca}
+html[data-theme="dark"] .vehicle-status-chip.warning{background:#33230d;border-color:#78350f;color:#fde68a}
+html[data-theme="dark"] .vehicle-status-chip.info{background:#10233f;border-color:#1e3a8a;color:#bfdbfe}
+html[data-theme="dark"] .vehicle-status-chip.repair{background:#21163c;border-color:#4c1d95;color:#ddd6fe}
+html[data-theme="dark"] .vehicle-status-chip.normal{background:#102733;border-color:#155e75;color:#bae6fd}
+
+.service-requests-summary-banner{
+ display:grid;
+ grid-template-columns:48px 1fr auto;
+ align-items:center;
+ gap:14px;
+ margin-bottom:12px;
+ padding:14px 16px;
+ border:1px solid #fbbf24;
+ border-radius:18px;
+ background:linear-gradient(135deg,#fff7ed,#fffbeb);
+ box-shadow:0 10px 26px rgba(245,158,11,.10)
+}
+.service-requests-summary-banner.empty{
+ border-color:#d1d5db;
+ background:#f8fafc;
+ opacity:.78
+}
+.service-requests-summary-icon{
+ display:grid;place-items:center;width:46px;height:46px;border-radius:14px;
+ background:#f59e0b;color:#fff;font-size:20px
+}
+.service-requests-summary-banner strong,
+.service-requests-summary-banner span{display:block}
+.service-requests-summary-banner span{margin-top:3px;color:#b45309;font-size:9px}
+.service-requests-summary-open{
+ border:0;background:transparent;color:#9a3412;font-weight:900;cursor:pointer
+}
+html[data-theme="dark"] .service-requests-summary-banner{
+ border-color:#92400e;background:linear-gradient(135deg,#2a1b0c,#21180c)
+}
+html[data-theme="dark"] .service-requests-summary-banner span{color:#fbbf24}
+@media(max-width:650px){
+ .service-requests-summary-banner{grid-template-columns:42px 1fr}
+ .service-requests-summary-open{grid-column:1/-1;text-align:right}
+ .vehicle-status-panel{gap:5px}
+ .vehicle-status-chip{padding:5px 8px}
+}

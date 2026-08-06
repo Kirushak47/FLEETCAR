@@ -1035,12 +1035,68 @@ function repairAlertLevel(rows){
  return"normal"
 }
 
-function fleetServiceBadgeMarkup(carId,desktop=false){
- const rows=repairAlertsForCar(carId);
- if(!rows.length)return"";
- const level=repairAlertLevel(rows);
- return `<button type="button" class="car-service-alert-icon ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Активных заявок: ${rows.length}"><span>🔧</span><b>${rows.length}</b></button>`
+
+function vehicleStatusItems(c){
+ const items=[];
+ const requests=repairAlertsForCar(c.id);
+ if(requests.length){
+  items.push({
+   kind:"request",
+   className:repairAlertLevel(requests),
+   icon:"🔧",
+   label:`${requests.length} ${requests.length===1?"заявка":"заявки"}`,
+   action:`openFleetServiceAlert('${c.id}')`
+  })
+ }
+
+ const activeRepairs=db.repairs.filter(r=>r.carId===c.id&&!["done","cancelled"].includes(r.status));
+ if(activeRepairs.length){
+  items.push({
+   kind:"repair",className:"repair",icon:"🛠️",
+   label:`${activeRepairs.length} ${activeRepairs.length===1?"ремонт":"ремонта"}`,
+   action:`openSmartEntity('repair','${activeRepairs[0].id}','${c.id}')`
+  })
+ }
+
+ const oilLeft=oil(c);
+ if(oilLeft<=1500){
+  items.push({
+   kind:"oil",className:oilLeft<=0?"danger":"warning",icon:"🛢️",
+   label:oilLeft<=0?"Масло просрочено":`Масло ${Math.round(oilLeft).toLocaleString("ru-RU")} км`,
+   action:`openQuickService('${c.id}','oil')`
+  })
+ }
+
+ const insuranceDays=c.insurance?days(c.insurance):9999;
+ if(insuranceDays<=30){
+  items.push({
+   kind:"insurance",className:insuranceDays<0?"danger":"info",icon:"🛡️",
+   label:insuranceDays<0?"Страховка просрочена":`Страховка ${insuranceDays} дн.`,
+   action:`openSmartEntity('insurance','${c.insuranceDocumentId||""}','${c.id}')`
+  })
+ }
+
+ const inspectionDays=c.inspection?days(c.inspection):9999;
+ if(inspectionDays<=30){
+  items.push({
+   kind:"inspection",className:inspectionDays<0?"danger":"info",icon:"📋",
+   label:inspectionDays<0?"ТО просрочено":`ТО ${inspectionDays} дн.`,
+   action:`openSmartEntity('inspection','${c.inspectionDocumentId||""}','${c.id}')`
+  })
+ }
+
+ return items.slice(0,5)
 }
+function vehicleStatusPanelMarkup(c,compact=false){
+ const items=vehicleStatusItems(c);
+ if(!items.length)return compact?`<div class="vehicle-status-panel compact ok"><span>✓ Всё в порядке</span></div>`:"";
+ return `<div class="vehicle-status-panel ${compact?"compact":""}" onclick="event.stopPropagation()">
+  ${items.map(item=>`<button type="button" class="vehicle-status-chip ${item.className}" onclick="event.stopPropagation();${item.action}">
+   <span>${item.icon}</span><b>${item.label}</b>
+  </button>`).join("")}
+ </div>`
+}
+function fleetServiceBadgeMarkup(){return""}
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
 }
@@ -1048,6 +1104,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  updateServiceRequestsSummaryBanner();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
@@ -1079,6 +1136,17 @@ function clearWorkspaceRepairCarFilter(){
 window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
 window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
+
+function updateServiceRequestsSummaryBanner(){
+ const banner=$("#serviceRequestsSummaryBanner");
+ if(!banner)return;
+ const active=(workspaceRepairAlerts||[]).filter(row=>!["done","rejected","cancelled"].includes(row.status));
+ const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
+ $("#serviceRequestsSummaryTitle").textContent=`${active.length} ${active.length===1?"заявка":"заявок"} от водителей`;
+ $("#serviceRequestsSummaryText").textContent=`Автомобилей с активными заявками: ${cars.size}`;
+ banner.classList.toggle("empty",active.length===0);
+ banner.hidden=false
+}
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
@@ -1088,6 +1156,7 @@ async function renderWorkspaceRepairRequests(){
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  updateServiceRequestsSummaryBanner();
   const allRows=workspaceRepairAlerts;
   const rows=selectedWorkspaceRepairCarId
    ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
@@ -1401,6 +1470,15 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
+
+const serviceRequestsSummaryOpen=$("#serviceRequestsSummaryOpen");
+if(serviceRequestsSummaryOpen)serviceRequestsSummaryOpen.onclick=()=>{
+ selectedWorkspaceRepairCarId=null;
+ showPage("repairsPage");
+ renderWorkspaceRepairRequests();
+ requestAnimationFrame(()=>document.querySelector(".driver-service-inbox")?.scrollIntoView({behavior:"smooth",block:"start"}))
+};
+
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;
 const driverRepairForm=$("#driverRepairForm");
@@ -2876,8 +2954,8 @@ function renderDesktopBoard(){
     <div class="desktop-board-column-head"><strong>${statusText(status)}</strong><span>${cars.length}</span></div>
     <div class="desktop-board-dropzone" data-board-drop="${status}">
       ${cars.map(c=>{const m=model(c),h=healthDetails(c);return`<article class="desktop-board-car health-${h.level}" draggable="true" data-board-car="${c.id}" data-fleet-car-id="${c.id}" onclick="openCar('${c.id}')">
-        ${fleetServiceBadgeMarkup(c.id,true)}
         <div><strong>${m.brand} ${m.model}</strong><small>${c.plate}${c.city?` · ${c.city}`:""}</small></div>
+        ${vehicleStatusPanelMarkup(c,true)}
         <span>${h.items.length?h.items[0].value:"OK"}</span>
       </article>`}).join("")||`<div class="desktop-board-empty">Нет автомобилей</div>`}
     </div>
@@ -2987,6 +3065,7 @@ function renderDesktopTable(){
        <span>
         <strong>${m.brand} ${m.model}</strong>
         <small>${c.plate||"Без номера"}</small>
+        ${vehicleStatusPanelMarkup(c,true)}
        </span>
       </button>
      </td>
@@ -4408,7 +4487,6 @@ function renderFleet(){
  <div class="hero-top">
   <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
-   ${fleetServiceBadgeMarkup(c.id)}
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
     const gps=gpsStatusForCar(c);
@@ -4478,7 +4556,6 @@ function renderFleet(){
 </div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
 <div class="desktop-fleet-row health-${health.level}" data-command-car="${c.id}" data-fleet-car-id="${c.id}">
-${fleetServiceBadgeMarkup(c.id,true)}
 <label class="desktop-list-check" onclick="event.stopPropagation()"><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"><span></span></label>
   <span class="desktop-row-accent"></span>
   <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
