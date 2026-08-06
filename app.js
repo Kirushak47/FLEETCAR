@@ -1082,12 +1082,9 @@ async function renderWorkspaceRepairRequests(){
   }).join("")||'<div class="driver-empty-state">Активных заявок для автомобиля нет.</div>');
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
-   try{
-    await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");
-    toast("Статус заявки обновлён");
-    await renderWorkspaceRepairRequests();
-    await loadFleetServiceAlerts({rerender:true})
-   }catch(error){toast(error.message||String(error))}
+   const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
+   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
+   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
@@ -1458,7 +1455,7 @@ $("#closeVehicleReport").onclick=()=>$("#vehicleReportDialog").close();
 $("#addQuickTask").onclick=addManualTask;
 $("#openAnalyticsFromTop").onclick=safeOpenAnalyticsPage;
 $("#clearActivityFeed").onclick=()=>{if(confirm("Очистить ленту действий?")){writeLocalArray(ACTIVITY_KEY,[]);renderDesktopActivityFeed()}};
-$("#criticalShowCars").onclick=()=>{localStorage.setItem(ALERT_KEY,today());$("#criticalAlertDialog").close();showPage("fleetPage");$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))};
+$("#criticalShowCars").onclick=()=>{localStorage.setItem(ALERT_KEY,today());$("#criticalAlertDialog").close();selectedFleetCity="all";showPage("fleetPage");const filter=$("#fleetFilter");if(filter){filter.value="attention";filter.dispatchEvent(new Event("change",{bubbles:true}))}renderFleet();requestAnimationFrame(()=>$("#fleetGrid")?.scrollIntoView({behavior:"smooth",block:"start"}))};
 $("#criticalRemindLater").onclick=()=>{$("#criticalAlertDialog").close()};
 $("#criticalAlertDialog").addEventListener("close",()=>localStorage.setItem(ALERT_KEY,today()));
 
@@ -4584,50 +4581,14 @@ function inPeriod(dateValue,bounds){
 }
 function financialData(period,carId=null){
  const bounds=periodBounds(period);
- const payments=db.payments.filter(p=>(!carId||p.carId===carId)&&inPeriod(p.date||p.to,bounds));
- const repairs=db.repairs.filter(r=>(!carId||r.carId===carId)&&r.status==="done"&&inPeriod(r.date,bounds));
- const paidExpenses=db.expenses.filter(x=>(!carId||x.carId===carId)&&x.status==="paid"&&inPeriod(x.date,bounds));
- const grossRevenue=payments.reduce((s,p)=>s+Number(p.received||0),0);
- const repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0);
- const otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
- const grossCosts=repairGross+otherGross;
- const tax=taxSettings();
- const noTaxes=tax.method==="none";
- const vatPayer=!noTaxes&&tax.vat==="yes";
- const vatFactor=1.23;
- const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue;
- const deductInputVat=vatPayer&&tax.deductVatCosts;
- const netCosts=deductInputVat?grossCosts/vatFactor:grossCosts;
- const outputVat=vatPayer?grossRevenue-netRevenue:0;
- const inputVat=deductInputVat?grossCosts-netCosts:0;
- const vatDue=noTaxes?0:Math.max(0,outputVat-inputVat);
- const profitBeforePit=netRevenue-netCosts;
- let pit=0;
- if(noTaxes){
-  pit=0;
- }else if(tax.method==="ryczalt"){
-  pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);
- }else if(tax.method==="linear"){
-  pit=Math.max(0,profitBeforePit*.19);
- }else if(tax.method==="scale"){
-  const taxable=Math.max(0,profitBeforePit);
-  if(bounds.months===1){
-   pit=Math.max(0,taxable*.12-300);
-  }else{
-   pit=taxable<=120000
-    ?Math.max(0,taxable*.12-3600)
-    :10800+(taxable-120000)*.32;
-  }
- }else{
-  pit=0;
- }
- const contributions=noTaxes?0:Number(tax.monthlyContributions||0)*bounds.months;
- const finalProfit=grossRevenue-grossCosts-vatDue-pit-contributions;
- return{
-  grossRevenue,repairGross,otherGross,grossCosts,
-  netRevenue,netCosts,vatDue,pit,contributions,
-  finalProfit,profitBeforePit,paymentCount:payments.length
- }
+ const payments=db.payments.filter(p=>(!carId||p.carId===carId)&&inPeriod(paymentAccrualDate(p),bounds));
+ const repairs=db.repairs.filter(r=>(!carId||r.carId===carId)&&r.status==="done"&&inPeriod(r.completedDate||r.date,bounds));
+ const paidExpenses=db.expenses.filter(x=>(!carId||x.carId===carId)&&x.status==="paid"&&!x.linkedRepairId&&inPeriod(x.date,bounds));
+ const grossRevenue=payments.reduce((s,p)=>s+Number(p.received||0),0),repairGross=repairs.reduce((s,r)=>s+Number(r.actual||r.planned||0),0),otherGross=paidExpenses.reduce((s,x)=>s+Number(x.amount||0),0),grossCosts=repairGross+otherGross,tax=taxSettings(),noTaxes=tax.method==="none",vatPayer=!noTaxes&&tax.vat==="yes",vatFactor=1.23;
+ const netRevenue=vatPayer?grossRevenue/vatFactor:grossRevenue,deductInputVat=vatPayer&&tax.deductVatCosts,netCosts=deductInputVat?grossCosts/vatFactor:grossCosts,outputVat=vatPayer?grossRevenue-netRevenue:0,inputVat=deductInputVat?grossCosts-netCosts:0,vatDue=noTaxes?0:Math.max(0,outputVat-inputVat),profitBeforePit=netRevenue-netCosts;
+ let pit=0;if(tax.method==="ryczalt"&&!noTaxes)pit=Math.max(0,netRevenue*Number(tax.ryczaltRate||0)/100);else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);else if(tax.method==="scale"&&!noTaxes){const taxable=Math.max(0,profitBeforePit);pit=bounds.months===1?Math.max(0,taxable*.12-300):(taxable<=120000?Math.max(0,taxable*.12-3600):10800+(taxable-120000)*.32)}
+ const contributions=noTaxes?0:Number(tax.monthlyContributions||0)*bounds.months,finalProfit=grossRevenue-grossCosts-vatDue-pit-contributions;
+ return{grossRevenue,repairGross,otherGross,grossCosts,netRevenue,netCosts,vatDue,pit,contributions,finalProfit,profitBeforePit,paymentCount:payments.length}
 }
 function syncTaxMethodFields(){
  const method=$("#taxMethod").value;
@@ -4859,12 +4820,63 @@ function serviceSuccessAnimation(carId,type,message){
 }
 
 function openMileage(id){const c=car(id);$("#mileageCarId").value=id;$("#newMileage").value=c.mileage;$("#mileageDate").value=today();$("#mileageInfo").textContent=`${model(c).brand} ${model(c).model} · ${c.plate} · до масла ${km(Math.max(0,oil(c)))}`;$("#mileageDialog").showModal()}
-function openRepairDialog(carId="",id=""){if(!requireFleetCar())return;const r=id?db.repairs.find(x=>x.id===id):null;$("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(r?.carId||carId);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=r?.mileage||"";$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairNote").value=r?.note||"";$("#repairDialog").showModal()}
+function openRepairDialog(carId="",id=""){
+ if(!requireFleetCar())return;
+ const r=id?db.repairs.find(v=>v.id===id):null,selected=r?.carId||carId||fleetCars()[0]?.id||"";
+ $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=r?.mileage||currentConfirmedMileage(selected);$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Связанная заявка водителя</strong><span>${r.note||""}</span>`:"";$("#repairNote").value=r?.note||"";
+ $("#repairDialog").showModal()
+}
 function openPaymentDialog(carId="",id=""){
  if(!requireFleetCar())return;const p=id?db.payments.find(x=>x.id===id):null,c=car(p?.carId||carId||db.cars[0]?.id),timing=p?.timing||c?.paymentTiming||"advance",period=suggestedPaymentPeriod(timing);
- $("#paymentId").value=p?.id||"";$("#paymentCarId").innerHTML=opts(p?.carId||carId);$("#paymentTenant").value=p?.tenant||c?.tenant||"";$("#paymentTiming").value=timing;$("#paymentFrom").value=p?.from||period.from;$("#paymentTo").value=p?.to||period.to;$("#paymentExpected").value=p?.expected??c?.weeklyRent??0;$("#paymentReceived").value=p?.received??c?.weeklyRent??0;$("#paymentDate").value=p?.date||today();$("#paymentReferenceWeek").value=p?.referenceWeek||p?.week||period.week;$("#paymentWeek").value=p?.week||p?.referenceWeek||period.week;$("#paymentNote").value=p?.note||"";$("#paymentAutoExpected").checked=!p;$("#paymentDialog").showModal();recalculateExpectedPayment()
+ $("#paymentId").value=p?.id||"";$("#paymentCarId").innerHTML=opts(p?.carId||carId);$("#paymentTenant").value=p?.tenant||c?.tenant||"";$("#paymentTiming").value=timing;$("#paymentFrom").value=p?.from||period.from;$("#paymentTo").value=p?.to||period.to;$("#paymentExpected").value=p?.expected??c?.weeklyRent??0;$("#paymentReceived").value=p?.received??c?.weeklyRent??0;$("#paymentDate").value=p?.date||today();$("#paymentAccrualMonth").value=p?.accrualMonth||monthFromDate(p?.from||period.from);$("#paymentReferenceWeek").value=p?.referenceWeek||p?.week||period.week;$("#paymentWeek").value=p?.week||p?.referenceWeek||period.week;$("#paymentNote").value=p?.note||"";$("#paymentAutoExpected").checked=!p;$("#paymentDialog").showModal();recalculateExpectedPayment()
 }
-function openExpenseDialog(carId="",id=""){if(!requireFleetCar())return;const x=id?db.expenses.find(v=>v.id===id):null;$("#expenseId").value=x?.id||"";$("#expenseCarId").innerHTML=opts(x?.carId||carId);$("#expenseTitle").value=x?.title||"";$("#expenseCategory").value=x?.category||"repair";$("#expenseDate").value=x?.date||today();$("#expenseAmount").value=x?.amount||"";$("#expenseStatus").value=x?.status||"planned";$("#expenseNote").value=x?.note||"";$("#expenseDialog").showModal()}
+
+function monthFromDate(value){return value?String(value).slice(0,7):""}
+function paymentAccrualDate(payment){return payment.accrualMonth?`${payment.accrualMonth}-01`:payment.from||payment.to||payment.date}
+function syncExpenseRepairFields(){const root=$("#expenseRepairFields");if(root)root.hidden=$("#expenseCategory")?.value!=="repair"}
+function currentConfirmedMileage(carId){
+ const c=car(carId),local=Number(c?.mileage||0);
+ const values=db.repairs.filter(r=>r.carId===carId).map(r=>Number(r.mileage||0));
+ return Math.max(local,...values,0)
+}
+function createOrUpdateRepairFromExpense(expense){
+ if(expense.category!=="repair"||!$("#expenseCreateRepair")?.checked)return null;
+ let repair=expense.linkedRepairId?db.repairs.find(r=>r.id===expense.linkedRepairId):null;
+ const mileage=Math.max(currentConfirmedMileage(expense.carId),Number($("#expenseRepairMileage").value||0));
+ if(!repair){repair={id:uid()};db.repairs.push(repair)}
+ Object.assign(repair,{carId:expense.carId,title:expense.title,date:expense.date,mileage,planned:Number(expense.amount||0),actual:expense.status==="paid"?Number(expense.amount||0):Number(repair.actual||0),paidAmount:expense.status==="paid"?Number(expense.amount||0):Number(repair.paidAmount||0),paymentStatus:$("#expensePaymentStatus").value||"paid",status:$("#expenseRepairStatus").value||"done",service:$("#expenseRepairService").value.trim(),note:expense.note,linkedExpenseId:expense.id,linkedRequestId:repair.linkedRequestId||"",completedDate:$("#expenseRepairStatus").value==="done"?expense.date:repair.completedDate||"",warrantyUntil:repair.warrantyUntil||""});
+ expense.linkedRepairId=repair.id;
+ const c=car(expense.carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
+ return repair
+}
+function syncLinkedExpenseFromRepair(repair){
+ const amount=Number(repair.actual||0);
+ if(!(repair.status==="done"&&amount>0&&["paid","partial","driver"].includes(repair.paymentStatus)))return;
+ let expense=repair.linkedExpenseId?db.expenses.find(x=>x.id===repair.linkedExpenseId):null;
+ if(!expense){expense={id:uid()};db.expenses.push(expense);repair.linkedExpenseId=expense.id}
+ Object.assign(expense,{carId:repair.carId,title:repair.title,category:"repair",date:repair.completedDate||repair.date||today(),amount,status:repair.paymentStatus==="paid"?"paid":"planned",note:repair.note||"",linkedRepairId:repair.id})
+}
+function openRepairFromDriverRequest(request){
+ const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
+ openRepairDialog(c.id);
+ $("#repairTitle").value=DRIVER_REPAIR_CATEGORY_LABELS[request.category]||"Ремонт по заявке";
+ $("#repairDate").value=today();
+ $("#repairMileage").value=Math.max(Number(c.mileage||0),Number(request.mileage||0));
+ $("#repairStatus").value="repair";
+ $("#repairPaymentStatus").value="unpaid";
+ $("#repairLinkedRequestId").value=request.id;
+ $("#repairSourceRequest").hidden=false;
+ $("#repairSourceRequest").innerHTML=`<strong>Заявка водителя</strong><span>${request.driver_email||"Водитель"} · ${request.description}</span><small>Пробег: ${km(request.mileage)}</small>`;
+ $("#repairNote").value=request.description||""
+}
+function openExpenseDialog(carId="",id=""){
+ if(!requireFleetCar())return;
+ const x=id?db.expenses.find(v=>v.id===id):null,selected=x?.carId||carId||fleetCars()[0]?.id||"";
+ $("#expenseId").value=x?.id||"";$("#expenseCarId").innerHTML=opts(selected);$("#expenseTitle").value=x?.title||"";$("#expenseCategory").value=x?.category||"repair";$("#expenseDate").value=x?.date||today();$("#expenseAmount").value=x?.amount||"";$("#expenseStatus").value=x?.status||"planned";$("#expenseNote").value=x?.note||"";
+ const linked=x?.linkedRepairId?db.repairs.find(r=>r.id===x.linkedRepairId):null;
+ $("#expenseCreateRepair").checked=x?.category==="repair"||!x;$("#expenseRepairMileage").value=linked?.mileage||currentConfirmedMileage(selected);$("#expenseRepairService").value=linked?.service||"";$("#expenseRepairStatus").value=linked?.status||"done";$("#expensePaymentStatus").value=linked?.paymentStatus||(x?.status==="paid"?"paid":"unpaid");
+ syncExpenseRepairFields();$("#expenseDialog").showModal()
+}
 function openDocumentDialog(carId="",id=""){if(!requireFleetCar())return;const d=id?db.documents.find(v=>v.id===id):null;$("#documentId").value=d?.id||"";$("#documentCarId").innerHTML=opts(d?.carId||carId);$("#documentType").value=d?.type||"insurance";$("#documentTitle").value=d?.title||"";$("#documentNumber").value=d?.number||"";$("#documentExpiry").value=d?.expiry||"";$("#documentCost").value=d?.cost||"";$("#documentPaymentMode").value=d?.paymentMode||"full";$("#documentInstallmentCount").value=d?.installmentCount||4;$("#documentFirstInstallment").value=d?.firstInstallment||today();$("#documentInstallmentFrequency").value=d?.installmentFrequency||"monthly";syncInsuranceFields();$("#documentFile").value=d?.file||"";$("#documentAttachment").value="";$("#documentAttachmentPreview").innerHTML=d?.fileId?`<div class="attached-file"><span>Файл прикреплён</span><button type="button" class="btn" onclick="openDocumentAttachment('${d.fileId}','${(d.title||"Документ").replaceAll("'","\'")}')">Открыть</button></div>`:"";$("#documentNote").value=d?.note||"";$("#documentDialog").showModal()}
 function openDepositDialog(carId="",id=""){if(!requireFleetCar())return;const row=id?(db.deposits||[]).find(x=>x.id===id):null,c=car(row?.carId||carId||fleetCars()[0]?.id);$("#depositId").value=row?.id||"";$("#depositCarId").innerHTML=opts(row?.carId||carId||c?.id);$("#depositTenant").value=row?.tenant||c?.tenant||"";$("#depositAmount").value=row?.amount||"";$("#depositDate").value=row?.date||today();$("#depositNote").value=row?.note||"";$("#depositDialog").showModal()}
 function deleteDeposit(id){if(!confirm("Удалить этот платёж кауции?"))return;const row=db.deposits.find(x=>x.id===id);db.deposits=db.deposits.filter(x=>x.id!==id);logActivity("Удалён платёж кауции","Кауция",row?money(row.amount):"",row?.carId);save();if(selectedCarId)openCar(selectedCarId,"finance")}
@@ -4914,10 +4926,12 @@ $("#quickServiceForm").onsubmit=e=>{
 };
 
 $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
-$("#repairForm").onsubmit=e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),obj={id,carId:$("#repairCarId").value,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage:Number($("#repairMileage").value||0),planned:Number($("#repairPlanned").value||0),actual:Number($("#repairActual").value||0),status:$("#repairStatus").value,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim()};old?Object.assign(old,obj):(db.repairs.push(obj),addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status)));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();toast("Ремонт сохранён")};
+$("#expenseCategory").onchange=syncExpenseRepairFields;
+$("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
+$("#repairForm").onsubmit=async e=>{e.preventDefault();const id=$("#repairId").value||uid(),old=db.repairs.find(x=>x.id===id),carId=$("#repairCarId").value,mileage=Number($("#repairMileage").value||0),minimum=currentConfirmedMileage(carId);if(mileage<minimum)return toast(`Пробег не может быть меньше ${km(minimum)}`);const status=$("#repairStatus").value,actual=Number($("#repairActual").value||0),paymentStatus=$("#repairPaymentStatus").value;if(status==="done"&&actual<=0&&paymentStatus!=="warranty")return toast("Укажите фактическую сумму или выберите гарантию");const obj={id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,mileage,planned:Number($("#repairPlanned").value||0),actual,status,service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),warrantyUntil:$("#repairWarrantyUntil").value,linkedRequestId:$("#repairLinkedRequestId").value,linkedExpenseId:$("#repairLinkedExpenseId").value};old?Object.assign(old,obj):db.repairs.push(obj);const c=car(carId);if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;if(c&&["repair","parts","service"].includes(status))c.status="repair";if(c&&status==="done"&&c.status==="repair")c.status="free";syncLinkedExpenseFromRepair(obj);if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);save();$("#repairDialog").close();renderRepairs();renderExpenses();if(obj.linkedRequestId){try{await window.FleetPilotCloud.linkDriverRequestRepair(obj.linkedRequestId,obj.id,status==="done"?"done":"repair",`Ремонт: ${obj.title} · пробег ${obj.mileage} км`);await loadFleetServiceAlerts({rerender:true})}catch(error){console.warn(error)}}toast("Ремонт сохранён")};
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};
-$("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),timing:$("#paymentTiming").value,referenceWeek:$("#paymentReferenceWeek").value.trim(),from:$("#paymentFrom").value,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));logActivity(old?"Изменена оплата":"Добавлена оплата","Аренда",money(obj.received),obj.carId);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
-$("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim()};old?Object.assign(old,obj):(db.expenses.push(obj),addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,expenseStatusText(obj.status)));logActivity(old?"Изменён расход":"Добавлен расход","Расходы",`${obj.title} · ${money(obj.amount)}`,obj.carId);save();$("#expenseDialog").close();renderExpenses();toast("Расход сохранён")};
+$("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот расчётный период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),from=$("#paymentFrom").value,obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),timing:$("#paymentTiming").value,referenceWeek:$("#paymentReferenceWeek").value.trim(),from,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,accrualMonth:$("#paymentAccrualMonth").value||monthFromDate(from),week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));logActivity(old?"Изменена оплата":"Добавлена оплата","Аренда",`${money(obj.received)} · ${obj.accrualMonth}`,obj.carId);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};
+$("#expenseForm").onsubmit=e=>{e.preventDefault();const id=$("#expenseId").value||uid(),old=db.expenses.find(x=>x.id===id),obj={id,carId:$("#expenseCarId").value,title:$("#expenseTitle").value.trim(),category:$("#expenseCategory").value,date:$("#expenseDate").value,amount:Number($("#expenseAmount").value),status:$("#expenseStatus").value,note:$("#expenseNote").value.trim(),linkedRepairId:old?.linkedRepairId||""};old?Object.assign(old,obj):db.expenses.push(obj);const linked=createOrUpdateRepairFromExpense(obj);if(!old)addTimeline(obj.carId,"expense",obj.title,-Number(obj.amount||0),obj.date,expenseStatusText(obj.status));logActivity(old?"Изменён расход":"Добавлен расход","Расходы",`${obj.title} · ${money(obj.amount)}`,obj.carId);save();$("#expenseDialog").close();renderExpenses();renderRepairs();toast(linked?"Расход и ремонт сохранены":"Расход сохранён")};
 $("#documentForm").onsubmit=async e=>{e.preventDefault();try{const id=$("#documentId").value||uid(),old=db.documents.find(x=>x.id===id);const type=$("#documentType").value,paymentMode=type==="insurance"?$("#documentPaymentMode").value:"full",cost=Number($("#documentCost").value||0),installmentCount=Number($("#documentInstallmentCount").value||4),firstInstallment=$("#documentFirstInstallment").value||today(),installmentFrequency=$("#documentInstallmentFrequency").value,installments=paymentMode==="installments"?buildInsuranceInstallments(cost,installmentCount,firstInstallment,installmentFrequency,old?.installments||[]):[];const selectedFile=$("#documentAttachment").files?.[0],fileId=selectedFile?await saveDocumentFile(selectedFile,id,old?.fileId||""):old?.fileId||"";const obj={id,carId:$("#documentCarId").value,type,title:$("#documentTitle").value.trim(),number:$("#documentNumber").value.trim(),expiry:$("#documentExpiry").value,cost,paymentMode,installmentCount,firstInstallment,installmentFrequency,installments,file:$("#documentFile").value.trim(),fileId,note:$("#documentNote").value.trim()};old?Object.assign(old,obj):(db.documents.push(obj),addTimeline(obj.carId,"document",obj.title,-Number(obj.cost||0),obj.expiry||today(),documentTypeText(obj.type)));logActivity(old?"Изменён документ":"Добавлен документ","Документы",obj.title,obj.carId);save();$("#documentDialog").close();renderDocuments();toast("Документ сохранён")}catch(error){toast(error.message||"Не удалось сохранить документ")}};
 $$(".theme-switcher button").forEach(button=>button.onclick=()=>setTheme(button.dataset.themeMode));
 $("#quickActionButton").onclick=()=>toggleQuickActions();

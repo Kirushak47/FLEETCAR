@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.7 Vehicle Handover</title>
-  <link rel="manifest" href="manifest.webmanifest?v=107000">
-  <link rel="stylesheet" href="styles.css?v=107000">
+  <title>FleetPilot V10.8 Service Finance</title>
+  <link rel="manifest" href="manifest.webmanifest?v=108000">
+  <link rel="stylesheet" href="styles.css?v=108000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -38,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.7 Vehicle Handover</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.8 Service Finance</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -1157,10 +1157,17 @@
     <label>Плановый пробег<input id="repairMileage" type="number"></label>
     <label>Плановая сумма<input id="repairPlanned" type="number" step="0.01"></label>
     <label>Фактическая сумма<input id="repairActual" type="number" step="0.01"></label>
-    <label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="parts">Ожидает запчасти</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option></select></label>
+    <label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="parts">Ожидает запчасти</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option><option value="cancelled">Отменён</option></select></label>
     <label>Сервис<input id="repairService"></label>
+    <label>Статус оплаты<select id="repairPaymentStatus"><option value="unpaid">Не оплачено</option><option value="partial">Частично</option><option value="paid">Оплачено</option><option value="driver">Оплата водителем</option><option value="insurance">Страховая</option><option value="warranty">Гарантия</option></select></label>
+    <label>Оплачено<input id="repairPaidAmount" type="number" step="0.01" min="0"></label>
+    <label>Дата завершения<input id="repairCompletedDate" type="date"></label>
+    <label>Гарантия до<input id="repairWarrantyUntil" type="date"></label>
   </div>
-  <label>Комментарий<textarea id="repairNote"></textarea></label>
+  <input id="repairLinkedRequestId" type="hidden">
+  <input id="repairLinkedExpenseId" type="hidden">
+  <div id="repairSourceRequest" class="repair-source-request" hidden></div>
+  <label>Выполненные работы / комментарий<textarea id="repairNote"></textarea></label>
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
@@ -1176,6 +1183,7 @@
     <label class="check-label auto-rent-label"><input id="paymentAutoExpected" type="checkbox" checked> Рассчитать автоматически по дням</label>
     <label>Получено<input id="paymentReceived" type="number" step="0.01" required></label>
     <label>Дата поступления<input id="paymentDate" type="date"></label>
+    <label>Месяц дохода<input id="paymentAccrualMonth" type="month"></label>
     <label>Учётная неделя<input id="paymentWeek"></label>
   </div>
   <div id="paymentCalculationInfo" class="payment-calculation-info"></div>
@@ -1194,6 +1202,15 @@
     <label>Плановая дата<input id="expenseDate" type="date" required></label>
     <label>Сумма<input id="expenseAmount" type="number" step="0.01" required></label>
     <label>Статус<select id="expenseStatus"><option value="planned">Запланирован</option><option value="paid">Оплачен</option><option value="cancelled">Отменён</option></select></label>
+  </div>
+  <div id="expenseRepairFields" class="expense-repair-fields">
+    <label class="check-label"><input id="expenseCreateRepair" type="checkbox" checked> Создать связанную запись в «Сервисе»</label>
+    <div class="grid2">
+      <label>Пробег<input id="expenseRepairMileage" type="number" min="0"></label>
+      <label>Сервис<input id="expenseRepairService"></label>
+      <label>Статус ремонта<select id="expenseRepairStatus"><option value="done">Выполнен</option><option value="repair">В ремонте</option><option value="service">Записан в сервис</option><option value="planned">Запланирован</option></select></label>
+      <label>Статус оплаты<select id="expensePaymentStatus"><option value="paid">Оплачено</option><option value="partial">Частично</option><option value="unpaid">Не оплачено</option><option value="warranty">Гарантия</option><option value="insurance">Страховая</option></select></label>
+    </div>
   </div>
   <label>Комментарий<input id="expenseNote"></label>
   <button class="btn primary full">Сохранить</button>
@@ -1513,7 +1530,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=107000"></script>
-<script src="cloud.js?v=107000"></script>
-<script src="app.js?v=107000"></script>
+<script src="cloud-config.js?v=108000"></script>
+<script src="cloud.js?v=108000"></script>
+<script src="app.js?v=108000"></script>
 </body></html>
