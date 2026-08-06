@@ -1,30 +1,24 @@
+# FleetPilot V12.1 — Stabilization
 
-# FleetPilot V12 — Full Redesign
-
-Cloudflare address:
+Production:
 https://fleetpilot.balyshevy.workers.dev/
 
-## Installation
+No new Supabase SQL is required.
 
-1. Replace the files in the GitHub repository with the contents of this archive.
-2. Commit the changes.
-3. Cloudflare will deploy the commit automatically.
-4. Open the Cloudflare site and refresh with Ctrl+F5.
+Included:
+- full V12 desktop redesign;
+- request status changes remain on the Service page;
+- Realtime does not redirect to Fleet;
+- restored orange driver-request summary;
+- changed request is highlighted;
+- repair saving returns to Service;
+- mileage and driver service synchronization from V11.3.1 remain;
+- one expense per linked repair;
+- car profile documents can be opened and downloaded;
+- legacy duplicate floating service indicator is disabled.
 
-## Important
-
-- No new Supabase SQL is required.
-- Do not delete `cloud.js` or `cloud-config.js`.
-- The redesign targets the desktop CRM interface.
-- The existing mobile interface remains compact and familiar.
-
-## Redesigned
-
-- dark professional CRM sidebar;
-- clean desktop header;
-- new cards, tables, filters and forms;
-- professional fleet list and board;
-- redesigned car profile;
-- improved service, documents, analytics and dialogs;
-- better spacing, hierarchy and dark theme;
-- Cloudflare cache control to reduce stale deployments.
+Deployment:
+1. Replace repository files.
+2. Commit.
+3. Wait for Cloudflare deployment.
+4. Refresh with Ctrl+F5.

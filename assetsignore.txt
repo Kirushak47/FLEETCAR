@@ -1,0 +1,11 @@
+.git
+.git/**
+.wrangler
+.wrangler/**
+.github
+.github/**
+node_modules
+node_modules/**
+supabase*.sql
+README_ORIGINAL.md
+CLOUDFLARE_PAGES_SETUP.md

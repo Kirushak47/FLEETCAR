@@ -8106,3 +8106,29 @@ html[data-theme="dark"] .repair-linked-finance-info{
  html[data-theme="dark"] tbody tr{background:#111827!important}
  html[data-theme="dark"] tbody td{border-color:rgba(255,255,255,.075)!important}
 }
+
+
+/* FleetPilot V12.1 — stabilization components */
+.service-requests-summary-banner{
+ display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;
+ margin-bottom:14px;padding:14px 16px;border:1px solid #fbbf24;border-radius:16px;
+ background:linear-gradient(135deg,#fff7ed,#fffbeb);box-shadow:0 10px 26px rgba(245,158,11,.10)
+}
+.service-requests-summary-banner.empty{border-color:#d1d5db;background:#f8fafc;opacity:.78}
+.service-requests-summary-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#f59e0b;color:#fff;font-size:20px}
+.service-requests-summary-banner strong,.service-requests-summary-banner span{display:block}
+.service-requests-summary-banner span{margin-top:3px;color:#b45309;font-size:9px}
+.service-requests-summary-open{border:0;background:transparent;color:#9a3412;font-weight:900;cursor:pointer}
+.v12-car-documents-grid{display:grid;gap:10px;margin-top:12px}
+.v12-car-document{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:13px;border:1px solid var(--v12-border,#e5e7eb);border-radius:13px;background:var(--v12-surface,#fff)}
+.v12-car-document strong,.v12-car-document small{display:block}
+.v12-car-document small{margin-top:4px;color:#64748b}
+.v12-car-document-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:7px}
+.v12-no-file{display:inline-flex;align-items:center;padding:7px 9px;border-radius:9px;background:#f1f5f9;color:#64748b;font-size:8px;font-weight:800}
+html[data-theme="dark"] .service-requests-summary-banner{border-color:#92400e;background:linear-gradient(135deg,#2a1b0c,#21180c)}
+html[data-theme="dark"] .service-requests-summary-banner span{color:#fbbf24}
+@media(max-width:650px){
+ .service-requests-summary-banner{grid-template-columns:42px 1fr}
+ .service-requests-summary-open{grid-column:1/-1;text-align:right}
+ .v12-car-document{grid-template-columns:1fr}
+}

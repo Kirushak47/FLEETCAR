@@ -1048,6 +1048,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  updateServiceRequestsSummaryBanner();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
   return workspaceRepairAlerts
@@ -1079,6 +1080,17 @@ function clearWorkspaceRepairCarFilter(){
 window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
 window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
+
+function updateServiceRequestsSummaryBanner(){
+ const banner=$("#serviceRequestsSummaryBanner");
+ if(!banner)return;
+ const active=(workspaceRepairAlerts||[]).filter(row=>!["done","rejected","cancelled"].includes(row.status));
+ const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
+ $("#serviceRequestsSummaryTitle").textContent=`${active.length} ${active.length===1?"заявка":"заявок"} от водителей`;
+ $("#serviceRequestsSummaryText").textContent=`Автомобилей с активными заявками: ${cars.size}`;
+ banner.classList.toggle("empty",active.length===0);
+ banner.hidden=false
+}
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
@@ -1088,6 +1100,7 @@ async function renderWorkspaceRepairRequests(){
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  updateServiceRequestsSummaryBanner();
   const allRows=workspaceRepairAlerts;
   const rows=selectedWorkspaceRepairCarId
    ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
@@ -1116,8 +1129,30 @@ async function renderWorkspaceRepairRequests(){
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
    const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
-   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
-   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
+   const requestId=select.dataset.requestStatus;
+   const requestedStatus=select.value;
+
+   if(requestedStatus==="repair"){
+    if(request)openRepairFromDriverRequest(request);
+    select.value=request?.status||"new";
+    return
+   }
+
+   select.disabled=true;
+   try{
+    await window.FleetPilotCloud.updateDriverRepairRequest(requestId,requestedStatus,"");
+    await loadFleetServiceAlerts({rerender:false});
+    showPage("repairsPage");
+    await renderWorkspaceRepairRequests();
+    requestAnimationFrame(()=>{
+     showPage("repairsPage");
+     highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(requestId))}"]`)
+    });
+    toast("Статус заявки обновлён")
+   }catch(error){
+    select.value=request?.status||"new";
+    toast(error.message||String(error))
+   }finally{select.disabled=false}
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
@@ -1374,6 +1409,15 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
+
+const serviceRequestsSummaryOpen=$("#serviceRequestsSummaryOpen");
+if(serviceRequestsSummaryOpen)serviceRequestsSummaryOpen.onclick=()=>{
+ selectedWorkspaceRepairCarId=null;
+ showPage("repairsPage");
+ renderWorkspaceRepairRequests();
+ requestAnimationFrame(()=>document.querySelector(".driver-service-inbox")?.scrollIntoView({behavior:"smooth",block:"start"}))
+};
+
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;
 const driverRepairForm=$("#driverRepairForm");
@@ -4969,7 +5013,22 @@ function renderCarProfile(id,activeTab="info"){
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
   <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
  </div>`;
- const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
+ const documents=`<div class="detail-tab-grid">
+  <div class="card">
+   <div class="section-head"><div><span class="eyebrow">Documents Center</span><h3>Документы автомобиля</h3></div><button class="btn primary" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>
+   <div class="v12-car-documents-grid">
+    ${docs.map(d=>`<article class="v12-car-document" data-document-id="${d.id}">
+     <div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · ${d.expiry?`до ${date(d.expiry)}`:"без срока"}</small></div>
+     <b>${money(d.cost)}</b>
+     <div class="v12-car-document-actions">
+      ${d.fileId?`<button class="btn primary" onclick="openDocumentAttachment('${d.fileId}','${d.title.replaceAll("'","\\'")}')">Открыть</button><button class="btn" onclick="downloadDocumentAttachment('${d.fileId}')">Скачать</button>`:"<span class='v12-no-file'>Файл не прикреплён</span>"}
+      <button class="btn" onclick="editDocument('${d.id}')">Редактировать</button>
+     </div>
+    </article>`).join("")||'<div class="driver-empty-state">Документов пока нет.</div>'}
+   </div>
+  </div>
+  <div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div>
+ </div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
@@ -5403,7 +5462,7 @@ $("#repairForm").onsubmit=async e=>{
   }catch(error){console.warn(error)}
  }
 
- const destination=(pageBeforeSave==="repairsPage"||obj.linkedRequestId)?"repairsPage":pageBeforeSave;
+ const destination="repairsPage";
  requestAnimationFrame(()=>{
   showPage(destination);
   if(destination==="repairsPage"){
@@ -5596,6 +5655,11 @@ window.addEventListener("fleetpilot:assignments-changed",async()=>{
  }else if(enterpriseCurrentRole()==="driver")renderDriverPortal()
 });
 window.addEventListener("fleetpilot:repair-requests-changed",async()=>{
- await loadFleetServiceAlerts({rerender:true});
- if($("#repairsPage")?.classList.contains("active"))renderWorkspaceRepairRequests()
+ const wasService=$("#repairsPage")?.classList.contains("active");
+ await loadFleetServiceAlerts({rerender:!wasService});
+ if(wasService){
+  showPage("repairsPage");
+  await renderWorkspaceRepairRequests();
+  requestAnimationFrame(()=>showPage("repairsPage"))
+ }
 });
