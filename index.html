@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V10.8.1 Period Profit</title>
-  <link rel="manifest" href="manifest.webmanifest?v=108100">
-  <link rel="stylesheet" href="styles.css?v=108100">
+  <title>FleetPilot V10.9 Insurance</title>
+  <link rel="manifest" href="manifest.webmanifest?v=109000">
+  <link rel="stylesheet" href="styles.css?v=109000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -38,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V10.8.1 Period Profit</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V10.9 Insurance</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -1229,10 +1229,32 @@
     <label>Ссылка на файл<input id="documentFile" placeholder="Необязательно"></label>
     <label>Прикрепить файл<input id="documentAttachment" type="file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
   </div>
+  <div id="insuranceInstallmentEditor" class="insurance-installment-editor insurance-installment-field">
+    <div class="section-head"><div><span class="eyebrow">Рассрочка</span><h3>Суммы и даты рат</h3></div><button type="button" id="rebuildInsuranceInstallments" class="btn">Пересчитать</button></div>
+    <div id="insuranceInstallmentEditorList"></div>
+    <div id="insuranceInstallmentTotalWarning" class="insurance-total-warning"></div>
+  </div>
   <div id="documentAttachmentPreview" class="attachment-preview"></div><label>Комментарий<input id="documentNote"></label>
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
+
+
+<dialog id="insurancePaymentDialog" class="enterprise-dialog">
+  <form id="insurancePaymentForm" class="modal">
+    <div class="modal-head"><div><span class="eyebrow">Страхование</span><h2 id="insurancePaymentTitle">Оплата раты</h2></div><button type="button" data-close="insurancePaymentDialog">✕</button></div>
+    <input id="insurancePaymentDocumentId" type="hidden">
+    <input id="insurancePaymentInstallmentId" type="hidden">
+    <div id="insurancePaymentSummary" class="insurance-payment-summary"></div>
+    <div class="grid2">
+      <label>Оплаченная сумма<input id="insurancePaidAmount" type="number" step="0.01" min="0" required></label>
+      <label>Дата оплаты<input id="insurancePaidDate" type="date" required></label>
+    </div>
+    <label>Комментарий<input id="insurancePaymentNote"></label>
+    <label class="check-label"><input id="insurancePaymentPaid" type="checkbox" checked> Рата оплачена</label>
+    <div class="settings-actions"><button type="button" class="btn" data-close="insurancePaymentDialog">Отмена</button><button class="btn primary">Сохранить оплату</button></div>
+  </form>
+</dialog>
 
 <dialog id="fileViewerDialog" class="file-viewer-dialog"><div class="file-viewer"><div class="modal-head"><div><span class="eyebrow">Документ</span><h2 id="fileViewerTitle">Просмотр</h2></div><button id="closeFileViewer" type="button">✕</button></div><iframe id="fileViewerFrame" title="Просмотр документа"></iframe><img id="fileViewerImage" alt="Просмотр изображения"><p id="fileViewerFallback"></p></div></dialog>
 
@@ -1530,7 +1552,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=108100"></script>
-<script src="cloud.js?v=108100"></script>
-<script src="app.js?v=108100"></script>
+<script src="cloud-config.js?v=109000"></script>
+<script src="cloud.js?v=109000"></script>
+<script src="app.js?v=109000"></script>
 </body></html>
