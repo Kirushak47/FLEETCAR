@@ -1091,9 +1091,11 @@ function renderFleetDriverRequestsPanel(){
   .filter(row=>!["done","rejected","cancelled"].includes(row.status))
   .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
 
- panel.hidden=active.length===0;
+ panel.hidden=false;
  if(!active.length){
-  list.innerHTML="";
+  $("#fleetDriverRequestsTitle").textContent="0 заявок от водителей";
+  $("#fleetDriverRequestsText").textContent="Автомобилей с активными заявками: 0";
+  list.innerHTML='<div class="fleet-driver-request-empty"><span>✓</span><div><strong>Активных заявок нет</strong><small>Новые обращения водителей появятся здесь автоматически.</small></div></div>';
   return
  }
 
@@ -1174,16 +1176,8 @@ window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
 window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
 
-function updateServiceRequestsSummaryBanner(){
- const banner=$("#serviceRequestsSummaryBanner");
- if(!banner)return;
- const active=(workspaceRepairAlerts||[]).filter(row=>!["done","rejected","cancelled"].includes(row.status));
- const cars=new Set(active.map(row=>String(row.car_id||"")).filter(Boolean));
- $("#serviceRequestsSummaryTitle").textContent=`${active.length} ${active.length===1?"заявка":"заявок"} от водителей`;
- $("#serviceRequestsSummaryText").textContent=`Автомобилей с активными заявками: ${cars.size}`;
- banner.classList.toggle("empty",active.length===0);
- banner.hidden=false
-}
+function updateServiceRequestsSummaryBanner(){}
+
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){
@@ -1503,13 +1497,6 @@ if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialo
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
 
-const serviceRequestsSummaryOpen=$("#serviceRequestsSummaryOpen");
-if(serviceRequestsSummaryOpen)serviceRequestsSummaryOpen.onclick=()=>{
- selectedWorkspaceRepairCarId=null;
- showPage("repairsPage");
- renderWorkspaceRepairRequests();
- requestAnimationFrame(()=>document.querySelector(".driver-service-inbox")?.scrollIntoView({behavior:"smooth",block:"start"}))
-};
 
 
 const fleetDriverRequestsOpenAll=$("#fleetDriverRequestsOpenAll");
