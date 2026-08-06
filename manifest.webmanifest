@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V12.6.2 White Screen Fix Cloud Beta",
+  "name": "FleetPilot V12.6.3 Leaflet Runtime Fix Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=126200",
+  "start_url": "./?v=126300",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

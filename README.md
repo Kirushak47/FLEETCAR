@@ -1,11 +1,6 @@
-# FleetPilot V12.6.2 — White Screen Fix
+# FleetPilot V12.6.3 — Leaflet Runtime Fix
 
-Critical emergency fix:
-- removed unsafe early showPage() call;
-- safe startup always opens the Dashboard;
-- background Fleet initialization no longer changes the active page;
-- optional removed buttons no longer crash initialization;
-- light theme remains permanent;
-- request panel remains hidden until a real active request exists;
-- core files use network-first service-worker loading to avoid stale broken JavaScript;
-- no SQL required.
+- Fixed the repeated `invalidateSize is not a function` runtime error.
+- All Fleet and mobile map resize calls now verify the method before calling it.
+- The repeated console error loop no longer freezes the interface.
+- No Supabase SQL is required.

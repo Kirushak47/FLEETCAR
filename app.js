@@ -1,3 +1,14 @@
+
+function safeInvalidateMap(mapInstance){
+ try{
+  if(mapInstance && typeof mapInstance.invalidateSize==="function"){
+   mapInstance.invalidateSize({pan:false})
+  }
+ }catch(error){
+  console.warn("Map resize skipped",error)
+ }
+}
+
 (function(){
   const forceLight=()=>{
     if(document.documentElement.getAttribute("data-theme")!=="light"){
@@ -1720,8 +1731,8 @@ $$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page==
  renderMobileGpsMap({fit:true});
  updateGpsCountdownUi();
  requestAnimationFrame(()=>{
-  mobileFleetMap?.invalidateSize({pan:false});
-  setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),180)
+  safeInvalidateMap(mobileFleetMap);
+  setTimeout(()=>safeInvalidateMap(mobileFleetMap),180)
  })
 }if(id==="searchPage")renderGlobalSearch()}
 function attention(c){return oil(c)<=1000||days(c.insurance)<=30||days(c.inspection)<=30}
@@ -2896,7 +2907,7 @@ function scheduleDesktopLiveRefresh(options={}){
 
   syncDesktopSelection();
   requestAnimationFrame(()=>{
-   leafletFleetMap?.invalidateSize({pan:false});
+   safeInvalidateMap(leafletFleetMap);
   })
  })
 }
@@ -3885,7 +3896,7 @@ function ensureMobileFleetMap(){
   maxZoom:19,minZoom:4,attribution:"&copy; OpenStreetMap"
  }).addTo(mobileFleetMap);
  mobileFleetLayer=L.layerGroup().addTo(mobileFleetMap);
- [50,180,400].forEach(delay=>setTimeout(()=>mobileFleetMap?.invalidateSize({pan:false}),delay));
+ [50,180,400].forEach(delay=>setTimeout(()=>safeInvalidateMap(mobileFleetMap),delay));
  return mobileFleetMap
 }
 
@@ -4319,7 +4330,7 @@ function initializeDesktopCommandCenter(){
    if(view==="list"&&carsBlock){carsBlock.classList.remove("desktop-command-hidden");carsBlock.style.removeProperty("display")}
    safeDesktopRender("events second pass",renderDesktopEvents);
    safeDesktopRender("insights second pass",renderDesktopInsights);
-   leafletFleetMap?.invalidateSize({pan:false})
+   safeInvalidateMap(leafletFleetMap)
   })
  })
 }
