@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V11.3.3 Dashboard Service</title>
-  <link rel="manifest" href="manifest.webmanifest?v=113300">
-  <link rel="stylesheet" href="styles.css?v=113300">
+  <title>FleetPilot V11.3.2 Professional Modules</title>
+  <link rel="manifest" href="manifest.webmanifest?v=113200">
+  <link rel="stylesheet" href="styles.css?v=113200">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -38,7 +38,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V11.3.3 Dashboard Service</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V11.3.2 Professional Modules</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -139,9 +139,9 @@
             <h3 id="fleetDriverRequestsTitle"></h3>
             <p id="fleetDriverRequestsText"></p>
           </div>
-          <button type="button" id="fleetDriverRequestsOpenService" class="btn primary">Открыть сервис</button>
+          <button type="button" id="fleetDriverRequestsRefresh" class="btn">Обновить</button>
         </div>
-        <div id="fleetDriverRequestsList" class="fleet-driver-requests-list" hidden></div>
+        <div id="fleetDriverRequestsList" class="fleet-driver-requests-list"></div>
       </section>
 
       <section class="desktop-command-center" aria-label="FleetPilot Command Center">
@@ -452,36 +452,11 @@
     </section>
 
     <section id="repairsPage" class="page" data-advanced-page="true">
-      <div class="section-head professional-page-head">
-        <div>
-          <span class="eyebrow">Технический отдел</span>
-          <h2>Сервис и ремонты</h2>
-          <p>Заявки водителей, активные работы и история обслуживания автопарка.</p>
-        </div>
-        <div class="service-page-actions">
-          <button type="button" id="refreshWorkspaceRepairRequests" class="btn">Обновить заявки</button>
-          <button id="addRepair" class="btn primary">+ Добавить ремонт</button>
-        </div>
-      </div>
+      <div id="workspaceRepairRequestsList" hidden></div>
 
-      <div id="serviceProfessionalSummary" class="professional-kpi-grid"></div>
-
-      <section class="professional-panel service-requests-panel">
-        <div class="professional-panel-head">
-          <div><span class="eyebrow">Driver Portal</span><h3>Заявки водителей</h3></div>
-          <span id="serviceRequestCount" class="professional-counter">0</span>
-        </div>
-        <div id="workspaceRepairRequestsList" class="service-request-list"></div>
-      </section>
-
-      <section class="professional-panel service-repairs-panel">
-        <div class="professional-panel-head">
-          <div><span class="eyebrow">Технические работы</span><h3>Ремонты и обслуживание</h3></div>
-          <span id="serviceRepairCount" class="professional-counter">0</span>
-        </div>
-        <div id="repairSummary" class="professional-kpi-grid service-repair-kpis"></div>
-        <div id="repairList" class="professional-list service-repair-list"></div>
-      </section>
+      <div class="section-head"><div><span class="eyebrow">Техническая часть</span><h2>Ремонты</h2></div><button id="addRepair" class="btn primary">+ Ремонт</button></div>
+      <div id="repairSummary" class="summary-grid compact"></div>
+      <div id="repairList" class="list"></div>
     </section>
 
     <section id="paymentsPage" class="page">
@@ -1667,7 +1642,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=113300"></script>
-<script src="cloud.js?v=113300"></script>
-<script src="app.js?v=113300"></script>
+<script src="cloud-config.js?v=113200"></script>
+<script src="cloud.js?v=113200"></script>
+<script src="app.js?v=113200"></script>
 </body></html>

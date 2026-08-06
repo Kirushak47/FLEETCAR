@@ -1054,20 +1054,38 @@ function activeDriverRepairRequests(){
 function renderFleetDriverRequestsPanel(){
  const panel=$("#fleetDriverRequestsPanel");
  const list=$("#fleetDriverRequestsList");
- if(!panel)return;
+ if(!panel||!list)return;
 
  const rows=activeDriverRepairRequests();
  if(!rows.length){
   panel.hidden=true;
-  if(list)list.innerHTML="";
+  list.innerHTML="";
   return
  }
 
  panel.hidden=false;
  const cars=new Set(rows.map(row=>String(row.car_id||"")).filter(Boolean));
- $("#fleetDriverRequestsTitle").textContent=`Активных заявок: ${rows.length}`;
+ $("#fleetDriverRequestsTitle").textContent=`${rows.length} ${rows.length===1?"активная заявка":"активных заявок"}`;
  $("#fleetDriverRequestsText").textContent=`Автомобилей с обращениями: ${cars.size}`;
- if(list)list.innerHTML=""
+
+ list.innerHTML=rows.map(row=>{
+  const c=car(row.car_id);
+  const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate}`:"Автомобиль";
+  const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
+  const status=DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status||"Новая";
+  return `<article class="fleet-driver-request-card" data-fleet-driver-request="${row.id}">
+   <div class="fleet-driver-request-status"></div>
+   <div class="fleet-driver-request-main">
+    <strong>${vehicle}</strong>
+    <span>${category} · ${status}</span>
+    <p>${row.description||"Без описания"}</p>
+    <small>${row.driver_email||"Водитель"}${row.mileage?` · ${km(row.mileage)}`:""}</small>
+   </div>
+   <div class="fleet-driver-request-actions">
+    <button type="button" class="btn primary" onclick="openRepairFromFleetRequest('${row.id}')">Открыть</button>
+   </div>
+  </article>`
+ }).join("")
 }
 
 function openRepairFromFleetRequest(requestId){
@@ -1121,19 +1139,13 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML="";
   return
  }
- root.innerHTML='<div class="professional-empty">Загрузка заявок…</div>';
+ root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  renderFleetDriverRequestsPanel();
-
   const allRows=workspaceRepairAlerts;
   const rows=selectedWorkspaceRepairCarId
    ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
    :allRows;
-  const activeRows=rows.filter(row=>!["done","rejected","cancelled"].includes(String(row.status||"")));
-
-  const count=$("#serviceRequestCount");if(count)count.textContent=String(activeRows.length);
-  renderServiceProfessionalSummary();
 
   const filterBar=selectedWorkspaceRepairCarId?`
    <div class="workspace-request-filter">
@@ -1144,46 +1156,26 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);
    const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
-   const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
-   const status=DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status||"Новая";
-   return `<article class="service-request-card urgency-${row.urgency}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}">
-    <div class="service-request-urgency"></div>
-    <div class="service-request-main">
-     <div class="service-request-title"><strong>${category}</strong><span>${status}</span></div>
-     <h4>${carName}</h4>
-     <p>${row.description||"Без описания"}</p>
+   return `<article class="workspace-request-row urgency-${row.urgency}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}">
+    <div>
+     <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category} · ${carName}</strong>
+     <span>${row.description}</span>
      <small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small>
     </div>
-    <div class="service-request-controls">
-     <select data-request-status="${row.id}">
-      ${Object.entries(DRIVER_REPAIR_STATUS_LABELS).map(([value,label])=>`<option value="${value}" ${value===row.status?"selected":""}>${label}</option>`).join("")}
-     </select>
-     <button type="button" class="btn primary" onclick="openRepairFromFleetRequest('${row.id}')">Создать ремонт</button>
-    </div>
+    <select data-request-status="${row.id}">
+     ${Object.entries(DRIVER_REPAIR_STATUS_LABELS).map(([value,label])=>`<option value="${value}" ${value===row.status?"selected":""}>${label}</option>`).join("")}
+    </select>
    </article>`
-  }).join("")||'<div class="professional-empty">Заявок водителей пока нет.</div>');
+  }).join("")||'<div class="driver-empty-state">Активных заявок для автомобиля нет.</div>');
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
    const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
-   if(select.value==="repair"){
-    if(request)openRepairFromDriverRequest(request);
-    select.value=request?.status||"new";
-    return
-   }
-   try{
-    await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");
-    toast("Статус заявки обновлён");
-    await renderWorkspaceRepairRequests();
-    await loadFleetServiceAlerts({rerender:true})
-   }catch(error){
-    toast(error.message||String(error))
-   }
+   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
+   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
- }catch(error){
-  root.innerHTML=`<div class="professional-empty">${error.message||error}</div>`
- }
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
 async function loadWorkspaceDriverAssignments(){
  try{
@@ -1436,12 +1428,8 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
-const fleetDriverRequestsOpenService=$("#fleetDriverRequestsOpenService");
-if(fleetDriverRequestsOpenService)fleetDriverRequestsOpenService.onclick=()=>{
- selectedWorkspaceRepairCarId=null;
- showPage("repairsPage");
- renderWorkspaceRepairRequests()
-};
+const fleetDriverRequestsRefresh=$("#fleetDriverRequestsRefresh");
+if(fleetDriverRequestsRefresh)fleetDriverRequestsRefresh.onclick=()=>loadFleetServiceAlerts({rerender:false});
 
 const refreshWorkspaceRepairRequests=$("#refreshWorkspaceRepairRequests");
 if(refreshWorkspaceRepairRequests)refreshWorkspaceRepairRequests.onclick=renderWorkspaceRepairRequests;
@@ -4684,56 +4672,11 @@ ${fleetServiceBadgeMarkup(c.id,true)}
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
  requestAnimationFrame(updateGpsBadgesOnly);
 }
-function renderServiceProfessionalSummary(){
- const requests=activeDriverRepairRequests();
- const requestCars=new Set(requests.map(row=>String(row.car_id||"")).filter(Boolean));
- const repairs=[...db.repairs];
- const inProgress=repairs.filter(x=>["parts","service","repair"].includes(x.status));
- const urgent=requests.filter(x=>["high","urgent","critical"].includes(String(x.urgency||"").toLowerCase())).length;
- const todayDone=repairs.filter(x=>x.status==="done"&&(x.completedDate||x.date)===today()).length;
- const root=$("#serviceProfessionalSummary");
- if(root)root.innerHTML=[
-  ["Активные заявки",requests.length,"От водителей"],
-  ["Автомобилей с обращениями",requestCars.size,"Нужен осмотр"],
-  ["В процессе",inProgress.length,"Активные ремонты"],
-  ["Завершено сегодня",todayDone,urgent?`Срочных заявок: ${urgent}`:"Без срочных заявок"]
- ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("")
-}
+function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item" data-repair-id="${r.id}"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
 
-function renderRepairs(){
- const list=[...db.repairs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
- const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0);
- const actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);
- const repairCount=$("#serviceRepairCount");if(repairCount)repairCount.textContent=String(list.length);
-
- $("#repairSummary").innerHTML=[
-  ["Запланировано",list.filter(x=>x.status==="planned").length,"Ожидают начала"],
-  ["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length,"Активные работы"],
-  ["Плановая сумма",money(planned),"По открытым работам"],
-  ["Фактические расходы",money(actual),"Завершённые работы"]
- ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
-
- $("#repairList").innerHTML=list.map(r=>{
-  const c=car(r.carId);
-  return `<article class="professional-row service-repair-row" data-repair-id="${r.id}">
-   <div class="professional-row-icon">🔧</div>
-   <div class="professional-row-main">
-    <strong>${r.title}</strong>
-    <span>${model(c).brand} ${model(c).model} · ${c?.plate||"Без номера"} · ${date(r.date)}</span>
-    <small>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</small>
-   </div>
-   <div class="professional-row-numbers">
-    <span class="professional-status ${r.status==="done"?"paid":"planned"}">${repairStatusText(r.status)}</span>
-    <b>${money(r.status==="done"?r.actual:r.planned)}</b>
-   </div>
-   <div class="professional-row-actions">
-    <button class="btn" onclick="editRepair('${r.id}')">Изменить</button>
-    <button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button>
-   </div>
-  </article>`
- }).join("")||`<div class="professional-empty">Ремонтов пока нет.</div>`;
-
- renderServiceProfessionalSummary()
+function taxSettings(){
+ db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:0,deductVatCosts:true};
+ return db.settings.tax
 }
 function monthLabel(value){
  const [year,month]=value.split("-").map(Number);
