@@ -1,0 +1,893 @@
+/* =========================================================
+   FleetPilot V15.6 — Driver UI
+   Dedicated driver mobile UI, handover, service alerts and driver history.
+   Source order: original styles.css lines 6795-7682
+   ========================================================= */
+/* FleetPilot V10.6 — Dedicated Driver UI */
+body.driver-only-ui{
+ background:#f4f7fb;
+}
+body.driver-only-ui .desktop-sidebar{
+ width:230px;
+ background:linear-gradient(180deg,#101827,#172033);
+}
+body.driver-only-ui .desktop-sidebar nav button{
+ display:none!important;
+}
+body.driver-only-ui .desktop-sidebar nav button[data-role-nav="driver"]{
+ display:flex!important;
+}
+body.driver-only-ui .desktop-sidebar nav button[data-role-nav="driver"] span{
+ display:inline-grid;
+ place-items:center;
+ width:28px;
+ height:28px;
+ border-radius:10px;
+ background:rgba(255,255,255,.08);
+}
+body.driver-only-ui .desktop-sidebar-footer #desktopSettingsButton{
+ display:none!important;
+}
+body.driver-only-ui #globalSearchButton,
+body.driver-only-ui #headerAdd{
+ display:none!important;
+}
+body.driver-only-ui .topbar .eyebrow{
+ font-size:0;
+}
+body.driver-only-ui .topbar .eyebrow::after{
+ content:"FleetPilot Driver";
+ font-size:9px;
+}
+.driver-head-actions{
+ display:flex;
+ gap:8px;
+ flex-wrap:wrap;
+}
+.driver-profile-page{
+ max-width:1050px;
+ margin:0 auto;
+}
+.driver-profile-layout{
+ display:grid;
+ gap:14px;
+}
+.driver-profile-main-card,
+.driver-profile-actions-card,
+.driver-profile-info-card{
+ border:1px solid #e5e7eb;
+ border-radius:20px;
+ background:#fff;
+ box-shadow:0 12px 34px rgba(15,23,42,.06);
+}
+.driver-profile-main-card{
+ display:grid;
+ grid-template-columns:72px 1fr auto;
+ align-items:center;
+ gap:14px;
+ padding:20px;
+}
+.driver-profile-avatar{
+ display:grid;
+ place-items:center;
+ width:68px;
+ height:68px;
+ border-radius:22px;
+ background:linear-gradient(145deg,#4f46e5,#2563eb);
+ color:#fff;
+ font-size:24px;
+ font-weight:900;
+}
+.driver-profile-main-card h3{
+ margin:4px 0;
+ font-size:22px;
+}
+.driver-profile-main-card p{
+ margin:0;
+ color:#64748b;
+}
+.driver-profile-status{
+ padding:7px 11px;
+ border-radius:999px;
+ background:rgba(34,197,94,.12);
+ color:#15803d;
+ font-size:9px;
+ font-weight:900;
+}
+.driver-profile-grid{
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:12px;
+}
+.driver-profile-info-card{
+ padding:16px;
+}
+.driver-profile-info-card small,
+.driver-profile-info-card strong{
+ display:block;
+}
+.driver-profile-info-card small{
+ color:#64748b;
+ font-size:8px;
+}
+.driver-profile-info-card strong{
+ margin-top:7px;
+ font-size:13px;
+}
+.driver-profile-actions-card{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:18px;
+ padding:18px;
+}
+.driver-profile-actions-card h3{
+ margin:4px 0;
+}
+.driver-profile-actions-card p{
+ margin:0;
+ color:#64748b;
+}
+.driver-profile-actions{
+ display:flex;
+ gap:8px;
+ flex-wrap:wrap;
+}
+html[data-theme="dark"] body.driver-only-ui{
+ background:#0b1120;
+}
+html[data-theme="dark"] .driver-profile-main-card,
+html[data-theme="dark"] .driver-profile-actions-card,
+html[data-theme="dark"] .driver-profile-info-card{
+ border-color:rgba(255,255,255,.08);
+ background:#111827;
+ color:#f8fafc;
+}
+@media(max-width:800px){
+ body.driver-only-ui .desktop-sidebar{
+  display:none!important;
+ }
+ body.driver-only-ui .app-shell{
+  grid-template-columns:1fr!important;
+ }
+ body.driver-only-ui .topbar{
+  left:0!important;
+ }
+ .driver-profile-grid{
+  grid-template-columns:1fr 1fr;
+ }
+ .driver-profile-actions-card{
+  display:grid;
+ }
+}
+@media(max-width:520px){
+ .driver-profile-main-card{
+  grid-template-columns:58px 1fr;
+ }
+ .driver-profile-avatar{
+  width:56px;
+  height:56px;
+  border-radius:18px;
+ }
+ .driver-profile-status{
+  grid-column:1/-1;
+  justify-self:start;
+ }
+ .driver-profile-grid{
+  grid-template-columns:1fr;
+ }
+ .driver-head-actions{
+  width:100%;
+ }
+ .driver-head-actions .btn{
+  flex:1;
+ }
+}
+
+
+/* FleetPilot V10.6.1 — focused driver navigation */
+.driver-bottom-nav{
+ display:none;
+}
+body.driver-only-ui .bottom-nav,
+body.driver-only-ui .quick-action-button,
+body.driver-only-ui .quick-action-menu{
+ display:none!important;
+}
+body.driver-only-ui .driver-bottom-nav{
+ position:fixed;
+ left:230px;
+ right:0;
+ bottom:0;
+ z-index:80;
+ display:grid;
+ grid-template-columns:repeat(5,1fr);
+ min-height:66px;
+ padding:7px max(12px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+ border-top:1px solid #e5e7eb;
+ background:rgba(255,255,255,.96);
+ backdrop-filter:blur(18px);
+ box-shadow:0 -10px 30px rgba(15,23,42,.08);
+}
+body.driver-only-ui .driver-bottom-nav button{
+ display:grid;
+ place-items:center;
+ gap:3px;
+ padding:5px;
+ border:0;
+ border-radius:13px;
+ background:transparent;
+ color:#64748b;
+ cursor:pointer;
+}
+body.driver-only-ui .driver-bottom-nav button span{
+ font-size:17px;
+}
+body.driver-only-ui .driver-bottom-nav button small{
+ font-size:8px;
+ font-weight:900;
+}
+body.driver-only-ui .driver-bottom-nav button.active{
+ background:#eef2ff;
+ color:#4338ca;
+}
+body.driver-only-ui main{
+ padding-bottom:92px!important;
+}
+.change-password-note{
+ margin:0 0 12px;
+ color:#64748b;
+ line-height:1.5;
+}
+html[data-theme="dark"] body.driver-only-ui .driver-bottom-nav{
+ border-color:rgba(255,255,255,.08);
+ background:rgba(17,24,39,.96);
+}
+html[data-theme="dark"] body.driver-only-ui .driver-bottom-nav button.active{
+ background:#1e2a4a;
+ color:#a5b4fc;
+}
+@media(max-width:800px){
+ body.driver-only-ui .driver-bottom-nav{
+  left:0;
+ }
+}
+
+
+/* FleetPilot V10.6.2 — service alerts on vehicle cards */
+.fleet-nav-alert-host{position:relative}
+.fleet-nav-alert-badge{
+ display:grid;
+ place-items:center;
+ min-width:18px;
+ height:18px;
+ padding:0 5px;
+ margin-left:auto;
+ border-radius:999px;
+ background:#ef4444;
+ color:#fff;
+ font-size:8px;
+ font-weight:900;
+ box-shadow:0 0 0 3px rgba(239,68,68,.14);
+}
+.fleet-service-alert-strip{
+ margin-bottom:12px;
+}
+.fleet-service-alert-strip>button{
+ width:100%;
+ display:grid;
+ grid-template-columns:auto 1fr auto;
+ align-items:center;
+ gap:12px;
+ padding:12px 14px;
+ border:1px solid #fde68a;
+ border-radius:15px;
+ background:linear-gradient(135deg,#fffbeb,#fff7ed);
+ text-align:left;
+ cursor:pointer;
+}
+.fleet-service-strip-icon{
+ display:grid;
+ place-items:center;
+ width:38px;
+ height:38px;
+ border-radius:12px;
+ background:#f59e0b;
+ color:#fff;
+ font-size:18px;
+}
+.fleet-service-alert-strip strong,
+.fleet-service-alert-strip small{
+ display:block;
+}
+.fleet-service-alert-strip small{
+ margin-top:3px;
+ color:#92400e;
+}
+.fleet-service-alert-strip b{
+ color:#92400e;
+ font-size:9px;
+}
+.car-service-alert-icon{
+ position:relative;
+ display:grid;
+ place-items:center;
+ width:34px;
+ height:34px;
+ padding:0;
+ border:1px solid rgba(255,255,255,.45);
+ border-radius:11px;
+ background:#f59e0b;
+ color:#fff;
+ cursor:pointer;
+ box-shadow:0 6px 18px rgba(245,158,11,.3);
+ animation:serviceAlertPulse 2s ease-in-out infinite;
+}
+.car-service-alert-icon.critical{
+ background:#ef4444;
+ box-shadow:0 6px 18px rgba(239,68,68,.38);
+}
+.car-service-alert-icon.normal{
+ background:#3b82f6;
+ box-shadow:0 6px 18px rgba(59,130,246,.3);
+}
+.car-service-alert-icon span{
+ font-size:15px;
+}
+.car-service-alert-icon b{
+ position:absolute;
+ top:-6px;
+ right:-6px;
+ display:grid;
+ place-items:center;
+ min-width:17px;
+ height:17px;
+ padding:0 4px;
+ border:2px solid #fff;
+ border-radius:999px;
+ background:#111827;
+ color:#fff;
+ font-size:7px;
+}
+.desktop-board-car{
+ position:relative;
+}
+.desktop-board-car>.car-service-alert-icon{
+ position:absolute;
+ top:7px;
+ right:7px;
+ width:29px;
+ height:29px;
+ z-index:3;
+}
+.workspace-request-filter{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+ padding:10px 12px;
+ margin-bottom:9px;
+ border:1px solid #c7d2fe;
+ border-radius:13px;
+ background:#eef2ff;
+ color:#3730a3;
+ font-size:9px;
+ font-weight:800;
+}
+@keyframes serviceAlertPulse{
+ 0%,100%{transform:scale(1)}
+ 50%{transform:scale(1.06)}
+}
+html[data-theme="dark"] .fleet-service-alert-strip>button{
+ border-color:#78350f;
+ background:linear-gradient(135deg,#292014,#211a13);
+ color:#fff;
+}
+html[data-theme="dark"] .workspace-request-filter{
+ border-color:#3730a3;
+ background:#1e1b4b;
+ color:#c7d2fe;
+}
+@media(max-width:700px){
+ .fleet-service-alert-strip>button{
+  grid-template-columns:auto 1fr;
+ }
+ .fleet-service-alert-strip b{
+  grid-column:1/-1;
+ }
+ .workspace-request-filter{
+  display:grid;
+ }
+}
+
+
+/* FleetPilot V10.7 — vehicle handover and history */
+.driver-handover-actions{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px;
+ margin:-4px 0 14px;
+}
+.driver-handover-actions button:only-child{grid-column:1/-1}
+.handover-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.handover-equipment{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:9px;
+ padding:13px;
+ border:1px solid #e5e7eb;
+ border-radius:14px;
+}
+.handover-equipment legend{padding:0 7px;font-weight:900}
+.handover-equipment label{display:flex!important;align-items:center;gap:7px;font-size:9px;font-weight:800}
+.handover-photo-upload{padding:13px;border:1px dashed #a5b4fc;border-radius:14px;background:#eef2ff}
+.handover-photo-upload span,.handover-photo-upload small{display:block}
+.handover-photo-upload small{margin:4px 0 9px;color:#64748b}
+.handover-photo-preview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.handover-photo-preview>div{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#e2e8f0}
+.handover-photo-preview img{width:100%;height:100%;object-fit:cover}
+.handover-photo-preview button{position:absolute;top:5px;right:5px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(15,23,42,.8);color:#fff}
+.handover-history-row{position:relative;display:grid;grid-template-columns:18px 1fr;gap:10px;padding:0 0 18px}
+.handover-history-line{position:relative}
+.handover-history-line::before{content:"";position:absolute;left:7px;top:4px;width:10px;height:10px;border-radius:50%;background:#4f46e5;box-shadow:0 0 0 4px #eef2ff}
+.handover-history-line::after{content:"";position:absolute;left:11px;top:18px;bottom:-4px;width:2px;background:#e0e7ff}
+.handover-history-row:last-child .handover-history-line::after{display:none}
+.handover-history-content{padding:14px;border:1px solid #e5e7eb;border-radius:15px;background:#f8fafc}
+.handover-history-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.handover-history-head span{padding:6px 8px;border-radius:999px;font-size:8px;font-weight:900}
+.handover-history-head span.active{background:#dcfce7;color:#15803d}
+.handover-history-head span.completed{background:#e2e8f0;color:#334155}
+.handover-history-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.handover-history-grid>div{padding:9px;border-radius:10px;background:#fff}
+.handover-history-grid small,.handover-history-grid b{display:block}
+.handover-history-grid small{color:#64748b;font-size:7px}.handover-history-grid b{margin-top:4px;font-size:9px}
+.handover-history-content p{font-size:9px}
+.handover-photo-history{display:flex;gap:7px;overflow:auto}
+.handover-photo-history img{width:76px;height:58px;object-fit:cover;border-radius:9px;border:1px solid #e5e7eb}
+html[data-theme="dark"] .handover-history-content,html[data-theme="dark"] .handover-history-grid>div{border-color:rgba(255,255,255,.08);background:#151d31}
+html[data-theme="dark"] .handover-photo-upload{background:#172554;border-color:#4338ca}
+@media(max-width:650px){
+ .driver-handover-actions,.handover-form-grid{grid-template-columns:1fr}
+ .handover-equipment{grid-template-columns:1fr}
+ .handover-photo-preview{grid-template-columns:repeat(3,1fr)}
+ .handover-history-grid{grid-template-columns:1fr 1fr}
+}
+
+.expense-repair-fields{padding:13px;border:1px solid #c7d2fe;border-radius:14px;background:#f8faff}
+.expense-repair-fields[hidden]{display:none!important}
+.repair-source-request{display:grid;gap:4px;padding:12px;border:1px solid #fde68a;border-radius:13px;background:#fffbeb}
+.repair-source-request strong,.repair-source-request span,.repair-source-request small{display:block}
+html[data-theme="dark"] .expense-repair-fields{border-color:#3730a3;background:#151d31}
+html[data-theme="dark"] .repair-source-request{border-color:#78350f;background:#292014}
+
+.payment-allocation{
+ margin-top:7px!important;
+ padding:8px 10px;
+ border-radius:10px;
+ background:#eef2ff;
+ color:#3730a3!important;
+ font-size:8px;
+ font-weight:800;
+}
+html[data-theme="dark"] .payment-allocation{
+ background:#1e1b4b;
+ color:#c7d2fe!important;
+}
+
+.insurance-installment-editor{grid-column:1/-1;padding:14px;border:1px solid #c7d2fe;border-radius:15px;background:#f8faff}
+#insuranceInstallmentEditorList{display:grid;gap:8px}.insurance-installment-edit-row{display:grid;grid-template-columns:70px 1fr 1fr auto;align-items:end;gap:9px;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}.insurance-installment-edit-row label{margin:0}.insurance-installment-edit-row small{padding-bottom:9px;color:#64748b;font-size:8px}.insurance-total-warning{margin-top:9px;padding:9px 11px;border-radius:10px;font-size:9px;font-weight:900}.insurance-total-warning.ok{background:#dcfce7;color:#15803d}.insurance-total-warning.warning,.insurance-card-warning{background:#fef3c7;color:#92400e}.insurance-card-warning{margin:8px 0;padding:8px 10px;border-radius:10px;font-size:8px;font-weight:900}.insurance-payment-summary{display:grid;gap:4px;padding:12px;border-radius:13px;background:#eef2ff}.insurance-payment-summary span{color:#64748b;font-size:9px}html[data-theme="dark"] .insurance-installment-editor{border-color:#3730a3;background:#151d31}html[data-theme="dark"] .insurance-installment-edit-row{border-color:rgba(255,255,255,.08);background:#111827}@media(max-width:700px){.insurance-installment-edit-row{grid-template-columns:1fr 1fr}.insurance-installment-edit-row strong,.insurance-installment-edit-row small{grid-column:1/-1}}
+
+.smart-target-highlight{animation:smartTargetPulse 1s ease-in-out 4!important;outline:3px solid #6366f1!important;outline-offset:3px!important}
+@keyframes smartTargetPulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.15)}50%{box-shadow:0 0 0 12px rgba(99,102,241,.18)}}
+.smart-event-button{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;border:0;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer}
+.calendar-item{cursor:pointer}
+
+
+/* FleetPilot V11.2 — driver service plan and guaranteed vehicle alerts */
+.driver-service-plan-count{
+ display:grid;place-items:center;min-width:30px;height:30px;padding:0 9px;border-radius:999px;
+ background:#eef2ff;color:#4338ca;font-weight:900;font-size:10px
+}
+.driver-service-plan-row{
+ display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px;border:1px solid #e5e7eb;
+ border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.05)
+}
+.driver-service-plan-row+.driver-service-plan-row{margin-top:9px}
+.driver-service-plan-row.urgent{border-color:#fdba74;background:#fff7ed}
+.driver-service-plan-row.overdue{border-color:#fca5a5;background:#fef2f2}
+.driver-service-plan-row.soon{border-color:#fde68a;background:#fffbeb}
+.driver-service-plan-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#eef2ff;font-size:20px}
+.driver-service-plan-title{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.driver-service-plan-title span{padding:5px 8px;border-radius:999px;background:#e2e8f0;font-size:8px;font-weight:900}
+.driver-service-plan-main p{margin:6px 0;color:#64748b;font-size:10px}
+.driver-service-plan-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.driver-service-plan-meta span,.driver-service-plan-meta b{font-size:8px}
+.driver-service-plan-meta b{margin-left:auto;color:#c2410c}
+.desktop-today-card{position:relative}
+.desktop-inline-service-alert{position:absolute!important;top:8px;right:8px;z-index:5}
+html[data-theme="dark"] .driver-service-plan-row{border-color:rgba(255,255,255,.08);background:#111827}
+html[data-theme="dark"] .driver-service-plan-row.urgent,
+html[data-theme="dark"] .driver-service-plan-row.soon,
+html[data-theme="dark"] .driver-service-plan-row.overdue{background:#1f2937}
+@media(max-width:600px){
+ .driver-service-plan-row{grid-template-columns:40px 1fr}
+ .driver-service-plan-icon{width:40px;height:40px}
+ .driver-service-plan-title{align-items:flex-start;flex-direction:column}
+ .driver-service-plan-meta b{margin-left:0}
+}
+
+
+/* FleetPilot V11.3 — persistent desktop alerts, repair navigation, driver history */
+.desktop-fleet-row,
+.desktop-board-car{position:relative}
+.desktop-fleet-row>.desktop-inline-service-alert{
+ position:absolute!important;
+ top:10px;
+ right:10px;
+ z-index:12;
+}
+.desktop-board-car>.desktop-inline-service-alert{
+ position:absolute!important;
+ top:6px;
+ right:6px;
+ z-index:8;
+ width:30px;
+ height:30px;
+}
+.driver-profile-service-alert{
+ display:grid;
+ grid-template-columns:52px 1fr auto;
+ align-items:center;
+ gap:14px;
+ padding:16px;
+ border:1px solid #fdba74;
+ border-radius:20px;
+ background:linear-gradient(135deg,#fff7ed,#fffbeb);
+ box-shadow:0 12px 30px rgba(194,65,12,.08)
+}
+.driver-profile-service-alert-icon{
+ display:grid;
+ place-items:center;
+ width:50px;
+ height:50px;
+ border-radius:16px;
+ background:#f97316;
+ color:#fff;
+ font-size:22px
+}
+.driver-profile-service-alert h3{margin:4px 0}
+.driver-profile-service-alert p{margin:0;color:#9a3412}
+.driver-profile-history-card{
+ padding:18px;
+ border:1px solid #e5e7eb;
+ border-radius:20px;
+ background:#fff;
+ box-shadow:0 12px 34px rgba(15,23,42,.06)
+}
+.driver-profile-service-history{display:grid;gap:9px}
+.driver-profile-history-row{
+ display:grid;
+ grid-template-columns:18px 1fr;
+ gap:10px;
+ padding:12px;
+ border:1px solid #e5e7eb;
+ border-radius:14px;
+ background:#f8fafc
+}
+.driver-profile-history-dot{
+ width:10px;height:10px;margin-top:5px;border-radius:50%;
+ background:#f59e0b;box-shadow:0 0 0 4px #fef3c7
+}
+.driver-profile-history-row.completed .driver-profile-history-dot{
+ background:#22c55e;box-shadow:0 0 0 4px #dcfce7
+}
+.driver-profile-history-title{
+ display:flex;justify-content:space-between;gap:10px;align-items:center
+}
+.driver-profile-history-title em{
+ padding:5px 8px;border-radius:999px;background:#e2e8f0;
+ font-size:8px;font-style:normal;font-weight:900
+}
+.driver-profile-history-row p{margin:5px 0;color:#64748b;font-size:9px}
+.driver-profile-history-row small{color:#475569}
+.smart-entity-highlight{
+ animation:smartEntityHighlight 1s ease-in-out 3;
+ outline:3px solid rgba(79,70,229,.35)!important
+}
+@keyframes smartEntityHighlight{
+ 0%,100%{transform:translateY(0);box-shadow:0 0 0 rgba(79,70,229,0)}
+ 50%{transform:translateY(-2px);box-shadow:0 12px 30px rgba(79,70,229,.2)}
+}
+html[data-theme="dark"] .driver-profile-service-alert{
+ border-color:#9a3412;background:linear-gradient(135deg,#2a1810,#21170d)
+}
+html[data-theme="dark"] .driver-profile-history-card,
+html[data-theme="dark"] .driver-profile-history-row{
+ border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc
+}
+@media(max-width:650px){
+ .driver-profile-service-alert{grid-template-columns:46px 1fr}
+ .driver-profile-service-alert button{grid-column:1/-1}
+}
+
+.repair-linked-finance-info{
+ display:grid;
+ gap:4px;
+ padding:12px;
+ border:1px solid #bbf7d0;
+ border-radius:13px;
+ background:#f0fdf4;
+ color:#166534;
+}
+.repair-linked-finance-info strong,
+.repair-linked-finance-info span{display:block}
+.repair-linked-finance-info span{font-size:9px}
+html[data-theme="dark"] .repair-linked-finance-info{
+ border-color:#166534;
+ background:#10251a;
+ color:#bbf7d0;
+}
+
+
+/* FleetPilot V11.3.2 — professional modules (theme untouched) */
+.professional-page-head p{margin:5px 0 0;color:var(--muted,#778196);font-size:10px}
+.professional-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.professional-kpi{min-height:96px;padding:15px 17px;border:1px solid var(--line,#e7eaf0);border-radius:15px;background:var(--card,#fff);box-shadow:0 7px 22px rgba(22,31,52,.04)}
+.professional-kpi span{display:block;color:var(--muted,#7a8498);font-size:9px;font-weight:800}
+.professional-kpi strong{display:block;margin-top:9px;font-size:21px;letter-spacing:-.035em}
+.professional-kpi small{display:block;margin-top:4px;color:var(--muted,#99a1b0);font-size:8px}
+.professional-toolbar{display:grid;grid-template-columns:minmax(240px,1fr) 190px;gap:9px;margin-bottom:14px;padding:10px;border:1px solid var(--line,#e7eaf0);border-radius:13px;background:var(--card,#fff)}
+.professional-toolbar-3{grid-template-columns:minmax(240px,1fr) 180px 180px}
+.professional-split-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,.65fr);gap:14px}
+.professional-panel{padding:16px;border:1px solid var(--line,#e7eaf0);border-radius:15px;background:var(--card,#fff);box-shadow:0 7px 22px rgba(22,31,52,.04)}
+.professional-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:11px;border-bottom:1px solid var(--line,#eef0f4)}
+.professional-panel-head h3{margin:3px 0 0;font-size:15px}
+.professional-counter{display:grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:9px;background:rgba(91,77,245,.10);color:#5b4df5;font-size:10px;font-weight:900}
+.professional-list{display:grid;gap:8px}
+.professional-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto auto;gap:11px;align-items:center;padding:11px 12px;border:1px solid var(--line,#edf0f4);border-radius:12px;background:color-mix(in srgb,var(--card,#fff) 96%,#f5f7fb)}
+.professional-row-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:rgba(91,77,245,.10);font-size:16px}
+.professional-row-main strong,.professional-row-main span,.professional-row-main small{display:block}
+.professional-row-main span{margin-top:3px;color:var(--muted,#657085);font-size:9px}
+.professional-row-main small{margin-top:3px;color:var(--muted,#98a0af);font-size:8px}
+.professional-row-numbers{text-align:right;min-width:120px}
+.professional-row-numbers b{display:block;margin-top:5px}
+.professional-row-numbers small{display:block;margin-top:3px;color:var(--muted,#98a0af);font-size:8px}
+.professional-status{display:inline-flex;padding:5px 8px;border-radius:999px;background:#f1f3f7;color:#6b7280;font-size:8px;font-weight:900}
+.professional-status.paid{background:#eaf9f0;color:#178c49}
+.professional-status.partial{background:#fff6df;color:#b77900}
+.professional-status.unpaid,.professional-status.cancelled{background:#fff0f0;color:#c43b3b}
+.professional-status.planned{background:#eef2ff;color:#4f46e5}
+.professional-row-actions{display:flex;gap:6px}
+.professional-row-actions .btn{min-height:32px;padding:0 9px!important;font-size:8px}
+.professional-empty{padding:28px;border:1px dashed var(--line,#d8dde7);border-radius:12px;color:var(--muted,#8992a3);text-align:center}
+.expense-category-breakdown{display:grid;gap:13px}
+.expense-category-row>div:first-child{display:flex;justify-content:space-between;gap:10px;font-size:9px}
+.expense-category-track{height:7px;margin-top:6px;border-radius:999px;background:#eff1f5;overflow:hidden}
+.expense-category-track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6657f5,#8d80ff)}
+.expense-category-row small{display:block;margin-top:4px;color:var(--muted,#98a0af);font-size:8px}
+.calendar-professional-toolbar{display:flex;gap:8px}
+.calendar-professional-list{display:grid;gap:12px}
+.calendar-month-group h4{margin:12px 0 8px;color:var(--muted,#677185);font-size:10px;text-transform:capitalize}
+.calendar-professional-row{display:grid;grid-template-columns:48px 40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line,#edf0f4);border-radius:12px;cursor:pointer}
+.calendar-professional-row.urgent{border-left:3px solid #ef4444}
+.calendar-professional-row.soon{border-left:3px solid #f59e0b}
+.calendar-professional-date{display:grid;place-items:center;width:44px;height:44px;border-radius:11px;background:rgba(91,77,245,.08)}
+.calendar-professional-date strong{font-size:16px}
+.calendar-professional-date span{font-size:8px;color:var(--muted,#8b93a2)}
+.calendar-professional-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:rgba(91,77,245,.10)}
+.calendar-professional-main strong,.calendar-professional-main span,.calendar-professional-main small{display:block}
+.calendar-professional-main span{margin-top:3px;color:var(--muted,#657085);font-size:9px}
+.calendar-professional-main small{margin-top:3px;color:var(--muted,#98a0af);font-size:8px}
+.calendar-month-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.calendar-month-card{padding:12px;border:1px solid var(--line,#edf0f4);border-radius:11px}
+.calendar-month-card span,.calendar-month-card strong,.calendar-month-card small{display:block}
+.calendar-month-card span{font-size:9px;text-transform:capitalize;color:var(--muted,#687286)}
+.calendar-month-card strong{margin-top:6px;font-size:20px}
+.calendar-month-card small{margin-top:2px;color:var(--muted,#99a1b0);font-size:8px}
+.fleet-driver-requests-panel{margin-bottom:14px;padding:0;border:1px solid #fed7aa;border-radius:16px;background:var(--card,#fff);box-shadow:0 8px 24px rgba(194,65,12,.07);overflow:hidden}
+.fleet-driver-requests-panel[hidden]{display:none!important}
+.fleet-driver-requests-head{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:12px;align-items:center;padding:15px 17px;background:linear-gradient(90deg,#fff7ed,transparent)}
+.fleet-driver-requests-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#ffedd5;color:#ea580c;font-size:19px}
+.fleet-driver-requests-head h3{margin:3px 0;color:inherit;font-size:15px}
+.fleet-driver-requests-head p{margin:0;color:var(--muted,#9a5b31);font-size:9px}
+.fleet-driver-requests-list{display:grid;gap:8px;padding:12px 15px 15px;border-top:1px solid rgba(234,88,12,.12)}
+.fleet-driver-request-card{display:grid;grid-template-columns:9px minmax(0,1fr) auto;gap:10px;align-items:start;padding:11px 12px;border:1px solid var(--line,#edf0f4);border-radius:12px;background:var(--card,#fff)}
+.fleet-driver-request-status{width:8px;height:8px;margin-top:4px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.10)}
+.fleet-driver-request-main strong,.fleet-driver-request-main span,.fleet-driver-request-main p,.fleet-driver-request-main small{display:block}
+.fleet-driver-request-main span{margin-top:3px;color:#c2410c;font-size:8px;font-weight:800}
+.fleet-driver-request-main p{margin:5px 0;color:var(--muted,#667085);font-size:9px}
+.fleet-driver-request-main small{color:var(--muted,#98a0af);font-size:8px}
+
+@media(max-width:1099px){
+ .professional-kpi-grid,.professional-toolbar,.professional-toolbar-3,.professional-split-layout{grid-template-columns:1fr}
+ .professional-row{grid-template-columns:38px minmax(0,1fr)}
+ .professional-row-numbers,.professional-row-actions{grid-column:2}
+ .calendar-professional-toolbar{display:grid;grid-template-columns:1fr 1fr}
+ .calendar-professional-row{grid-template-columns:44px 36px minmax(0,1fr)}
+ .calendar-professional-row>b{display:none}
+ .fleet-driver-requests-head{grid-template-columns:42px minmax(0,1fr)}
+ .fleet-driver-requests-head .btn{grid-column:1/-1}
+}
+
+
+/* FleetPilot V11.3.3.1 — safe Dashboard & Service styling */
+.fleet-driver-requests-list[hidden]{display:none!important}
+.fleet-driver-requests-head{min-height:82px}
+.service-page-actions{display:flex;gap:8px;align-items:center}
+.service-requests-panel{margin-bottom:14px}
+.service-repairs-panel{margin-top:14px}
+
+#repairsPage .workspace-request-list{display:grid;gap:8px}
+#repairsPage .workspace-request-row{
+ padding:13px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:13px!important;
+ background:var(--card,#fff)!important;
+ box-shadow:0 5px 16px rgba(22,31,52,.035)!important;
+}
+#repairsPage .workspace-request-row strong,
+#repairsPage .workspace-request-row span,
+#repairsPage .workspace-request-row small{display:block}
+#repairsPage .workspace-request-row span{margin-top:5px;color:var(--muted,#667085)}
+#repairsPage .workspace-request-row small{margin-top:6px;color:var(--muted,#98a0af)}
+#repairsPage .workspace-request-row select{min-width:180px}
+
+.owner-dashboard{
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+}
+.owner-dashboard-kpis{
+ display:grid!important;
+ grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:10px!important;
+ padding:0!important;
+ background:transparent!important;
+}
+.owner-kpi,
+.owner-kpi-card{
+ min-height:100px!important;
+ padding:15px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.owner-dashboard-grid{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:14px!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+}
+.owner-dashboard-widget{
+ padding:16px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ color:inherit!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+.dashboard-quick-actions{
+ margin-top:14px!important;
+ border:1px solid var(--line,#e7eaf0)!important;
+ border-radius:15px!important;
+ background:var(--card,#fff)!important;
+ box-shadow:0 7px 22px rgba(22,31,52,.04)!important;
+}
+
+@media(max-width:1099px){
+ .service-page-actions{display:grid;grid-template-columns:1fr 1fr}
+ .owner-dashboard-kpis,.owner-dashboard-grid{grid-template-columns:1fr!important}
+}
+
+
+/* FleetPilot V11.3.4 — scalable Service inbox */
+#repairsPage .service-inbox-request{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) 210px!important;
+ gap:14px!important;
+ align-items:center!important;
+}
+.service-inbox-request-heading{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ flex-wrap:wrap;
+}
+.service-inbox-request-badge{
+ display:inline-flex!important;
+ width:max-content;
+ margin:0!important;
+ padding:4px 7px;
+ border-radius:999px;
+ font-size:8px!important;
+ font-weight:900;
+}
+.service-inbox-request-badge.new{
+ background:#fff4dd;
+ color:#b66b00!important;
+}
+.service-inbox-request-badge.accepted{
+ background:#eaf8ef;
+ color:#16824a!important;
+}
+.service-inbox-request-actions{
+ display:grid;
+ grid-template-columns:1fr;
+ gap:7px;
+}
+.service-inbox-request-actions select,
+.service-inbox-request-actions .btn{
+ width:100%;
+ min-height:36px;
+}
+.service-inbox-empty{
+ min-height:72px;
+ display:grid;
+ place-items:center;
+ border:1px dashed var(--line,#d9dee8);
+ border-radius:12px;
+ background:color-mix(in srgb,var(--card,#fff) 97%,#f5f7fb);
+}
+#repairSourceRequest:not([hidden]){
+ border-left:3px solid #5b4df5;
+}
+
+@media(max-width:1099px){
+ #repairsPage .service-inbox-request{
+  grid-template-columns:1fr!important;
+ }
+ .service-inbox-request-actions{
+  grid-template-columns:1fr 1fr;
+ }
+}
+
+
+/* FleetPilot V11.3.6 — service request archive */
+.service-request-head-actions{
+ display:flex;
+ align-items:center;
+ gap:8px;
+}
+.service-request-archive-panel{
+ margin:14px 0;
+}
+.service-request-archive-panel[hidden]{
+ display:none!important;
+}
+.service-archive-request{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) auto!important;
+ gap:14px!important;
+ align-items:center!important;
+ opacity:.92;
+}
+.service-inbox-request-badge.rejected{
+ background:#fff0f0;
+ color:#c43b3b!important;
+}
+.service-archive-actions{
+ display:flex;
+ align-items:center;
+}
+.service-archive-actions .btn{
+ min-width:145px;
+}
+@media(max-width:1099px){
+ .service-request-head-actions{
+  flex-wrap:wrap;
+  justify-content:flex-end;
+ }
+ .service-archive-request{
+  grid-template-columns:1fr!important;
+ }
+ .service-archive-actions .btn{
+  width:100%;
+ }
+}
+
+

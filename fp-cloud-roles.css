@@ -1,0 +1,1083 @@
+/* =========================================================
+   FleetPilot V15.6 — Cloud & Roles
+   Authentication, cloud workspace, company management and role screens.
+   Source order: original styles.css lines 5717-6794
+   ========================================================= */
+/* FleetPilot V8.2 — Cloud Beta */
+.cloud-settings-card{margin-bottom:14px}.cloud-settings-card .section-head p{margin:6px 0 0;color:#7b8798;font-size:9px}
+.cloud-connection-summary{display:flex;align-items:center;gap:12px;margin-top:12px;padding:14px;border:1px solid #e5e9f0;border-radius:14px;background:#f8fafc}.cloud-connection-summary>div{flex:1}.cloud-connection-summary strong,.cloud-connection-summary small{display:block}.cloud-connection-summary strong{font-size:10px}.cloud-connection-summary small{margin-top:4px;color:#8a95a6;font-size:8px}.cloud-state-dot{width:11px;height:11px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 5px rgba(148,163,184,.12)}.cloud-state-dot.online{background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.11)}.cloud-state-dot.syncing{background:#6366f1;box-shadow:0 0 0 5px rgba(99,102,241,.11);animation:cloudPulse 1.2s infinite}.cloud-state-dot.error{background:#ef4444;box-shadow:0 0 0 5px rgba(239,68,68,.10)}
+@keyframes cloudPulse{50%{opacity:.45}}
+.cloud-dialog{width:min(680px,calc(100% - 24px));padding:0;border:0;border-radius:20px;background:transparent}.cloud-dialog::backdrop{background:rgba(15,23,42,.65);backdrop-filter:blur(7px)}.cloud-shell{overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 30px 90px rgba(15,23,42,.32)}.cloud-head{display:flex;justify-content:space-between;gap:18px;padding:20px;border-bottom:1px solid #e8ecf1}.cloud-head h2{margin:6px 0 4px;font-size:18px}.cloud-head p{margin:0;color:#7b8798;font-size:9px}.cloud-body{display:grid;gap:14px;max-height:72vh;overflow:auto;padding:18px 20px}.cloud-body section{display:grid;gap:10px;padding:14px;border:1px solid #e7ebf1;border-radius:14px;background:#fbfcfe}.cloud-body h3{margin:0;font-size:11px}.cloud-body label{display:grid;gap:6px}.cloud-body label>span{font-size:8px;font-weight:850}.cloud-body input{min-height:42px;padding:0 11px;border:1px solid #dfe5ed;border-radius:11px;background:#fff;font-size:9px}.cloud-inline-actions,.cloud-auth-actions,.cloud-user-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.cloud-inline-actions span{color:#7b8798;font-size:8px}.cloud-message{padding:10px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8px;font-weight:800}.cloud-message.error{background:#fef2f2;color:#b91c1c}.cloud-message.success{background:#f0fdf4;color:#15803d}.cloud-user-row small,.cloud-user-row strong{display:block}.cloud-user-row small{color:#8a95a6;font-size:7px}.cloud-user-row strong{margin-top:3px;font-size:10px}.cloud-sync-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cloud-sync-grid>div{padding:10px;border-radius:10px;background:#f5f7fb}.cloud-sync-grid small,.cloud-sync-grid strong{display:block}.cloud-sync-grid small{color:#8a95a6;font-size:7px}.cloud-sync-grid strong{margin-top:4px;font-size:9px}.cloud-warning{margin:0;color:#9a6b16;font-size:7.5px;line-height:1.5}
+html[data-theme="dark"] .cloud-connection-summary,html[data-theme="dark"] .cloud-body section,html[data-theme="dark"] .cloud-sync-grid>div{border-color:rgba(255,255,255,.08);background:#182136}html[data-theme="dark"] .cloud-shell{background:#151d31;color:#f8fafc}html[data-theme="dark"] .cloud-head{border-color:rgba(255,255,255,.08)}html[data-theme="dark"] .cloud-body input{border-color:rgba(255,255,255,.09);background:#111827;color:#f8fafc}
+@media(max-width:620px){.cloud-auth-actions{display:grid;grid-template-columns:1fr 1fr}.cloud-inline-actions{align-items:stretch;flex-direction:column}.cloud-sync-grid{grid-template-columns:1fr}}
+
+
+/* FleetPilot Cloud V1 */
+.cloud-confirm-section{
+ display:grid;
+ gap:14px;
+ padding:18px;
+ border:1px solid rgba(59,130,246,.18);
+ border-radius:16px;
+ background:rgba(59,130,246,.07);
+ text-align:center;
+}
+.cloud-confirm-icon{
+ display:grid;
+ place-items:center;
+ width:54px;
+ height:54px;
+ margin:auto;
+ border-radius:16px;
+ background:#fff;
+ font-size:24px;
+ box-shadow:0 10px 28px rgba(15,23,42,.09);
+}
+.cloud-confirm-section h3{margin:0;font-size:16px}
+.cloud-confirm-section p{margin:0;color:#64748b;font-size:12px;line-height:1.55}
+.cloud-text-button{
+ margin-top:10px;
+ padding:0;
+ border:0;
+ background:transparent;
+ color:#4f46e5;
+ font-size:11px;
+ font-weight:800;
+ cursor:pointer;
+}
+.cloud-role-badge{
+ display:inline-flex;
+ margin-top:6px;
+ padding:4px 8px;
+ border-radius:999px;
+ background:#eef2ff;
+ color:#4f46e5;
+ font-size:9px;
+ font-weight:900;
+}
+.cloud-role-badge.owner{
+ background:rgba(245,158,11,.13);
+ color:#b45309;
+}
+.cloud-admin-section{
+ display:grid;
+ gap:14px;
+ margin-top:8px;
+ padding-top:18px;
+ border-top:1px solid #e5e7eb;
+}
+.cloud-admin-head{
+ display:flex;
+ align-items:flex-start;
+ justify-content:space-between;
+ gap:14px;
+}
+.cloud-admin-head h3{margin:4px 0}
+.cloud-admin-head p{margin:0;color:#64748b;font-size:11px}
+.cloud-admin-kpis{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:10px;
+}
+.cloud-admin-kpis>div{
+ display:grid;
+ gap:4px;
+ padding:12px;
+ border:1px solid #e5e7eb;
+ border-radius:12px;
+ background:#f8fafc;
+}
+.cloud-admin-kpis small{color:#64748b;font-size:8px}
+.cloud-admin-kpis strong{font-size:18px}
+.cloud-admin-users{display:grid;gap:9px}
+.cloud-admin-user{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(260px,1.2fr) auto;
+ align-items:center;
+ gap:12px;
+ padding:12px;
+ border:1px solid #e5e7eb;
+ border-radius:13px;
+ background:#fff;
+}
+.cloud-admin-user-main strong,
+.cloud-admin-user-main small{display:block}
+.cloud-admin-user-main strong{font-size:11px}
+.cloud-admin-user-main small{margin-top:4px;color:#64748b;font-size:8px}
+.cloud-admin-user-stats{
+ display:grid;
+ grid-template-columns:70px 70px minmax(110px,1fr);
+ gap:7px;
+}
+.cloud-admin-user-stats span{
+ display:grid;
+ gap:3px;
+ padding:7px;
+ border-radius:9px;
+ background:#f8fafc;
+}
+.cloud-admin-user-stats small{color:#64748b;font-size:7px}
+.cloud-admin-user-stats strong{font-size:9px}
+.cloud-admin-empty{
+ padding:20px;
+ border:1px dashed #cbd5e1;
+ border-radius:12px;
+ color:#64748b;
+ text-align:center;
+}
+html[data-theme="dark"] .cloud-confirm-section{
+ border-color:rgba(96,165,250,.2);
+ background:rgba(59,130,246,.1);
+}
+html[data-theme="dark"] .cloud-confirm-icon,
+html[data-theme="dark"] .cloud-admin-user{
+ border-color:rgba(255,255,255,.08);
+ background:#151d31;
+ color:#f8fafc;
+}
+html[data-theme="dark"] .cloud-admin-section{border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .cloud-admin-kpis>div,
+html[data-theme="dark"] .cloud-admin-user-stats span{
+ border-color:rgba(255,255,255,.07);
+ background:#111827;
+ color:#f8fafc;
+}
+@media(max-width:760px){
+ .cloud-admin-head{display:grid}
+ .cloud-admin-kpis{grid-template-columns:1fr}
+ .cloud-admin-user{grid-template-columns:1fr}
+ .cloud-admin-user-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* FleetPilot Cloud V2 */
+.profile-avatar-button{position:relative;width:38px;height:38px;padding:0;border:2px solid #fff;border-radius:50%;background:#eef2ff;box-shadow:0 5px 18px rgba(15,23,42,.14);cursor:pointer}
+.profile-avatar-image,.profile-large-avatar{display:grid;place-items:center;background:linear-gradient(135deg,#4f46e5,#2563eb);background-position:center;background-size:cover;color:#fff;font-weight:900}
+.profile-avatar-image{width:100%;height:100%;border-radius:50%;font-size:11px}
+.profile-online-dot{position:absolute;right:-1px;bottom:0;width:10px;height:10px;border:2px solid #fff;border-radius:50%;background:#22c55e}
+.profile-online-dot.demo{background:#f59e0b}
+.account-summary-card{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}
+.account-summary-card>div{display:grid;gap:3px;flex:1}.account-summary-card small{color:#64748b}
+.profile-dialog{width:min(440px,calc(100vw - 24px));padding:0;border:0;border-radius:24px;background:transparent}
+.profile-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(7px)}
+.profile-dialog-shell{position:relative;max-height:min(780px,calc(100vh - 30px));overflow:auto;padding:22px;border-radius:24px;background:#fff;box-shadow:0 28px 90px rgba(15,23,42,.30)}
+.profile-dialog-close{position:absolute;z-index:3;right:16px;top:16px}
+.profile-hero{display:grid;justify-items:center;gap:7px;padding:18px 10px 20px;text-align:center}
+.profile-photo-wrap{position:relative;cursor:pointer}
+.profile-large-avatar{width:88px;height:88px;border-radius:50%;font-size:28px;box-shadow:0 12px 30px rgba(79,70,229,.24)}
+.profile-large-avatar.demo{background:linear-gradient(135deg,#f59e0b,#ea580c)}
+.profile-photo-edit{position:absolute;right:0;bottom:2px;display:grid;place-items:center;width:27px;height:27px;border:3px solid #fff;border-radius:50%;background:#111827;color:#fff}
+.profile-hero h2{margin:4px 0 0}.profile-hero p{margin:0;color:#64748b}
+.profile-status-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:15px;background:#f4f7ff}
+.profile-status-card>div{display:flex;align-items:center;gap:10px}.profile-status-card small,.profile-status-card strong{display:block}.profile-status-card small{color:#64748b}.profile-status-icon{font-size:21px}
+.profile-menu-list{display:grid;gap:8px;margin-top:14px}
+.profile-menu-list>button{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:10px;width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:13px;background:#fff;text-align:left;cursor:pointer}
+.profile-menu-list>button>span{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eef2ff;color:#4f46e5;font-weight:900}
+.profile-menu-list strong,.profile-menu-list small{display:block}.profile-menu-list small{margin-top:3px;color:#64748b;font-size:9px}.profile-menu-list b{font-size:18px;color:#94a3b8}
+.profile-signout-button{width:100%;margin-top:16px;padding:12px;border:1px solid rgba(239,68,68,.16);border-radius:13px;background:rgba(239,68,68,.07);color:#dc2626;font-weight:900;cursor:pointer}
+.profile-guest-view,.profile-demo-view{display:grid;justify-items:center;gap:12px;padding:25px 8px;text-align:center}.profile-guest-view h2{margin:0}.profile-guest-view p{max-width:310px;margin:0 0 8px;color:#64748b}
+.profile-guest-logo{display:grid;place-items:center;width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,#4f46e5,#2563eb);color:#fff;font-size:28px;font-weight:900}
+.profile-wide-button{width:100%;max-width:310px}.profile-demo-button,.auth-demo-button{border:0;background:transparent;color:#4f46e5;font-weight:900;cursor:pointer}
+.profile-admin-card{display:grid;gap:12px;margin-top:16px;padding:14px;border:1px solid rgba(245,158,11,.25);border-radius:15px;background:rgba(245,158,11,.07)}
+.profile-admin-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.profile-admin-title h3{margin:3px 0}.profile-mini-button{border:0;border-radius:10px;padding:8px;background:#fff;color:#4f46e5;font-weight:900;cursor:pointer}
+.profile-admin-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.profile-admin-kpis>div{padding:9px;border-radius:10px;background:#fff}.profile-admin-kpis small,.profile-admin-kpis strong{display:block}.profile-admin-kpis small{color:#64748b;font-size:7px}.profile-admin-kpis strong{margin-top:4px;font-size:16px}
+.profile-admin-open{padding:10px;border:0;border-radius:11px;background:#111827;color:#fff;font-weight:900;cursor:pointer}
+.auth-gate{position:fixed;z-index:100000;inset:0;display:grid;place-items:center;padding:18px;background:radial-gradient(circle at top,#eef2ff 0,#f8fafc 40%,#e2e8f0 100%)}
+.auth-gate[hidden]{display:none!important}.auth-locked body{overflow:hidden}
+.auth-gate-card{width:min(430px,100%);padding:26px;border:1px solid rgba(255,255,255,.8);border-radius:28px;background:rgba(255,255,255,.94);box-shadow:0 30px 90px rgba(15,23,42,.18);backdrop-filter:blur(20px)}
+.auth-brand{display:flex;align-items:center;gap:11px;margin-bottom:30px}.auth-brand-logo{display:grid;place-items:center;width:45px;height:45px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#2563eb);color:#fff;font-size:18px;font-weight:900}.auth-brand strong,.auth-brand small{display:block}.auth-brand small{color:#94a3b8}
+.auth-view{display:grid;gap:14px}.auth-view h1,.auth-view h2{margin:0}.auth-view>p{margin:0;color:#64748b;line-height:1.55}.auth-view label{display:grid;gap:6px}.auth-view label span{font-size:9px;font-weight:900}.auth-view input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #dbe3ef;border-radius:12px}
+.auth-main-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}.auth-submit{width:100%}.auth-back{justify-self:start;padding:0;border:0;background:transparent;color:#64748b;font-weight:800;cursor:pointer}
+.auth-confirm-view{text-align:center;justify-items:center}.auth-mail-icon{display:grid;place-items:center;width:62px;height:62px;border-radius:19px;background:#eef2ff;font-size:25px}.auth-confirm-view p{max-width:330px}
+.cloud-state-dot.demo{background:#f59e0b}
+html[data-theme="dark"] .profile-dialog-shell,html[data-theme="dark"] .auth-gate-card{background:#0f172a;color:#f8fafc}
+html[data-theme="dark"] .profile-status-card,html[data-theme="dark"] .account-summary-card,html[data-theme="dark"] .profile-menu-list>button,html[data-theme="dark"] .profile-admin-kpis>div{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
+html[data-theme="dark"] .auth-gate{background:radial-gradient(circle at top,#172554,#0f172a 45%,#020617)}
+html[data-theme="dark"] .auth-view input{border-color:rgba(255,255,255,.09);background:#111827;color:#fff}
+@media(max-width:600px){.profile-dialog-shell{padding:17px}.auth-gate-card{padding:21px}.auth-main-actions{grid-template-columns:1fr}.profile-admin-kpis{grid-template-columns:1fr}.topbar-actions{gap:7px}}
+
+
+/* FleetPilot Cloud V2.1 — strict state visibility */
+[hidden]{
+  display:none!important;
+}
+
+.auth-view[hidden],
+.profile-logged-view[hidden],
+.profile-guest-view[hidden],
+.profile-demo-view[hidden],
+.profile-admin-card[hidden],
+.cloud-admin-users[hidden],
+.cloud-message[hidden],
+.auth-gate[hidden]{
+  display:none!important;
+}
+
+
+/* FleetPilot Cloud V2.2 — More page cleanup */
+#morePage,
+.more-page{
+  max-width:1180px;
+  margin:0 auto;
+  padding-bottom:32px;
+}
+
+#morePage > .page-head,
+.more-page > .page-head{
+  margin-bottom:18px;
+}
+
+#morePage .activity-log-card,
+.more-page .activity-log-card{
+  max-width:760px;
+  margin:0 auto 18px;
+}
+
+#morePage .account-settings-card,
+#morePage .gps-settings-card,
+.more-page .account-settings-card,
+.more-page .gps-settings-card{
+  margin-bottom:14px;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(15,23,42,.06);
+}
+
+#morePage .section-head,
+.more-page .section-head{
+  align-items:center;
+  padding:18px 18px 10px;
+}
+
+#morePage .section-head h3,
+.more-page .section-head h3{
+  margin:4px 0 3px;
+}
+
+#morePage .section-head p,
+.more-page .section-head p{
+  margin:0;
+  color:#64748b;
+  font-size:11px;
+}
+
+#morePage .account-summary-card,
+.more-page .account-summary-card{
+  margin:0 18px 18px;
+}
+
+#morePage .more-grid,
+.more-page .more-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin-top:14px;
+}
+
+#morePage .more-grid > *,
+.more-page .more-grid > *{
+  min-height:140px;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(15,23,42,.06);
+}
+
+#morePage .more-grid > *:last-child:nth-child(odd),
+.more-page .more-grid > *:last-child:nth-child(odd){
+  grid-column:1 / -1;
+}
+
+#morePage [data-page="dataPage"],
+.more-page [data-page="dataPage"]{
+  display:none!important;
+}
+
+html[data-theme="dark"] #morePage .account-settings-card,
+html[data-theme="dark"] #morePage .gps-settings-card,
+html[data-theme="dark"] #morePage .more-grid > *,
+html[data-theme="dark"] .more-page .account-settings-card,
+html[data-theme="dark"] .more-page .gps-settings-card,
+html[data-theme="dark"] .more-page .more-grid > *{
+  border-color:rgba(255,255,255,.08);
+  background:#111827;
+  box-shadow:none;
+}
+
+@media(max-width:900px){
+  #morePage,
+  .more-page{
+    max-width:none;
+  }
+
+  #morePage .activity-log-card,
+  .more-page .activity-log-card{
+    max-width:none;
+  }
+
+  #morePage .more-grid,
+  .more-page .more-grid{
+    grid-template-columns:1fr;
+  }
+
+  #morePage .more-grid > *:last-child:nth-child(odd),
+  .more-page .more-grid > *:last-child:nth-child(odd){
+    grid-column:auto;
+  }
+}
+
+
+/* FleetPilot Cloud V2.3 — journal width and navigation cleanup */
+#morePage .activity-log-card,
+.more-page .activity-log-card{
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 18px!important;
+  box-sizing:border-box;
+}
+
+[data-desktop-page="morePage"],
+.bottom-nav [data-page="morePage"]{
+  display:none!important;
+}
+
+
+/* FleetPilot V9 Polish Edition */
+:root{
+ --fp-radius-sm:12px;
+ --fp-radius:18px;
+ --fp-radius-lg:24px;
+ --fp-shadow:0 12px 32px rgba(15,23,42,.065);
+ --fp-shadow-hover:0 18px 44px rgba(15,23,42,.11);
+ --fp-transition:180ms cubic-bezier(.2,.8,.2,1);
+}
+
+.btn,
+.desktop-icon-button,
+.round,
+.control-card-head button,
+.command-section-head button,
+.command-section-head select{
+ transition:transform var(--fp-transition),box-shadow var(--fp-transition),background var(--fp-transition),border-color var(--fp-transition);
+}
+.btn:hover,
+.desktop-icon-button:hover,
+.control-card-head button:hover,
+.command-section-head button:hover{
+ transform:translateY(-1px);
+ box-shadow:0 8px 20px rgba(15,23,42,.10);
+}
+.btn:active,
+.desktop-icon-button:active,
+.control-card-head button:active{
+ transform:translateY(0) scale(.98);
+}
+
+.card,
+.control-center-card,
+.desktop-command-view,
+.calendar-card,
+.analytics-card,
+.document-card,
+.repair-card,
+.payment-card,
+.expense-card{
+ border-radius:var(--fp-radius)!important;
+ box-shadow:var(--fp-shadow);
+ transition:transform var(--fp-transition),box-shadow var(--fp-transition),border-color var(--fp-transition);
+}
+@media(hover:hover){
+ .card:hover,
+ .control-center-card:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--fp-shadow-hover);
+ }
+}
+
+.page.active{
+ animation:fpPageIn .22s ease both;
+}
+dialog[open]{
+ animation:fpDialogIn .2s ease both;
+}
+@keyframes fpPageIn{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes fpDialogIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+
+.owner-dashboard{
+ display:grid;
+ gap:16px;
+ margin-bottom:20px;
+}
+.owner-dashboard[hidden]{display:none!important}
+.owner-dashboard-kpis{
+ display:grid;
+ grid-template-columns:repeat(6,minmax(0,1fr));
+ gap:12px;
+}
+.owner-kpi-card{
+ display:flex;
+ align-items:flex-start;
+ gap:11px;
+ min-height:116px;
+ padding:16px;
+ border:1px solid #e6eaf1;
+ border-radius:var(--fp-radius);
+ background:linear-gradient(145deg,#fff,#fbfcff);
+ box-shadow:var(--fp-shadow);
+}
+.owner-kpi-icon{
+ display:grid;
+ place-items:center;
+ flex:0 0 38px;
+ height:38px;
+ border-radius:12px;
+ background:#eef2ff;
+ color:#4f46e5;
+ font-size:16px;
+ font-weight:900;
+}
+.owner-kpi-card div{min-width:0}
+.owner-kpi-card small{display:block;min-height:25px;color:#7b879b;font-size:9px;font-weight:800;line-height:1.35}
+.owner-kpi-card strong{display:block;margin-top:4px;color:#111827;font-size:23px;letter-spacing:-.04em}
+.owner-kpi-card p{margin:5px 0 0;color:#a0a9b8;font-size:8px}
+.owner-dashboard-grid{
+ display:grid;
+ grid-template-columns:1.25fr .75fr;
+ gap:14px;
+}
+.owner-dashboard-widget{
+ min-width:0;
+ padding:16px;
+ border:1px solid #e6eaf1;
+ border-radius:var(--fp-radius);
+ background:#fff;
+ box-shadow:var(--fp-shadow);
+}
+.owner-widget-head{
+ display:flex;
+ align-items:flex-start;
+ justify-content:space-between;
+ gap:12px;
+ margin-bottom:13px;
+}
+.owner-widget-head span{color:#7b879b;font-size:8px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.owner-widget-head h3{margin:4px 0 0;color:#111827;font-size:16px}
+.owner-widget-head>button,
+.owner-widget-actions button{
+ padding:6px 9px;
+ border:0;
+ border-radius:9px;
+ background:#f3f5fa;
+ color:#667085;
+ font-size:9px;
+ font-weight:900;
+ cursor:pointer;
+}
+.owner-widget-actions{display:flex;gap:6px}
+.owner-map-widget{grid-row:span 2}
+.owner-live-map-preview{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;min-height:330px}
+.owner-map-canvas{
+ position:relative;
+ min-height:330px;
+ overflow:hidden;
+ border-radius:15px;
+ background:
+  radial-gradient(circle at 20% 20%,rgba(34,197,94,.14),transparent 26%),
+  radial-gradient(circle at 80% 70%,rgba(59,130,246,.14),transparent 30%),
+  linear-gradient(135deg,#e9eef5,#f7f9fc);
+}
+.owner-map-canvas:before{
+ content:"";
+ position:absolute;inset:0;
+ opacity:.45;
+ background-image:linear-gradient(rgba(100,116,139,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(100,116,139,.13) 1px,transparent 1px);
+ background-size:28px 28px;
+}
+.owner-map-road{position:absolute;z-index:1;height:8px;border:2px solid rgba(255,255,255,.9);border-radius:999px;background:#cbd5e1;transform-origin:left center}
+.owner-map-road.road-a{left:-8%;top:35%;width:120%;transform:rotate(18deg)}
+.owner-map-road.road-b{left:12%;top:75%;width:95%;transform:rotate(-28deg)}
+.owner-map-car{
+ position:absolute;z-index:3;left:var(--x);top:var(--y);
+ display:grid;place-items:center;width:30px;height:30px;
+ border:3px solid #fff;border-radius:50%;background:#ef4444;color:#fff;
+ box-shadow:0 7px 18px rgba(15,23,42,.25);cursor:pointer;
+}
+.owner-map-car.online{background:#22c55e}
+.owner-map-summary{display:grid;align-content:start;gap:7px}
+.owner-map-summary>button{
+ display:flex;align-items:center;gap:9px;width:100%;padding:9px;border:1px solid #e7eaf0;border-radius:11px;background:#fff;text-align:left;cursor:pointer;
+}
+.owner-map-summary strong,.owner-map-summary small{display:block}
+.owner-map-summary strong{font-size:9px}.owner-map-summary small{margin-top:3px;color:#8a94a5;font-size:8px}
+.owner-map-status{width:8px;height:8px;border-radius:50%;background:#ef4444}.owner-map-status.online{background:#22c55e}
+.owner-widget-list{display:grid;gap:7px}
+.owner-list-row{
+ display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:9px 10px;border:1px solid #edf0f5;border-radius:11px;background:#fbfcfe;text-align:left;
+}
+button.owner-list-row{cursor:pointer}
+.owner-list-row>div{min-width:0;flex:1}
+.owner-list-row strong,.owner-list-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owner-list-row strong{color:#172033;font-size:9px}.owner-list-row small{margin-top:3px;color:#8b95a7;font-size:8px}
+.owner-list-icon,.owner-rank{
+ display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:#eef2ff;color:#4f46e5;font-weight:900
+}
+.owner-profit-row>b{color:#16a34a;font-size:9px}
+.owner-alert-dot{flex:0 0 8px;height:8px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.1)}
+.owner-attention-row>b{color:#94a3b8}
+.owner-empty{display:grid;place-items:center;min-height:90px;padding:14px;border:1px dashed #d8dee9;border-radius:12px;color:#8a94a5;font-size:9px;text-align:center}
+.owner-all-good{color:#16a34a}
+.owner-widget-settings{display:grid;gap:8px}
+.owner-widget-setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid #e6eaf0;border-radius:12px;font-weight:800}
+.owner-skeleton-card{
+ min-height:116px;border-radius:var(--fp-radius);
+ background:linear-gradient(90deg,#eef1f5 25%,#f7f8fa 37%,#eef1f5 63%);
+ background-size:400% 100%;animation:ownerSkeleton 1.25s ease infinite;
+}
+@keyframes ownerSkeleton{0%{background-position:100% 0}100%{background-position:0 0}}
+
+html[data-theme="dark"] .owner-kpi-card,
+html[data-theme="dark"] .owner-dashboard-widget{
+ border-color:rgba(255,255,255,.08);
+ background:#111827;
+ box-shadow:none;
+}
+html[data-theme="dark"] .owner-kpi-card strong,
+html[data-theme="dark"] .owner-widget-head h3,
+html[data-theme="dark"] .owner-list-row strong{color:#f8fafc}
+html[data-theme="dark"] .owner-list-row,
+html[data-theme="dark"] .owner-map-summary>button{
+ border-color:rgba(255,255,255,.07);background:#151d31
+}
+html[data-theme="dark"] .owner-map-canvas{background:linear-gradient(135deg,#0f172a,#1e293b)}
+html[data-theme="dark"] .owner-widget-setting-row{border-color:rgba(255,255,255,.08)}
+
+@media(max-width:1450px){
+ .owner-dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:1099px){
+ .desktop-fleet-page-head{align-items:flex-start}
+ .desktop-page-actions{flex-wrap:wrap}
+ .owner-dashboard{margin-top:4px}
+ .owner-dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .owner-dashboard-grid{grid-template-columns:1fr}
+ .owner-map-widget{grid-row:auto}
+ .owner-live-map-preview{grid-template-columns:1fr;min-height:auto}
+ .owner-map-canvas{min-height:260px}
+}
+@media(max-width:560px){
+ .owner-dashboard-kpis{grid-template-columns:1fr 1fr;gap:8px}
+ .owner-kpi-card{min-height:105px;padding:12px}
+ .owner-kpi-card strong{font-size:19px}
+ .owner-dashboard-widget{padding:12px}
+ .owner-live-map-preview{display:block}
+ .owner-map-summary{margin-top:10px}
+ .owner-map-summary>button:nth-child(n+4){display:none}
+}
+
+
+/* FleetPilot V9.1 — restore full Leaflet fleet map */
+.owner-live-map-preview{
+  position:relative;
+}
+.owner-live-map-preview::after{
+  content:"Предпросмотр";
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  z-index:5;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:999px;
+  background:rgba(255,255,255,.86);
+  color:#64748b;
+  font-size:8px;
+  font-weight:900;
+  backdrop-filter:blur(8px);
+}
+
+.full-fleet-map-view{
+  scroll-margin-top:18px;
+}
+
+.full-fleet-map-view .fleet-map-layout{
+  min-height:620px;
+}
+
+.full-fleet-map-view .poland-map-card,
+.full-fleet-map-view .leaflet-map-card,
+.full-fleet-map-view .leaflet-fleet-map{
+  min-height:620px!important;
+  height:620px!important;
+}
+
+.full-fleet-map-view .map-city-panel{
+  min-height:620px;
+  max-height:620px;
+  overflow:auto;
+}
+
+.full-fleet-map-view.full-map-highlight{
+  animation:fullMapReveal .9s ease;
+}
+
+@keyframes fullMapReveal{
+  0%{box-shadow:0 0 0 0 rgba(59,130,246,.35)}
+  45%{box-shadow:0 0 0 6px rgba(59,130,246,.12)}
+  100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}
+}
+
+html[data-theme="dark"] .owner-live-map-preview::after{
+  border-color:rgba(255,255,255,.08);
+  background:rgba(15,23,42,.85);
+  color:#cbd5e1;
+}
+
+@media(max-width:1099px){
+  .full-fleet-map-view .fleet-map-layout{
+    min-height:0;
+  }
+  .full-fleet-map-view .poland-map-card,
+  .full-fleet-map-view .leaflet-map-card,
+  .full-fleet-map-view .leaflet-fleet-map{
+    min-height:520px!important;
+    height:520px!important;
+  }
+  .full-fleet-map-view .map-city-panel{
+    min-height:auto;
+    max-height:none;
+  }
+}
+
+
+/* FleetPilot V9.2 — one real fleet map */
+.owner-gps-widget{
+  grid-column:1 / -1;
+}
+
+.owner-gps-status{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 1.2fr auto;
+  align-items:center;
+  gap:18px;
+}
+
+.owner-gps-main{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.owner-gps-ring{
+  display:grid;
+  place-items:center;
+  width:78px;
+  height:78px;
+  flex:0 0 78px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at center,#fff 54%,transparent 55%),
+    conic-gradient(#22c55e 0 72%,#e5e7eb 72% 100%);
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.05);
+}
+
+.owner-gps-ring strong,
+.owner-gps-ring small{
+  grid-area:1/1;
+}
+
+.owner-gps-ring strong{
+  transform:translateY(-7px);
+  font-size:24px;
+}
+
+.owner-gps-ring small{
+  transform:translateY(13px);
+  color:#94a3b8;
+  font-size:9px;
+}
+
+.owner-gps-main span{
+  color:#64748b;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.owner-gps-main h4{
+  margin:4px 0;
+  font-size:23px;
+}
+
+.owner-gps-main p{
+  margin:0;
+  color:#94a3b8;
+  font-size:9px;
+}
+
+.owner-gps-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+
+.owner-gps-metrics>div{
+  padding:12px;
+  border:1px solid #e7eaf0;
+  border-radius:12px;
+  background:#fbfcfe;
+}
+
+.owner-gps-metrics small,
+.owner-gps-metrics strong{
+  display:block;
+}
+
+.owner-gps-metrics small{
+  color:#64748b;
+  font-size:8px;
+}
+
+.owner-gps-metrics strong{
+  margin-top:5px;
+  font-size:18px;
+}
+
+.owner-gps-open-map{
+  padding:12px 15px;
+  border:0;
+  border-radius:12px;
+  background:#3659e8;
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.owner-live-map-preview,
+.owner-map-canvas,
+.owner-map-summary{
+  display:none!important;
+}
+
+html[data-theme="dark"] .owner-gps-ring{
+  background:
+    radial-gradient(circle at center,#111827 54%,transparent 55%),
+    conic-gradient(#22c55e 0 72%,#334155 72% 100%);
+}
+
+html[data-theme="dark"] .owner-gps-metrics>div{
+  border-color:rgba(255,255,255,.08);
+  background:#151d31;
+}
+
+@media(max-width:900px){
+  .owner-gps-status{
+    grid-template-columns:1fr;
+  }
+  .owner-gps-open-map{
+    width:100%;
+  }
+}
+
+@media(max-width:560px){
+  .owner-gps-metrics{
+    grid-template-columns:1fr 1fr 1fr;
+  }
+}
+
+
+/* FleetPilot V9.3 — remove duplicated owner KPI blocks */
+body.owner-dashboard-active .legacy-fleet-kpis{
+  display:none!important;
+}
+
+/* Additional targeted fallback for known old desktop summary areas */
+body.owner-dashboard-active .desktop-command-center .desktop-command-stats,
+body.owner-dashboard-active .desktop-command-center .fleet-kpi-grid,
+body.owner-dashboard-active .desktop-command-center .desktop-kpi-grid,
+body.owner-dashboard-active .desktop-command-center .summary-cards,
+body.owner-dashboard-active .desktop-command-center .stats-grid{
+  display:none!important;
+}
+
+/* Keep mode tabs and actual fleet views visible */
+body.owner-dashboard-active .desktop-view-switcher,
+body.owner-dashboard-active .desktop-fleet-view-tabs,
+body.owner-dashboard-active [data-fleet-view],
+body.owner-dashboard-active .desktop-command-view{
+  display:revert;
+}
+
+/* FleetPilot V9.4 — separate Dashboard and Fleet */
+#dashboardPage{max-width:1500px;margin:0 auto}
+#dashboardPage .owner-dashboard{display:grid;margin-bottom:16px}
+#dashboardPage .dashboard-quick-actions{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px}
+#dashboardPage .dashboard-quick-actions h3{margin:4px 0 0}
+.dashboard-quick-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.dashboard-quick-buttons button{padding:10px 13px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#334155;font-weight:850;cursor:pointer}
+#fleetPage .desktop-fleet-page-head{margin-bottom:14px}
+html[data-theme="dark"] #dashboardPage .dashboard-quick-actions,
+html[data-theme="dark"] .dashboard-quick-buttons button{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+@media(max-width:1099px){
+ #dashboardPage .dashboard-quick-actions{display:grid}
+ .dashboard-quick-buttons{display:grid;grid-template-columns:1fr 1fr}
+ #dashboardPage .owner-dashboard-kpis{grid-template-columns:1fr 1fr}
+}
+
+
+/* FleetPilot V10 Enterprise Foundation */
+.enterprise-page{max-width:1180px;margin:0 auto}
+.enterprise-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.enterprise-page-head h2{margin:5px 0}.enterprise-page-head p{margin:0;color:#64748b}
+.enterprise-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.enterprise-kpis article{padding:16px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;box-shadow:var(--fp-shadow,0 10px 30px rgba(15,23,42,.06))}
+.enterprise-kpis small,.enterprise-kpis strong{display:block}.enterprise-kpis small{color:#64748b;font-size:9px}.enterprise-kpis strong{margin-top:6px;font-size:24px}
+.enterprise-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) 190px auto;gap:10px;margin-bottom:13px}
+.enterprise-toolbar input,.enterprise-toolbar select{padding:11px;border:1px solid #dbe2ec;border-radius:12px;background:#fff}
+.enterprise-members-list{display:grid;gap:9px}
+.enterprise-member-card{display:grid;grid-template-columns:42px minmax(180px,1fr) 160px 150px auto auto;align-items:center;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:15px;background:#fff}
+.enterprise-member-avatar{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:#eef2ff;color:#4f46e5;font-weight:900}
+.enterprise-member-main strong,.enterprise-member-main small{display:block}.enterprise-member-main small{margin-top:4px;color:#64748b;font-size:8px}
+.enterprise-member-card select,.enterprise-member-card input{width:100%;padding:9px;border:1px solid #e1e6ee;border-radius:10px;background:#f8fafc}
+.enterprise-status{padding:6px 9px;border-radius:999px;font-size:8px;font-weight:900}.enterprise-status.active{background:rgba(34,197,94,.12);color:#15803d}.enterprise-status.disabled{background:rgba(239,68,68,.1);color:#dc2626}
+.enterprise-member-toggle,.enterprise-invite-row button{padding:8px;border:0;border-radius:9px;background:#f1f5f9;color:#475569;font-size:8px;font-weight:900;cursor:pointer}
+.enterprise-invites-card{margin-top:18px;padding:16px;border:1px solid #e5e7eb;border-radius:18px;background:#fff}
+.enterprise-section-head h3{margin:4px 0 12px}.enterprise-invites-list{display:grid;gap:8px}
+.enterprise-invite-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:10px;border-radius:11px;background:#f8fafc}.enterprise-invite-row strong,.enterprise-invite-row small{display:block}.enterprise-invite-row small{margin-top:3px;color:#64748b;font-size:8px}.enterprise-invite-row>span{color:#64748b;font-size:8px}
+.enterprise-dialog{width:min(480px,calc(100vw - 24px));padding:0;border:0;border-radius:22px}.enterprise-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(6px)}
+.enterprise-dialog label{display:grid;gap:6px}.enterprise-dialog label span{font-size:9px;font-weight:900}.enterprise-dialog input,.enterprise-dialog select{padding:12px;border:1px solid #dbe2ec;border-radius:12px}
+[data-role-denied="true"]{display:none!important}
+html[data-theme="dark"] .enterprise-kpis article,html[data-theme="dark"] .enterprise-member-card,html[data-theme="dark"] .enterprise-invites-card{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .enterprise-member-card select,html[data-theme="dark"] .enterprise-member-card input,html[data-theme="dark"] .enterprise-toolbar input,html[data-theme="dark"] .enterprise-toolbar select,html[data-theme="dark"] .enterprise-invite-row{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
+@media(max-width:1050px){.enterprise-member-card{grid-template-columns:42px minmax(160px,1fr) 150px}.enterprise-member-card>*:nth-child(n+4){grid-column:2/-1}.enterprise-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.enterprise-page-head{display:grid}.enterprise-toolbar{grid-template-columns:1fr}.enterprise-kpis{grid-template-columns:1fr 1fr}.enterprise-member-card{grid-template-columns:42px 1fr}.enterprise-member-card>*:nth-child(n+3){grid-column:1/-1}.enterprise-invite-row{grid-template-columns:1fr}.enterprise-invite-row>span{justify-self:start}}
+
+
+/* FleetPilot V10.0.1 — platform admin separation */
+#cloudAdminSection[hidden],
+body:not(.platform-admin) #cloudAdminSection,
+body:not(.platform-admin) #openSupabaseDashboard{
+  display:none!important;
+}
+
+body.workspace-owner:not(.platform-admin) .profile-admin-card{
+  display:none!important;
+}
+
+.enterprise-page-head .eyebrow::after{
+  content:"";
+}
+
+.platform-admin-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 9px;
+  border-radius:999px;
+  background:#111827;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}
+
+
+/* FleetPilot V10.1 — self-service workspace */
+.workspace-gate{
+ position:fixed;
+ inset:0;
+ z-index:10050;
+ display:grid;
+ place-items:center;
+ padding:18px;
+ overflow:auto;
+ background:
+  radial-gradient(circle at 15% 10%,rgba(59,91,232,.16),transparent 28%),
+  linear-gradient(135deg,#eef3fb,#f8fafc);
+}
+.workspace-gate[hidden]{display:none!important}
+.workspace-onboarding-card{
+ width:min(540px,100%);
+ padding:28px;
+ border:1px solid rgba(148,163,184,.22);
+ border-radius:28px;
+ background:rgba(255,255,255,.96);
+ box-shadow:0 28px 80px rgba(15,23,42,.16);
+}
+.workspace-onboarding-card h1{margin:22px 0 8px;font-size:31px;letter-spacing:-.04em}
+.workspace-onboarding-card>section>p{margin:0 0 22px;color:#64748b;line-height:1.65}
+.workspace-create-form{display:grid;gap:14px}
+.workspace-create-form label{display:grid;gap:7px}
+.workspace-create-form label span{font-size:9px;font-weight:900;color:#475569}
+.workspace-create-form input,.workspace-create-form select{
+ width:100%;padding:13px 14px;border:1px solid #dbe2ec;border-radius:13px;background:#fff;
+}
+.workspace-pending-invite{
+ display:grid;
+ grid-template-columns:42px 1fr auto;
+ align-items:center;
+ gap:12px;
+ margin-top:18px;
+ padding:13px;
+ border:1px solid #c7d2fe;
+ border-radius:15px;
+ background:#eef2ff;
+}
+.workspace-invite-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fff}
+.workspace-pending-invite strong,.workspace-pending-invite small{display:block}
+.workspace-pending-invite small{margin-top:4px;color:#64748b}
+.workspace-onboarding-card .cloud-text-button{display:block;margin:18px auto 0}
+html.workspace-locked body{overflow:hidden}
+.platform-project-row{grid-template-columns:minmax(180px,1fr) 90px minmax(150px,.7fr)!important}
+html[data-theme="dark"] .workspace-gate{background:linear-gradient(135deg,#0b1120,#111827)}
+html[data-theme="dark"] .workspace-onboarding-card{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .workspace-create-form input,
+html[data-theme="dark"] .workspace-create-form select{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
+@media(max-width:600px){
+ .workspace-onboarding-card{padding:20px;border-radius:22px}
+ .workspace-pending-invite{grid-template-columns:42px 1fr}
+ .workspace-pending-invite button{grid-column:1/-1;width:100%}
+ .platform-project-row{grid-template-columns:1fr!important}
+}
+
+
+/* FleetPilot V10.1.2 — workspace sync status */
+.cloud-message.error{
+  white-space:pre-wrap;
+}
+
+
+/* FleetPilot V10.3 — Company Management */
+.company-management-page{max-width:1240px;margin:0 auto}
+.company-shell{display:grid;gap:16px}
+.company-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.company-hero h2{margin:5px 0}.company-hero p{margin:0;color:#64748b}
+.company-tabs{display:flex;gap:6px;padding:6px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;overflow:auto}
+.company-tabs button{border:0;border-radius:11px;padding:10px 13px;background:transparent;color:#64748b;font-size:9px;font-weight:900;white-space:nowrap;cursor:pointer}
+.company-tabs button.active{background:#111827;color:#fff}
+.company-panel{display:none}.company-panel.active{display:block;animation:companyPanelIn .18s ease}
+@keyframes companyPanelIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.company-overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.company-overview-card{padding:18px;border:1px solid #e5e7eb;border-radius:18px;background:#fff}
+.company-overview-card h3{margin:5px 0 14px}
+.company-role-summary,.company-workspace-summary{display:grid;gap:8px}
+.company-role-summary>div,.company-workspace-summary>div{display:flex;align-items:center;justify-content:space-between;padding:10px 11px;border-radius:11px;background:#f8fafc}
+.company-role-summary span,.company-workspace-summary span{color:#64748b;font-size:9px}
+.company-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.company-section-head h3{margin:4px 0}.company-section-head p{margin:5px 0 0;color:#64748b}
+.role-permissions-layout{display:grid;grid-template-columns:220px 1fr;gap:14px}
+.role-permission-tabs{display:grid;gap:8px;align-content:start}
+.role-permission-tabs button{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #e5e7eb;border-radius:13px;background:#fff;text-align:left;cursor:pointer}
+.role-permission-tabs button.active{border-color:#4f46e5;background:#eef2ff;color:#3730a3}
+.role-permission-tabs strong,.role-permission-tabs small{display:block}.role-permission-tabs small{font-size:8px;color:#94a3b8}
+.role-permissions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.permission-group{padding:15px;border:1px solid #e5e7eb;border-radius:16px;background:#fff}
+.permission-group h4{margin:0 0 10px}
+.permission-switch{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f1f5f9;cursor:pointer}
+.permission-switch:first-of-type{border-top:0}.permission-switch span{font-size:9px;font-weight:800}
+.permission-switch input{position:absolute;opacity:0;pointer-events:none}
+.permission-switch i{position:relative;width:38px;height:22px;border-radius:999px;background:#cbd5e1;transition:.18s}
+.permission-switch i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(15,23,42,.2);transition:.18s}
+.permission-switch input:checked+i{background:#4f46e5}.permission-switch input:checked+i::after{transform:translateX(16px)}
+.company-save-row{display:flex;justify-content:flex-end;margin-top:14px}
+.workspace-settings-form{padding:18px;border:1px solid #e5e7eb;border-radius:18px;background:#fff}
+.workspace-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.workspace-settings-grid label{display:grid;gap:7px}.workspace-settings-grid label span{font-size:9px;font-weight:900}
+.workspace-settings-grid input,.workspace-settings-grid select{padding:12px;border:1px solid #dbe2ec;border-radius:12px;background:#fff}
+.company-activity-log{display:grid;gap:10px}
+.activity-row{display:grid;grid-template-columns:14px 1fr;gap:10px;padding:13px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}
+.activity-dot{width:10px;height:10px;margin-top:4px;border-radius:50%;background:#4f46e5;box-shadow:0 0 0 4px #eef2ff}
+.activity-row strong,.activity-row span,.activity-row small{display:block}.activity-row span{margin-top:3px}.activity-row small{margin-top:5px;color:#94a3b8;font-size:8px}
+html[data-theme="dark"] .company-tabs,html[data-theme="dark"] .company-overview-card,html[data-theme="dark"] .role-permission-tabs button,html[data-theme="dark"] .permission-group,html[data-theme="dark"] .workspace-settings-form,html[data-theme="dark"] .activity-row{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .company-role-summary>div,html[data-theme="dark"] .company-workspace-summary>div{background:#151d31}
+html[data-theme="dark"] .workspace-settings-grid input,html[data-theme="dark"] .workspace-settings-grid select{border-color:rgba(255,255,255,.08);background:#151d31;color:#f8fafc}
+@media(max-width:850px){.company-overview-grid,.role-permissions-grid,.workspace-settings-grid{grid-template-columns:1fr}.role-permissions-layout{grid-template-columns:1fr}.role-permission-tabs{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.company-hero,.company-section-head{display:grid}.company-hero .btn,.company-section-head .btn{width:100%}.role-permission-tabs{grid-template-columns:1fr 1fr}.company-tabs{margin-inline:-4px}}
+
+
+/* FleetPilot V10.3.1 — startup stability */
+#workspaceGate[hidden]{display:none!important}
+html:not(.workspace-locked) #workspaceGate{display:none!important}
+
+
+/* FleetPilot V10.5 — Driver Portal Stage 1 */
+.driver-portal-page{max-width:1160px;margin:0 auto}
+.driver-portal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.driver-portal-head h2{margin:5px 0}.driver-portal-head p{margin:0;color:#64748b}
+.driver-vehicle-card,.driver-portal-card,.driver-service-inbox{border:1px solid #e5e7eb;border-radius:20px;background:#fff;box-shadow:0 12px 34px rgba(15,23,42,.06)}
+.driver-vehicle-card{padding:18px;margin-bottom:14px}
+.driver-vehicle-main{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:13px}
+.driver-vehicle-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;background:#eef2ff;font-size:25px}
+.driver-vehicle-main h3{margin:4px 0;font-size:21px}.driver-vehicle-main p{margin:0;color:#64748b}
+.driver-vehicle-status{padding:7px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#15803d;font-size:9px;font-weight:900}
+.driver-vehicle-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.driver-vehicle-stats>div{padding:12px;border-radius:13px;background:#f8fafc}
+.driver-vehicle-stats small,.driver-vehicle-stats strong{display:block}.driver-vehicle-stats small{color:#64748b;font-size:8px}.driver-vehicle-stats strong{margin-top:5px}
+.driver-portal-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.driver-portal-card{padding:16px}.driver-portal-card-wide{grid-column:1/-1}
+.driver-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.driver-card-head h3{margin:4px 0}
+.driver-simple-list,.driver-request-list,.driver-notifications-list,.workspace-request-list{display:grid;gap:8px}
+.driver-list-row,.driver-request-row,.driver-notification-row,.workspace-request-row{padding:12px;border:1px solid #edf0f4;border-radius:13px;background:#f8fafc}
+.driver-list-row strong,.driver-list-row small{display:block}.driver-list-row small{margin-top:4px;color:#64748b}
+.driver-request-row,.workspace-request-row{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px}
+.driver-request-main strong,.driver-request-main span,.driver-request-main small,.driver-request-main em{display:block}
+.driver-request-main span{margin-top:4px}.driver-request-main small{margin-top:6px;color:#64748b}.driver-request-main em{margin-top:7px;color:#4f46e5;font-style:normal}
+.driver-request-badges{display:grid;gap:6px;justify-items:end}.driver-request-badges span{padding:6px 8px;border-radius:999px;font-size:8px;font-weight:900}
+.driver-request-badges .status{background:#e2e8f0;color:#334155}.driver-request-badges .urgency{background:#fef3c7;color:#92400e}
+.urgency-critical{border-color:#fecaca!important;background:#fff7f7!important}.urgency-critical .urgency{background:#fee2e2!important;color:#b91c1c!important}
+.driver-notification-row{display:grid;grid-template-columns:32px 1fr;gap:10px}.driver-notification-row>span{font-size:20px}.driver-notification-row strong,.driver-notification-row small,.driver-notification-row em{display:block}.driver-notification-row small{margin-top:3px}.driver-notification-row em{margin-top:5px;color:#94a3b8;font-size:8px;font-style:normal}
+.driver-empty-state{display:grid;gap:5px;padding:18px;text-align:center;color:#64748b}.driver-empty-state strong{color:#0f172a}
+.driver-repair-vehicle-summary{display:flex;justify-content:space-between;padding:11px;border-radius:12px;background:#f8fafc}
+.driver-repair-dialog textarea{resize:vertical;padding:12px;border:1px solid #dbe2ec;border-radius:12px;font:inherit}
+.driver-check-row{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center}
+.driver-service-inbox{padding:16px;margin-bottom:15px}
+.workspace-request-row>div strong,.workspace-request-row>div span,.workspace-request-row>div small{display:block}.workspace-request-row>div span{margin-top:4px}.workspace-request-row>div small{margin-top:6px;color:#64748b}
+.workspace-request-row select{padding:9px;border:1px solid #dbe2ec;border-radius:10px;background:#fff}
+.enterprise-member-card [data-driver-assignment]{grid-column:2/-1}
+html[data-theme="dark"] .driver-vehicle-card,html[data-theme="dark"] .driver-portal-card,html[data-theme="dark"] .driver-service-inbox{border-color:rgba(255,255,255,.08);background:#111827;color:#f8fafc}
+html[data-theme="dark"] .driver-vehicle-stats>div,html[data-theme="dark"] .driver-list-row,html[data-theme="dark"] .driver-request-row,html[data-theme="dark"] .driver-notification-row,html[data-theme="dark"] .workspace-request-row,html[data-theme="dark"] .driver-repair-vehicle-summary{border-color:rgba(255,255,255,.07);background:#151d31}
+@media(max-width:760px){.driver-portal-head{display:grid}.driver-portal-head .btn{width:100%}.driver-portal-grid{grid-template-columns:1fr}.driver-portal-card-wide{grid-column:auto}.driver-vehicle-stats{grid-template-columns:1fr 1fr}.driver-request-row,.workspace-request-row{grid-template-columns:1fr}.driver-request-badges{justify-items:start}.driver-vehicle-main{grid-template-columns:48px 1fr}.driver-vehicle-status{grid-column:1/-1;justify-self:start}}
+
+
+/* FleetPilot V10.5.1 — Realtime cloud sync */
+#cloudSyncStatus::before{
+ content:"";
+ display:inline-block;
+ width:7px;
+ height:7px;
+ margin-right:7px;
+ border-radius:50%;
+ background:#22c55e;
+ box-shadow:0 0 0 4px rgba(34,197,94,.12);
+ vertical-align:1px;
+}
+
+
+/* FleetPilot V10.5.2 — password recovery */
+#authRecoveryView p{
+ margin:0 0 18px;
+ color:#64748b;
+ line-height:1.55;
+}
+#authRecoveryView .auth-submit{
+ margin-top:4px;
+}
+html.auth-locked body{
+ overflow:hidden;
+}
+
+/* FleetPilot V10.5.3 — Data Recovery & Protection */
+.cloud-version-history{margin-top:16px;padding:18px}
+.cloud-versions-list{display:grid;gap:9px}
+.cloud-version-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc}
+.cloud-version-row strong,.cloud-version-row span,.cloud-version-row small{display:block}
+.cloud-version-row span{margin-top:4px;font-size:9px;font-weight:800}
+.cloud-version-row small{margin-top:5px;color:#64748b;font-size:8px}
+.data-protection-badge{padding:7px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#15803d;font-size:8px;font-weight:900}
+.cloud-versions-card{border-color:#c7d2fe!important;background:linear-gradient(145deg,#fff,#eef2ff)!important}
+html[data-theme="dark"] .cloud-version-row{border-color:rgba(255,255,255,.08);background:#151d31}
+html[data-theme="dark"] .cloud-versions-card{background:linear-gradient(145deg,#111827,#172554)!important}
+@media(max-width:620px){.cloud-version-row{grid-template-columns:1fr}.cloud-version-row .btn{width:100%}}
+
+
