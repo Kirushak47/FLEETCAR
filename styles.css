@@ -9074,3 +9074,8 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 .profile-document-actions{display:flex;align-items:center;gap:8px;flex:none}.profile-document-actions .btn{min-height:30px;padding:5px 9px}.profile-installment-link{display:block;width:100%;text-align:left;margin:6px 0}
 .profile-fallback-documents{display:grid;gap:8px;margin-top:16px}.profile-fallback-documents h4{margin:0 0 4px}
 @media(max-width:760px){.profile-document-row{align-items:flex-start}.profile-document-main{align-items:flex-start;flex-direction:column}.profile-document-actions{margin-left:auto}}
+
+/* FleetPilot V14.2.5 — unified vehicle documents */
+.profile-documents-card .section-head{align-items:center}
+.profile-documents-card .professional-empty{display:grid;gap:8px;justify-items:start}
+.profile-documents-card .professional-empty span{color:var(--muted,#64748b);font-size:13px}

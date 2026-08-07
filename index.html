@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V14.2.4 Navigation Fix</title>
-  <link rel="manifest" href="manifest.webmanifest?v=142400">
-  <link rel="stylesheet" href="styles.css?v=142400">
+  <title>FleetPilot V14.2.5 Unified Vehicle Documents</title>
+  <link rel="manifest" href="manifest.webmanifest?v=142500">
+  <link rel="stylesheet" href="styles.css?v=142500">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -628,7 +628,13 @@
           <option value="insurance">Страховка</option>
           <option value="inspection">Техосмотр</option>
           <option value="registration">Регистрация</option>
+          <option value="technical_passport">Техпаспорт</option>
           <option value="leasing">Лизинг</option>
+          <option value="credit">Кредит</option>
+          <option value="rental_contract">Договор аренды</option>
+          <option value="warranty">Гарантия</option>
+          <option value="invoice">Счёт / фактура</option>
+          <option value="authorization">Доверенность</option>
           <option value="other">Другое</option>
         </select>
         <select id="documentStatusFilter">
@@ -1456,7 +1462,7 @@
   <input id="documentId" type="hidden">
   <label>Автомобиль<select id="documentCarId"></select></label>
   <div class="grid2">
-    <label>Тип<select id="documentType"><option value="insurance">Страховка</option><option value="inspection">Техосмотр</option><option value="registration">Регистрация</option><option value="leasing">Лизинг</option><option value="other">Другое</option></select></label>
+    <label>Тип<select id="documentType" onchange="applyDocumentTypeDefaults()"><option value="insurance">Страховка</option><option value="inspection">Техосмотр</option><option value="registration">Регистрация</option><option value="technical_passport">Техпаспорт</option><option value="leasing">Лизинг</option><option value="credit">Кредит</option><option value="rental_contract">Договор аренды</option><option value="warranty">Гарантия</option><option value="invoice">Счёт / фактура</option><option value="authorization">Доверенность</option><option value="other">Другое</option></select></label>
     <label>Название<input id="documentTitle" required></label>
     <label>Номер<input id="documentNumber"></label>
     <label>Действует до<input id="documentExpiry" type="date"></label>
@@ -1830,7 +1836,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=142400"></script>
-<script src="cloud.js?v=142400"></script>
-<script src="app.js?v=142400"></script>
+<script src="cloud-config.js?v=142500"></script>
+<script src="cloud.js?v=142500"></script>
+<script src="app.js?v=142500"></script>
 </body></html>
