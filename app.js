@@ -198,7 +198,7 @@ function effectiveVisible(settings=uxSettings()){
 }
 
 const SIMPLE_ALLOWED_PAGES=new Set(["dashboardPage","fleetPage","paymentsPage","expensesPage","morePage","carPage","attentionPage","mobileMapPage","documentsPage"]);
-const SIMPLE_ALLOWED_TABS=new Set(["info","finance","documents","damages"]);
+const SIMPLE_ALLOWED_TABS=new Set(["info","service","finance","documents","damages"]);
 
 function currentUiMode(){return uxSettings().mode==="simple"?"simple":"advanced"}
 function isSimpleMode(){return currentUiMode()==="simple"}
@@ -1042,7 +1042,7 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
  if(!total)return"";
  const level=requestRows.some(row=>row.urgency==="critical")||repairRows.some(r=>r.status==="repair")?"critical":
   requestRows.length||repairRows.some(r=>["service","parts"].includes(r.status))?"service":"normal";
- return `<button type="button" class="car-service-alert-icon task-indicator ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Открытых сервисных задач: ${total}" aria-label="Открыть сервисные задачи"><span>🔔</span><b>${total}</b></button>`
+ return `<button type="button" class="car-service-alert-icon task-indicator-square ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span>🔧</span><b>${total}</b></button>`
 }
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
@@ -1315,7 +1315,7 @@ const FLEETPILOT_ROUTES={
 const FLEETPILOT_ROUTE_PAGES=Object.fromEntries(
  Object.entries(FLEETPILOT_ROUTES).map(([page,route])=>[route,page])
 );
-const FLEETPILOT_CAR_TABS=new Set(["info","finance","history","documents","damages"]);
+const FLEETPILOT_CAR_TABS=new Set(["info","service","finance","history","documents","damages"]);
 let fleetPilotRouteReady=false;
 let fleetPilotApplyingRoute=false;
 
@@ -4687,7 +4687,7 @@ function renderFleet(){
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span>${fleetServiceBadgeMarkup(c.id)}</div>
+  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
@@ -4710,9 +4710,12 @@ function renderFleet(){
   </div>
  </div>
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
- <div class="hero-title">
-  <h3>${m.brand} ${m.model}</h3>
-  <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
+ <div class="hero-title hero-title-with-task">
+  <div class="hero-title-copy">
+   <h3>${m.brand} ${m.model}</h3>
+   <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
+  </div>
+  <div class="hero-title-task-slot">${fleetServiceBadgeMarkup(c.id)}</div>
  </div>
  <div class="hero-business-metrics">
   <button type="button" class="hero-business-metric mileage" onclick="event.stopPropagation();openMileage('${c.id}')">
@@ -5550,6 +5553,65 @@ function renderCarProfile(id,activeTab="info"){
  selectedCarId=id;
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
  const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
+ const serviceActive=rep.filter(x=>!["done","cancelled"].includes(String(x.status||"")));
+ const serviceHistory=rep.filter(x=>["done","cancelled"].includes(String(x.status||""))).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||"")));
+ const carRequests=activeDriverRepairRequests().filter(x=>String(x.car_id)===String(c.id));
+ const service=`<div class="car-service-profile">
+  <div class="car-service-profile-head">
+   <div><span class="eyebrow">История обслуживания</span><h3>Сервис автомобиля</h3><p>Активные технические задачи и выполненные ремонты по этому автомобилю.</p></div>
+   <button class="btn primary" onclick="openRepairDialog('${c.id}')">+ Добавить ремонт</button>
+  </div>
+  <div class="car-service-kpis">
+   <div><span>Активные задачи</span><strong>${serviceActive.length+carRequests.length}</strong></div>
+   <div><span>Выполнено ремонтов</span><strong>${serviceHistory.filter(x=>x.status==="done").length}</strong></div>
+   <div><span>Расходы на ремонт</span><strong>${money(rep.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0))}</strong></div>
+   <div><span>Последний ремонт</span><strong>${serviceHistory[0]?date(serviceHistory[0].completedDate||serviceHistory[0].date):"—"}</strong></div>
+  </div>
+
+  ${(carRequests.length||serviceActive.length)?`<section class="car-service-section">
+   <div class="car-service-section-head"><div><span class="eyebrow">Сейчас</span><h4>Активные задачи</h4></div><span>${carRequests.length+serviceActive.length}</span></div>
+   <div class="car-service-timeline active">
+    ${carRequests.map(req=>`<article class="car-service-entry request">
+      <div class="car-service-dot"></div>
+      <div class="car-service-entry-main">
+       <div class="car-service-entry-title"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span class="car-service-entry-status request">${req.status==="accepted"?"Принята":"Новая"}</span></div>
+       <p>${req.description||"Без описания"}</p>
+       <div class="car-service-entry-meta"><span>${new Date(req.created_at).toLocaleDateString("ru-RU")}</span><span>${km(req.mileage)}</span><span>${req.driver_email||"Водитель"}</span></div>
+      </div>
+      <button class="car-service-open" onclick="openRepairFromFleetRequest('${req.id}')" title="Открыть заявку">›</button>
+     </article>`).join("")}
+    ${serviceActive.sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>`<article class="car-service-entry ${serviceStatusClass(r.status)}">
+      <div class="car-service-dot"></div>
+      <div class="car-service-entry-main">
+       <div class="car-service-entry-title"><strong>${r.title}</strong><span class="car-service-entry-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span></div>
+       <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
+       <div class="car-service-entry-meta"><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${money(r.planned||0)}</span></div>
+      </div>
+      <button class="car-service-open" onclick="editRepair('${r.id}')" title="Открыть ремонт">›</button>
+     </article>`).join("")}
+   </div>
+  </section>`:""}
+
+  <section class="car-service-section">
+   <div class="car-service-section-head"><div><span class="eyebrow">История</span><h4>Завершённые ремонты</h4></div><span>${serviceHistory.length}</span></div>
+   <div class="car-service-timeline history">
+    ${serviceHistory.map(r=>`<article class="car-service-entry ${r.status==="done"?"done":"cancelled"}">
+      <div class="car-service-dot"></div>
+      <div class="car-service-entry-main">
+       <div class="car-service-entry-title"><strong>${r.title}</strong><span class="car-service-entry-status ${r.status==="done"?"done":"cancelled"}">${repairStatusText(r.status)}</span></div>
+       <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
+       <div class="car-service-entry-meta">
+        <span>${date(r.completedDate||r.date)}</span>
+        <span>${km(r.mileage)}</span>
+        <span>${money(r.actual||r.planned||0)}</span>
+        ${r.warrantyUntil?`<span>Гарантия до ${date(r.warrantyUntil)}</span>`:""}
+       </div>
+      </div>
+      <button class="car-service-open" onclick="editRepair('${r.id}')" title="Подробнее">›</button>
+     </article>`).join("")||`<div class="professional-empty">История ремонтов пока пустая.</div>`}
+   </div>
+  </section>
+ </div>`;
  const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card"><h3>Плановые расходы</h3>${exp.slice(0,10).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div></div>`;
  const history=`<div class="detail-tab-grid">
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
@@ -5557,9 +5619,9 @@ function renderCarProfile(id,activeTab="info"){
  </div>`;
  const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
- const tabContent={info,finance,history,documents,damages}[activeTab]||info;
+ const tabContent={info,service,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
- $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="copyCurrentCarLink('${c.id}','${activeTab}')">🔗 Скопировать ссылку</button><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"service","Сервис",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="copyCurrentCarLink('${c.id}','${activeTab}')">🔗 Скопировать ссылку</button><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
  if(activeTab==="history")loadVehicleHandoverHistory(c.id);
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}

@@ -1,17 +1,12 @@
-# FleetPilot V11.3.7 — Service CRM
+# FleetPilot V11.3.8 — Car Service UI
 
-Built on V11.3.6.
-
-New Service CRM:
-- one vehicle = one service card;
-- all active repairs and driver requests are grouped inside that vehicle;
-- search by vehicle, plate, driver, repair title, note or service;
-- filters by repair status and city;
-- priority/newest/plate sorting;
-- clickable KPI filters;
-- archive of rejected driver requests remains available and restorable;
-- Fleet service indicator moved next to vehicle status;
-- indicator is now a task notification with total unresolved service task count;
-- clicking it opens Service directly on that vehicle and highlights its task group;
-- no Supabase schema changes;
-- no SQL required.
+Changes:
+- New "Сервис" tab in each vehicle profile.
+- No duplicate next-service/oil/insurance information in that tab.
+- Car Service tab shows active driver requests, active repairs, completed repair history, dates, mileage, cost, service, status and warranty.
+- Deep link supports #/car/<id>/service.
+- Service CRM "Открыть" buttons are compact and fitted to row height.
+- Fleet task indicator moved into the vehicle title area inside the photo.
+- Indicator is square, compact and shows total unresolved technical tasks.
+- Clicking it still opens Service CRM directly on that vehicle.
+- No Supabase schema changes and no SQL required.

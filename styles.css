@@ -7854,3 +7854,115 @@ html[data-theme="dark"] .repair-linked-finance-info{
  .service-task-row{grid-template-columns:32px minmax(0,1fr)}
  .service-task-status,.service-task-row>.btn{grid-column:2}
 }
+
+
+/* =========================================================
+   FleetPilot V11.3.8 — Car Service profile + refined task UI
+   ========================================================= */
+
+/* Car profile / Service */
+.car-service-profile{display:grid;gap:14px}
+.car-service-profile-head{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+ padding:16px;border:1px solid var(--line,#e7eaf0);border-radius:15px;
+ background:var(--card,#fff);box-shadow:0 7px 22px rgba(22,31,52,.04)
+}
+.car-service-profile-head h3{margin:3px 0 4px;font-size:16px;letter-spacing:-.02em}
+.car-service-profile-head p{margin:0;color:var(--muted,#7b8495);font-size:9px}
+.car-service-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.car-service-kpis>div{
+ padding:14px;border:1px solid var(--line,#e7eaf0);border-radius:13px;
+ background:var(--card,#fff)
+}
+.car-service-kpis span,.car-service-kpis strong{display:block}
+.car-service-kpis span{color:var(--muted,#7c8698);font-size:8px;font-weight:800}
+.car-service-kpis strong{margin-top:7px;font-size:17px;letter-spacing:-.025em}
+.car-service-section{
+ border:1px solid var(--line,#e7eaf0);border-radius:15px;background:var(--card,#fff);overflow:hidden
+}
+.car-service-section-head{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ padding:14px 16px;border-bottom:1px solid var(--line,#edf0f4)
+}
+.car-service-section-head h4{margin:3px 0 0;font-size:13px}
+.car-service-section-head>span{
+ display:grid;place-items:center;min-width:28px;height:28px;padding:0 7px;
+ border-radius:9px;background:rgba(91,77,245,.09);color:#5b4df5;font-size:9px;font-weight:900
+}
+.car-service-timeline{display:grid}
+.car-service-entry{
+ position:relative;display:grid;grid-template-columns:18px minmax(0,1fr) 30px;
+ gap:10px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--line,#eef0f4)
+}
+.car-service-entry:last-child{border-bottom:0}
+.car-service-entry:hover{background:color-mix(in srgb,var(--card,#fff) 96%,#f4f6fa)}
+.car-service-dot{
+ width:9px;height:9px;border-radius:50%;background:#8b93a2;
+ box-shadow:0 0 0 4px rgba(139,147,162,.10)
+}
+.car-service-entry.repair .car-service-dot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.09)}
+.car-service-entry.service .car-service-dot{background:#5b4df5;box-shadow:0 0 0 4px rgba(91,77,245,.09)}
+.car-service-entry.parts .car-service-dot{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.10)}
+.car-service-entry.request .car-service-dot{background:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.10)}
+.car-service-entry.done .car-service-dot{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.09)}
+.car-service-entry-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.car-service-entry-title strong{font-size:10px}
+.car-service-entry-main p{margin:4px 0;color:var(--muted,#687386);font-size:8px}
+.car-service-entry-meta{display:flex;gap:9px;flex-wrap:wrap;color:var(--muted,#929aa9);font-size:7px}
+.car-service-entry-status{
+ display:inline-flex;padding:4px 7px;border-radius:999px;background:#f0f2f6;
+ color:#687185;font-size:7px;font-weight:900
+}
+.car-service-entry-status.repair{background:#fff0f0;color:#c43b3b}
+.car-service-entry-status.service{background:#efedff;color:#5547d7}
+.car-service-entry-status.parts{background:#fff5df;color:#ad7100}
+.car-service-entry-status.request{background:#fff0e8;color:#c35319}
+.car-service-entry-status.done{background:#eaf8ef;color:#16824a}
+.car-service-entry-status.cancelled{background:#f1f2f4;color:#7b8491}
+.car-service-open{
+ display:grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid var(--line,#dfe3ea);
+ border-radius:8px;background:var(--card,#fff);color:inherit;font-size:16px;cursor:pointer
+}
+.car-service-open:hover{border-color:#bfc5d0;background:#f7f8fa}
+
+/* Service work queue actions: compact and aligned with rows */
+.service-task-row>.btn{
+ width:64px!important;min-width:64px!important;max-width:64px!important;
+ min-height:28px!important;height:28px!important;padding:0 7px!important;
+ border-radius:8px!important;font-size:7px!important;line-height:1!important
+}
+.service-car-group-actions .btn{
+ min-height:30px!important;height:30px!important;padding:0 9px!important;font-size:7px!important
+}
+
+/* Fleet task indicator: square, inside photo title area */
+.hero-title-with-task{
+ display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:12px!important
+}
+.hero-title-copy{min-width:0}
+.hero-title-task-slot{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
+.car-service-alert-icon.task-indicator-square{
+ position:static!important;inset:auto!important;
+ display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;
+ width:42px!important;height:38px!important;min-width:42px!important;padding:0 6px!important;
+ border:1px solid rgba(255,255,255,.24)!important;border-radius:10px!important;
+ background:rgba(18,24,35,.68)!important;color:#fff!important;
+ box-shadow:0 5px 16px rgba(0,0,0,.16)!important;backdrop-filter:blur(8px);
+ transform:none!important
+}
+.car-service-alert-icon.task-indicator-square span{
+ display:block!important;font-size:13px!important;line-height:1!important
+}
+.car-service-alert-icon.task-indicator-square b{
+ position:static!important;display:grid!important;place-items:center!important;
+ min-width:14px!important;height:14px!important;padding:0 3px!important;border-radius:5px!important;
+ background:#fff!important;color:#1e2430!important;font-size:7px!important;line-height:1!important
+}
+.car-service-alert-icon.task-indicator-square.critical{background:rgba(174,35,35,.88)!important}
+.car-service-alert-icon.task-indicator-square.service{background:rgba(167,89,14,.88)!important}
+
+@media(max-width:1099px){
+ .car-service-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .car-service-profile-head{display:grid}
+ .service-task-row>.btn{grid-column:2!important;width:64px!important}
+}
