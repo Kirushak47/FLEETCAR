@@ -8700,3 +8700,97 @@ button,select,input,textarea{max-width:100%}
 .service-request-dialog-actions #serviceRequestTransferButton{margin-left:auto!important}
 #repairDialog .modal{max-width:560px!important;width:min(560px,calc(100vw - 24px))!important;max-height:88vh!important;overflow:auto!important}
 #repairDialog .grid2{gap:10px!important}
+
+/* FleetPilot V13.1.1 — service action alignment fix */
+@media (min-width:900px){
+  /* Working queue: keep status and Open action in dedicated right columns. */
+  #repairsPage .service-task-row.request,
+  #repairsPage .service-task-row.planned-expense{
+    display:grid!important;
+    grid-template-columns:30px minmax(0,1fr) 84px 92px!important;
+    gap:10px!important;
+    align-items:center!important;
+    padding:9px 12px!important;
+    overflow:hidden!important;
+  }
+  #repairsPage .service-task-row.request .service-task-status,
+  #repairsPage .service-task-row.planned-expense .service-task-status{
+    grid-column:3!important;
+    justify-self:end!important;
+    width:auto!important;
+    min-width:68px!important;
+    max-width:84px!important;
+    margin:0!important;
+  }
+  #repairsPage .service-task-row.request .service-task-actions,
+  #repairsPage .service-task-row.planned-expense .service-task-actions{
+    grid-column:4!important;
+    justify-self:end!important;
+    width:92px!important;
+    min-width:92px!important;
+    display:flex!important;
+    justify-content:flex-end!important;
+    margin:0!important;
+  }
+  #repairsPage .service-task-row.request .service-task-actions .btn,
+  #repairsPage .service-task-row.planned-expense .service-task-actions .btn{
+    width:84px!important;
+    min-width:84px!important;
+    max-width:84px!important;
+    margin:0!important;
+  }
+
+  /* Inbox: main content, status selector and Open button are separate columns. */
+  #repairsPage .service-inbox-request{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 118px 88px!important;
+    gap:10px!important;
+    align-items:center!important;
+    padding:9px 12px!important;
+    min-height:64px!important;
+    overflow:hidden!important;
+  }
+  #repairsPage .service-inbox-request-main{
+    grid-column:1!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  #repairsPage .service-inbox-request-heading{
+    display:block!important;
+    min-width:0!important;
+  }
+  #repairsPage .service-inbox-request-heading .service-inbox-request-badge{
+    display:none!important;
+  }
+  #repairsPage .service-inbox-request-actions{
+    display:contents!important;
+  }
+  #repairsPage .service-inbox-request-actions select{
+    grid-column:2!important;
+    width:118px!important;
+    min-width:118px!important;
+    max-width:118px!important;
+    height:32px!important;
+    min-height:32px!important;
+    margin:0!important;
+    justify-self:end!important;
+  }
+  #repairsPage .service-inbox-request-actions .btn{
+    grid-column:3!important;
+    width:84px!important;
+    min-width:84px!important;
+    max-width:84px!important;
+    height:32px!important;
+    min-height:32px!important;
+    margin:0!important;
+    justify-self:end!important;
+  }
+}
+
+@media (max-width:1180px) and (min-width:900px){
+  #repairsPage .service-inbox-request{
+    grid-template-columns:minmax(0,1fr) 108px 82px!important;
+  }
+  #repairsPage .service-inbox-request-actions select{width:108px!important;min-width:108px!important;max-width:108px!important}
+  #repairsPage .service-inbox-request-actions .btn{width:78px!important;min-width:78px!important;max-width:78px!important}
+}
