@@ -1,13 +1,30 @@
-# FleetPilot V11.3.4 — Service Workflow
+# FleetPilot V11.3.5 — Deep Links
 
-Based on stable V11.3.3.1 Cars Restore.
+Built on V11.3.4 Service Workflow.
 
-Workflow:
-- Service inbox shows only New and Accepted driver requests.
-- Request status menu contains New / Accepted / Rejected only.
-- Separate “Передать в сервис” action opens the existing repair form with request/car/mileage prefilled.
-- After the linked repair is saved, the existing cloud link operation changes the request to a service/repair state.
-- That request therefore disappears from the upper inbox and remains as the linked repair below.
-- Fleet request summary counts only unresolved New/Accepted requests.
-- No changes to Fleet rendering, theme, maps, Supabase schema or finance logic.
+Deep links:
+- `#/dashboard`
+- `#/fleet`
+- `#/service`
+- `#/rent`
+- `#/expenses`
+- `#/calendar`
+- `#/documents`
+- `#/analytics`
+- `#/company`
+- `#/data`
+- `#/car/<car-id>`
+- `#/car/<car-id>/finance`
+- `#/car/<car-id>/history`
+- `#/car/<car-id>/documents`
+- `#/car/<car-id>/damages`
+
+Behavior:
+- Desktop URL changes as the user navigates.
+- Browser Back/Forward reopens the matching FleetPilot screen.
+- Refresh keeps the current deep-linked page/car.
+- Mobile UI remains unchanged, but an SMS deep link opens the requested page/car.
+- Car routes also accept an exact registration plate in place of the internal car id.
+- Car profile has a "Скопировать ссылку" button.
+- Hash routing requires no Cloudflare `_redirects` and does not change Supabase.
 - No SQL required.

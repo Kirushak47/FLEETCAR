@@ -1210,6 +1210,128 @@ function driverAssignmentControl(member){
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
  </select>`
 }
+
+/* =========================================================
+   FleetPilot V11.3.5 — Deep Links
+   Uses hash routes so Cloudflare always serves index.html.
+   ========================================================= */
+const FLEETPILOT_ROUTES={
+ dashboardPage:"dashboard",
+ fleetPage:"fleet",
+ repairsPage:"service",
+ paymentsPage:"rent",
+ expensesPage:"expenses",
+ documentsPage:"documents",
+ calendarPage:"calendar",
+ analyticsPage:"analytics",
+ companyPage:"company",
+ dataPage:"data",
+ attentionPage:"attention",
+ searchPage:"search"
+};
+const FLEETPILOT_ROUTE_PAGES=Object.fromEntries(
+ Object.entries(FLEETPILOT_ROUTES).map(([page,route])=>[route,page])
+);
+const FLEETPILOT_CAR_TABS=new Set(["info","finance","history","documents","damages"]);
+let fleetPilotRouteReady=false;
+let fleetPilotApplyingRoute=false;
+
+function fleetPilotHash(route){
+ return `#/${String(route||"dashboard").replace(/^\/+/,"")}`
+}
+function fleetPilotCurrentRoute(){
+ return decodeURIComponent(String(location.hash||"").replace(/^#\/?/,""))
+}
+function fleetPilotSetRoute(route,{replace=false}={}){
+ if(!fleetPilotRouteReady||fleetPilotApplyingRoute)return;
+ const hash=fleetPilotHash(route);
+ if(location.hash===hash)return;
+ const url=`${location.pathname}${location.search}${hash}`;
+ try{
+  history[replace?"replaceState":"pushState"]({fleetpilot:true},"",url)
+ }catch{
+  location.hash=hash
+ }
+}
+function fleetPilotRouteForPage(pageId){
+ return FLEETPILOT_ROUTES[pageId]||"dashboard"
+}
+function fleetPilotCarRoute(carId,tab="info"){
+ const safeId=encodeURIComponent(String(carId||""));
+ const safeTab=FLEETPILOT_CAR_TABS.has(tab)?tab:"info";
+ return safeTab==="info"?`car/${safeId}`:`car/${safeId}/${safeTab}`
+}
+function fleetPilotFindCar(routeId){
+ const decoded=decodeURIComponent(String(routeId||""));
+ const normalized=decoded.trim().toLowerCase();
+ return db.cars.find(c=>String(c.id)===decoded)
+  ||db.cars.find(c=>String(c.plate||"").trim().toLowerCase()===normalized)
+  ||null
+}
+function fleetPilotApplyRoute({replaceInvalid=true}={}){
+ const route=fleetPilotCurrentRoute();
+ if(!route){
+  fleetPilotApplyingRoute=true;
+  try{showPage("dashboardPage")}finally{fleetPilotApplyingRoute=false}
+  fleetPilotSetRoute("dashboard",{replace:true});
+  return
+ }
+
+ const parts=route.split("/").filter(Boolean);
+ const root=parts[0];
+
+ fleetPilotApplyingRoute=true;
+ try{
+  if(root==="car"){
+   const target=fleetPilotFindCar(parts[1]);
+   const tab=FLEETPILOT_CAR_TABS.has(parts[2])?parts[2]:"info";
+   if(target){
+    openCar(target.id,tab);
+    return
+   }
+   toast("Автомобиль по ссылке не найден");
+   showPage("fleetPage");
+   if(replaceInvalid)setTimeout(()=>fleetPilotSetRoute("fleet",{replace:true}),0);
+   return
+  }
+
+  const pageId=FLEETPILOT_ROUTE_PAGES[root];
+  if(pageId&&document.getElementById(pageId)){
+   showPage(pageId);
+   return
+  }
+
+  showPage("dashboardPage");
+  if(replaceInvalid)setTimeout(()=>fleetPilotSetRoute("dashboard",{replace:true}),0)
+ }finally{
+  fleetPilotApplyingRoute=false
+ }
+}
+function initializeFleetPilotDeepLinks(){
+ fleetPilotRouteReady=true;
+ fleetPilotApplyRoute();
+}
+function copyFleetPilotLink(route){
+ const url=`${location.origin}${location.pathname}${location.search}${fleetPilotHash(route)}`;
+ if(navigator.clipboard?.writeText){
+  navigator.clipboard.writeText(url).then(()=>toast("Ссылка скопирована")).catch(()=>prompt("Скопируйте ссылку",url))
+ }else{
+  prompt("Скопируйте ссылку",url)
+ }
+}
+function copyCurrentCarLink(carId,tab="info"){
+ copyFleetPilotLink(fleetPilotCarRoute(carId,tab))
+}
+window.copyFleetPilotLink=copyFleetPilotLink;
+window.copyCurrentCarLink=copyCurrentCarLink;
+
+window.addEventListener("popstate",()=>{
+ if(fleetPilotRouteReady)fleetPilotApplyRoute({replaceInvalid:false})
+});
+window.addEventListener("hashchange",()=>{
+ if(fleetPilotRouteReady&&!fleetPilotApplyingRoute)fleetPilotApplyRoute({replaceInvalid:false})
+});
+
 function showPage(id){
  applyEnterpriseAccess();
  if(!enterpriseCanOpen(id)){
@@ -1217,6 +1339,9 @@ function showPage(id){
   id="dashboardPage"
  }
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
+ if(id!=="carPage"&&fleetPilotRouteReady&&!fleetPilotApplyingRoute){
+  fleetPilotSetRoute(fleetPilotRouteForPage(id))
+ }
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
@@ -5142,6 +5267,9 @@ function carTabButton(carId,key,label,activeTab){
 }
 
 function openCar(id,activeTab="info"){
+ if(fleetPilotRouteReady&&!fleetPilotApplyingRoute){
+  fleetPilotSetRoute(fleetPilotCarRoute(id,activeTab))
+ }
  const run=()=>{
   renderCarProfile(id,activeTab);
   requestAnimationFrame(()=>{
@@ -5170,7 +5298,7 @@ function renderCarProfile(id,activeTab="info"){
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
- $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="copyCurrentCarLink('${c.id}','${activeTab}')">🔗 Скопировать ссылку</button><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
  if(activeTab==="history")loadVehicleHandoverHistory(c.id);
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
@@ -5748,7 +5876,7 @@ $("#eraseAllData").onclick=()=>{
  showPage("fleetPage");
  toast("Все данные удалены")
 };
-showPage("fleetPage");
+initializeFleetPilotDeepLinks();
 
 
 /* FleetPilot V7.5.4 — final DOM boot guard */
