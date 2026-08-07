@@ -43,6 +43,87 @@ const seed={settings:{currency:"PLN",tax:{vat:"no",method:"ryczalt",ryczaltRate:
  {id:"c1",modelKey:"toyota-prius-3",year:2013,plate:"WA 1234A",vin:"",tenant:"Иван",status:"active",mileage:245620,oilInterval:10000,lastOil:240000,weeklyRent:700,insurance:addDays(today(),90),inspection:addDays(today(),180),history:[{date:today(),value:245620}]},
  {id:"c2",modelKey:"skoda-octavia",year:2020,plate:"WZ 5678K",vin:"",tenant:"Александр",status:"active",mileage:178900,oilInterval:15000,lastOil:165000,weeklyRent:800,insurance:addDays(today(),18),inspection:addDays(today(),40),history:[{date:today(),value:178900}]}
 ],repairs:[],payments:[],expenses:[],documents:[]};
+
+const demoSeed=(()=>{
+ const d=(n)=>addDays(today(),n);
+ const cars=[
+  {id:"d1",modelKey:"toyota-prius-3",year:2017,plate:"WX 4821P",tenant:"Алексей",status:"active",city:"Warszawa",mileage:286420,oilInterval:10000,lastOil:279800,weeklyRent:760,insurance:d(14),inspection:d(92)},
+  {id:"d2",modelKey:"toyota-auris",year:2016,plate:"WA 7316K",tenant:"Михаил",status:"active",city:"Warszawa",mileage:241880,oilInterval:10000,lastOil:233000,weeklyRent:720,insurance:d(164),inspection:d(22)},
+  {id:"d3",modelKey:"toyota-corolla",year:2020,plate:"WZ 9054C",tenant:"Олег",status:"active",city:"Warszawa",mileage:164230,oilInterval:15000,lastOil:154000,weeklyRent:850,insurance:d(244),inspection:d(187)},
+  {id:"d4",modelKey:"skoda-octavia-3",year:2019,plate:"WE 1187L",tenant:"Андрей",status:"repair",city:"Warszawa",mileage:198760,oilInterval:15000,lastOil:188500,weeklyRent:820,insurance:d(61),inspection:d(116)},
+  {id:"d5",modelKey:"kia-ceed",year:2018,plate:"WU 4428N",tenant:"Игорь",status:"active",city:"Warszawa",mileage:173910,oilInterval:15000,lastOil:161000,weeklyRent:740,insurance:d(-3),inspection:d(203)},
+  {id:"d6",modelKey:"hyundai-ioniq",year:2019,plate:"WI 6305H",tenant:"Владимир",status:"active",city:"Warszawa",mileage:152480,oilInterval:15000,lastOil:147200,weeklyRent:790,insurance:d(118),inspection:d(9)},
+  {id:"d7",modelKey:"ford-mondeo",year:2017,plate:"WB 2746F",tenant:"Сергей",status:"free",city:"Warszawa",mileage:226540,oilInterval:15000,lastOil:214000,weeklyRent:700,insurance:d(321),inspection:d(72)},
+  {id:"d8",modelKey:"toyota-camry",year:2018,plate:"WN 8862T",tenant:"Дмитрий",status:"active",city:"Warszawa",mileage:189330,oilInterval:10000,lastOil:184000,weeklyRent:880,insurance:d(47),inspection:d(154)},
+  {id:"d9",modelKey:"nissan-leaf",year:2020,plate:"WW 3901E",tenant:"Роман",status:"repair",city:"Warszawa",mileage:118760,oilInterval:30000,lastOil:104000,weeklyRent:810,insurance:d(209),inspection:d(28)},
+  {id:"d10",modelKey:"skoda-fabia-combi",year:2018,plate:"WF 5173S",tenant:"Павел",status:"active",city:"Warszawa",mileage:207140,oilInterval:15000,lastOil:195000,weeklyRent:690,insurance:d(83),inspection:d(-8)}
+ ].map(c=>({...c,vin:"",inFleet:true,favorite:["d1","d3"].includes(c.id),history:[{date:d(-35),value:c.mileage-1820},{date:d(-14),value:c.mileage-720},{date:today(),value:c.mileage}]}));
+ const repairs=[
+  ["r1","d1","Замена масла и фильтров",d(5),680,"planned","Auto Service Centrum"],
+  ["r2","d2","Передние тормозные колодки",d(2),540,"parts","Moto Expert"],
+  ["r3","d4","Диагностика гибридной системы",d(0),1450,"repair","Hybrid Lab"],
+  ["r4","d4","Подшипник ступицы",d(3),820,"service","Hybrid Lab"],
+  ["r5","d5","Продление страховки / осмотр",d(1),0,"planned",""],
+  ["r6","d6","Техосмотр",d(7),99,"planned","Stacja Kontroli"],
+  ["r7","d8","Кондиционер — обслуживание",d(11),360,"planned","CoolCar"],
+  ["r8","d9","Диагностика подвески",d(-1),280,"repair","EV Garage"],
+  ["r9","d10","Техосмотр",d(-8),99,"planned","Stacja Kontroli"],
+  ["r10","d3","Замена шин",d(19),1600,"planned","Tire Point"],
+  ["r11","d7","Замена аккумулятора 12V",d(-18),620,"done","Auto Service Centrum"],
+  ["r12","d1","Замена задних колодок",d(-27),490,"done","Moto Expert"],
+  ["r13","d3","Сервис кондиционера",d(-41),310,"done","CoolCar"],
+  ["r14","d8","Замена масла",d(-33),590,"done","Auto Service Centrum"]
+ ].map(([id,carId,title,date,planned,status,service])=>({id,carId,title,date,planned,actual:status==="done"?planned:0,status,service,note:status==="done"?"Выполнено без замечаний":"Демонстрационная сервисная задача"}));
+ const categories=["repair","insurance","inspection","tires","leasing","other"];
+ const expenses=[
+  ["e1","d1","Плановое ТО",d(5),680,"planned","repair"],["e2","d2","Тормозные колодки",d(2),540,"planned","repair"],
+  ["e3","d5","Страховка OC",d(1),1840,"planned","insurance"],["e4","d6","Техосмотр",d(7),99,"planned","inspection"],
+  ["e5","d3","Комплект шин",d(19),1600,"planned","tires"],["e6","d8","Лизинговый платёж",d(12),1350,"planned","leasing"],
+  ["e7","d9","Диагностика подвески",d(0),280,"planned","repair"],["e8","d10","Техосмотр",d(0),99,"planned","inspection"],
+  ["e9","d4","Ступичный подшипник",d(3),820,"planned","repair"],["e10","d7","Подготовка к выдаче",d(4),240,"planned","other"],
+  ["e11","d1","Мойка и химчистка",d(-8),180,"paid","other"],["e12","d4","Диагностика HV",d(-2),450,"paid","repair"],
+  ["e13","d8","Масло и фильтры",d(-33),590,"paid","repair"],["e14","d2","Шиномонтаж",d(-15),180,"paid","tires"]
+ ].map(([id,carId,title,date,amount,status,category])=>({id,carId,title,date,amount,status,category,note:"Демо-расход"}));
+ const payments=[];
+ cars.forEach((c,ci)=>{
+  for(let w=0;w<5;w++){
+   const to=d(-1-w*7),from=d(-7-w*7),expected=Number(c.weeklyRent||0);
+   let received=expected;
+   if(w===0&&ci===1)received=expected-220;
+   if(w===0&&ci===4)received=0;
+   if(w===1&&ci===8)received=expected-100;
+   payments.push({id:`p-${c.id}-${w}`,carId:c.id,tenant:c.tenant,timing:"arrears",from,to,expected,received,date:to,accrualMonth:to.slice(0,7),week:"",note:received<expected?"Есть задолженность":"Оплачено"});
+  }
+ });
+ const documents=cars.flatMap((c,i)=>[
+  {id:`doc-ins-${c.id}`,carId:c.id,type:"insurance",title:"Страховка OC/AC",number:`POL-${26001+i}`,expiry:c.insurance,cost:1550+i*95,paymentMode:"full",installments:[],note:"Демо-полис"},
+  {id:`doc-to-${c.id}`,carId:c.id,type:"inspection",title:"Технический осмотр",number:`TO-${4601+i}`,expiry:c.inspection,cost:99,paymentMode:"full",installments:[],note:"Демо-документ"}
+ ]);
+ const requestData=[
+  ["q1","d1","engine","Загорелся Check Engine, машина едет нормально.","service","new",-1],
+  ["q2","d1","brakes","При торможении появился писк спереди.","normal","accepted",-3],
+  ["q3","d2","suspension","Стук на мелких неровностях справа.","service","new",-2],
+  ["q4","d2","tires","Медленно спускает заднее левое колесо.","normal","new",-5],
+  ["q5","d3","electric","Периодически появляется сообщение о сервисе.","normal","accepted",-4],
+  ["q6","d4","engine","Ошибка гибридной системы, требуется диагностика.","critical","accepted",-1],
+  ["q7","d4","other","Гул увеличивается после 60 км/ч.","service","new",-2],
+  ["q8","d5","other","Заканчивается страховка, нужна запись.","service","new",-6],
+  ["q9","d5","brakes","Вибрация на руле при торможении.","service","accepted",-3],
+  ["q10","d6","other","Нужно пройти техосмотр до конца недели.","service","new",-1],
+  ["q11","d6","climate","Кондиционер стал хуже охлаждать.","normal","new",-8],
+  ["q12","d7","electric","После простоя слабый запуск 12V.","service","accepted",-10],
+  ["q13","d7","body","Царапина на заднем бампере.","normal","new",-9],
+  ["q14","d8","climate","Неприятный запах при включении кондиционера.","normal","new",-5],
+  ["q15","d8","engine","Подошёл срок замены масла.","service","accepted",-4],
+  ["q16","d9","suspension","Стук сзади и автомобиль ведёт вправо.","critical","new",-1],
+  ["q17","d9","electric","Иногда не начинается зарядка с первого раза.","service","accepted",-2],
+  ["q18","d10","other","Техосмотр просрочен.","critical","new",-1],
+  ["q19","d10","electric","Не горит правая лампа ближнего света.","service","new",-3],
+  ["q20","d3","tires","Пора менять передние шины, протектор низкий.","service","new",-7]
+ ];
+ const serviceRequests=requestData.map(([id,car_id,category,description,urgency,status,age],i)=>({id,car_id,category,description,urgency,status,mileage:cars.find(c=>c.id===car_id)?.mileage||0,driver_email:`driver${i+1}@demo.fleetpilot`,created_at:new Date(d(age)+"T09:30:00").toISOString(),updated_at:new Date(d(age)+"T10:00:00").toISOString(),manager_comment:""}));
+ return {settings:{currency:"PLN",tax:{vat:"yes",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:2100,deductVatCosts:true}},cars,repairs,payments,expenses,documents,serviceRequests,deposits:[{id:"dep1",carId:"d1",tenant:"Алексей",date:d(-120),amount:500,note:"Кауция"},{id:"dep2",carId:"d1",tenant:"Алексей",date:d(-90),amount:300,note:"Доплата"}],timeline:[],damages:[],activity:[]};
+})();
 function isFleetDatabase(value){
  return value&&typeof value==="object"&&Array.isArray(value.cars)&&Array.isArray(value.repairs)&&Array.isArray(value.payments)&&Array.isArray(value.expenses)&&Array.isArray(value.documents)
 }
@@ -95,6 +176,7 @@ db.deposits=Array.isArray(db.deposits)?db.deposits:[];
 db.timeline=db.timeline||[];
 db.damages=db.damages||[];
 db.activity=db.activity||[];
+db.serviceRequests=Array.isArray(db.serviceRequests)?db.serviceRequests:[];
 db.damages.forEach(d=>{
  if(!Array.isArray(d.photos))d.photos=d.photo?[d.photo]:[];
  if(!d.stage)d.stage="before";
@@ -129,9 +211,16 @@ window.getFleetPilotDatabase=()=>structuredClone(db);
 window.createFleetPilotEmptyDatabase=()=>({
  settings:structuredClone(seed.settings),
  cars:[],repairs:[],payments:[],expenses:[],documents:[],
- deposits:[],timeline:[],damages:[],activity:[]
+ deposits:[],timeline:[],damages:[],activity:[],serviceRequests:[]
 });
-window.createFleetPilotDemoDatabase=()=>structuredClone(seed);
+window.createFleetPilotDemoDatabase=()=>structuredClone(demoSeed);
+window.updateFleetPilotDemoServiceRequest=(requestId,patch={})=>{
+ const row=(db.serviceRequests||[]).find(x=>String(x.id)===String(requestId));
+ if(!row)return null;
+ Object.assign(row,patch,{updated_at:new Date().toISOString()});
+ save();
+ return structuredClone(row)
+};
 window.clearFleetPilotLocalDatabase=()=>{
  const empty=window.createFleetPilotEmptyDatabase();
  localStorage.setItem(DATA_KEY,JSON.stringify(empty));
@@ -1054,7 +1143,7 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
  const repairRows=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&!["done","cancelled"].includes(String(r.status||"")));
  const total=requestRows.length+repairRows.length;
  if(!total)return"";
- return `<button type="button" class="car-service-alert-icon photo-task-indicator ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span>🔧</span><b>${total}</b></button>`
+ return `<button type="button" class="car-service-alert-icon photo-task-indicator ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span class="service-wrench-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a5 5 0 0 0-6.4 6.4L3 18l3 3 5.3-5.3a5 5 0 0 0 6.4-6.4l-3 3-3-3 3-3Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>${total}</b></button>`
 }
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
@@ -1988,7 +2077,7 @@ async function importBackupFile(file){
  await writeAutoBackup(new Date().toISOString());
  const normalized=structuredClone(imported);
  normalized.settings=normalized.settings||structuredClone(seed.settings);
- for(const key of ["cars","repairs","payments","expenses","documents","deposits","timeline","damages","activity"]){
+ for(const key of ["cars","repairs","payments","expenses","documents","deposits","timeline","damages","activity","serviceRequests"]){
   if(!Array.isArray(normalized[key]))normalized[key]=[]
  }
  normalized.cars.forEach(c=>{
@@ -2207,7 +2296,8 @@ function deleteDamage(id){
 
 
 function logActivity(action,entity="",details="",carId=""){
- db.activity=db.activity||[];db.activity.push({id:uid(),date:new Date().toISOString(),action,entity,details,carId});if(db.activity.length>1000)db.activity=db.activity.slice(-1000)
+ db.activity=db.activity||[];
+db.serviceRequests=Array.isArray(db.serviceRequests)?db.serviceRequests:[];db.activity.push({id:uid(),date:new Date().toISOString(),action,entity,details,carId});if(db.activity.length>1000)db.activity=db.activity.slice(-1000)
 }
 function futureFinancialData(daysAhead=30){
  const start=new Date(),end=new Date();end.setDate(end.getDate()+daysAhead);

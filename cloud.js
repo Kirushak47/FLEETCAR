@@ -211,6 +211,7 @@ async function renderWorkspaceOnboarding(){
  }
 }
 function enterpriseRole(){
+ if(isDemo())return"owner";
  return membership?.role||profile?.role||"user"
 }
 function hasEnterpriseRole(...roles){
@@ -735,10 +736,10 @@ async function signOut(){
 }
 function startDemo(reset=false){
  localStorage.setItem(DEMO_KEY,"1");
- if(reset||!localStorage.getItem("fleetpilot.demo.initialized.v1")){
+ if(reset||!localStorage.getItem("fleetpilot.demo.initialized.v2")){
   const demo=window.createFleetPilotDemoDatabase?.();
   if(demo)window.replaceFleetPilotDatabase(demo);
-  localStorage.setItem("fleetpilot.demo.initialized.v1","1")
+  localStorage.setItem("fleetpilot.demo.initialized.v2","1")
  }
  location.reload()
 }
@@ -1035,12 +1036,14 @@ async function getMyDriverRepairRequests(){
  return data||[]
 }
 async function getWorkspaceDriverRepairRequests(){
+ if(isDemo())return window.getFleetPilotDatabase?.().serviceRequests||[];
  if(!client||!membership)return[];
  const {data,error}=await client.rpc("get_workspace_driver_repair_requests");
  if(error)throw error;
  return data||[]
 }
 async function updateDriverRepairRequest(requestId,status,comment=""){
+ if(isDemo()){window.updateFleetPilotDemoServiceRequest?.(requestId,{status,manager_comment:String(comment||"").trim()});return}
  if(!client||!membership)throw new Error("Workspace недоступен");
  const {error}=await client.rpc("update_driver_repair_request",{
   request_id_value:requestId,
@@ -1126,6 +1129,7 @@ async function getVehicleHandoverHistory(carId){
  return data||[]
 }
 async function linkDriverRequestRepair(requestId,repairId,status,comment=""){
+ if(isDemo()){window.updateFleetPilotDemoServiceRequest?.(requestId,{status,linked_repair_id:String(repairId),manager_comment:String(comment||"").trim()});return}
  if(!client||!membership)throw new Error("Workspace недоступен");
  const {error}=await client.rpc("link_driver_request_repair",{request_id_value:requestId,linked_repair_id_value:String(repairId),request_status_value:String(status),manager_comment_value:String(comment||"").trim()||null});
  if(error)throw error

@@ -8190,3 +8190,9 @@ html[data-theme="dark"] .repair-linked-finance-info{
 .service-car-group:has(.service-car-task-list[hidden]) .service-car-group-head{
  border-bottom:0;
 }
+
+
+/* FleetPilot V11.4 Demo Showcase — professional service task icon */
+.service-wrench-icon{display:grid!important;place-items:center!important;width:18px!important;height:18px!important;line-height:0!important;transform:none!important}
+.service-wrench-icon svg{display:block;width:18px;height:18px}
+.car-service-alert-icon.photo-task-indicator .service-wrench-icon{font-size:0!important}
