@@ -19,6 +19,67 @@ let workspaceDriverAssignments={};
 let workspaceDriverAssignmentRows=[];
 let workspaceDriverDirectory=[];
 
+
+/* =========================================================
+   V18.4 — Single Driver Assignment Pipeline
+   Every entry point (new car, car profile, Drivers registry) must call this.
+   Assignment never means acceptance. Acceptance is only created by the driver
+   after mileage + photo in Driver Portal.
+   ========================================================= */
+async function assignVehicleDriverUnified(driverUserId,carId,options={}){
+ const uid=String(driverUserId||"").trim();
+ const cid=String(carId||"").trim();
+ if(!uid)throw new Error("Водитель не выбран");
+ if(!cid)throw new Error("Автомобиль не выбран");
+ await loadWorkspaceDriverDirectory?.();
+ const member=(workspaceDriverDirectory||[]).find(x=>String(x.user_id||"")===uid)||null;
+ const target=car(cid);if(!target)throw new Error("Автомобиль не найден");
+ // One account driver = one current vehicle. Clear stale local links first.
+ fleetCars().forEach(c=>{
+  if(String(c.driverUserId||"")===uid&&String(c.id)!==cid){
+   c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";
+   if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+  }
+ });
+ // If the target has another account driver, detach that assignment first.
+ const previous=workspaceDriverForCar(target);
+ if(previous?.userId&&String(previous.userId)!==uid&&window.FleetPilotCloud?.assignDriverVehicle){
+  await window.FleetPilotCloud.assignDriverVehicle(previous.userId,null);
+ }
+ if(window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(uid,cid);
+ target.driverUserId=uid;
+ target.driverEmail=workspaceDriverEmail(member)||options.email||"";
+ target.driverName=workspaceDriverName(member)||options.name||target.driverEmail||"Водитель";
+ target.driverPhone=workspaceDriverPhone(member)||options.phone||"";
+ target.driverAssignmentSource="account";
+ target.tenant=target.driverName||target.driverEmail;
+ // Critical: assigning/reassigning ALWAYS starts a fresh pending acceptance.
+ target.driverAcceptedAt="";
+ target.driverAssignedAt=new Date().toISOString();
+ save?.();
+ await loadWorkspaceDriverAssignments?.();
+ renderFleet?.();
+ renderDriversRegistry?.();
+ if(selectedCarId&&String(selectedCarId)===cid&&$("#carPage")?.classList.contains("active"))openCar(cid);
+ window.dispatchEvent(new CustomEvent("fleetpilot:driver-assignment-changed",{detail:{driverUserId:uid,carId:cid,status:"pending"}}));
+ return target
+}
+async function unassignVehicleDriverUnified(driverUserId,carId=""){
+ const uid=String(driverUserId||"").trim();
+ if(uid&&window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(uid,null);
+ fleetCars().forEach(c=>{
+  if((uid&&String(c.driverUserId||"")===uid)||(carId&&String(c.id)===String(carId))){
+   c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignedAt="";
+   if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+  }
+ });
+ save?.();
+ await loadWorkspaceDriverAssignments?.();
+ renderFleet?.();renderDriversRegistry?.();
+}
+window.assignVehicleDriverUnified=assignVehicleDriverUnified;
+window.unassignVehicleDriverUnified=unassignVehicleDriverUnified;
+
 function normalizeDriverIdentity(value){return String(value||"").trim().toLowerCase()}
 function workspaceDriverEmail(member){return member?.profiles?.email||member?.email||member?.driver_email||""}
 function driverMetaStorageKey(){return `fleetpilot.driver.meta.${window.FleetPilotCloud?.workspace?.id||"default"}`}
@@ -104,7 +165,7 @@ function renderCarDriverPicker(c=null){
   unlink.onclick=async()=>{
    if(!c||!confirm("Отвязать водителя от этого автомобиля? История выдач останется сохранена."))return;
    try{
-    if(current?.userId&&window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(current.userId,null);
+    if(current?.userId&&window.unassignVehicleDriverUnified)await window.unassignVehicleDriverUnified(current.userId,c.id);
     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignmentSource="";c.tenant="";
     if(c.status==="active"||c.status==="repair")c.status="free";
     save?.();
@@ -779,7 +840,10 @@ async function loadWorkspaceDriverAssignments(){
     c.driverName=assignment.driver_name||workspaceDriverName(member)||c.driverName||"";
     c.driverAssignmentSource="account";
     c.tenant=c.driverName||c.driverEmail||c.tenant||"";
-    if(assignment.active_handover_id||assignment.handover_id||assignment.issue_at)c.driverAcceptedAt=assignment.issue_at||c.driverAcceptedAt||new Date().toISOString();
+    // V18.4: assignment/issue_at alone is NOT acceptance. Only an explicit
+    // completed handover can activate the vehicle.
+    const accepted=Boolean(assignment.active_handover_id||assignment.handover_id||assignment.accepted_at||assignment.vehicle_accepted_at||(assignment.status==="issued"&&assignment.issue_mileage!=null&&Number(assignment.issue_photos_count||0)>0));
+    c.driverAcceptedAt=accepted?(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString()):"";
    }else if(c.driverUserId){
     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";
     if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource="";if(c.status==="active")c.status="free"}
@@ -796,3 +860,41 @@ function driverAssignmentControl(member){
  </select>`
 }
 
+
+
+/* V18.4 — bridge the existing Add/Edit car form into the same assignment API. */
+(function installUnifiedCarAssignmentBridge(){
+ function install(){
+  const form=$("#carForm");if(!form||form.dataset.driverAssignmentBridge==="1")return;
+  form.dataset.driverAssignmentBridge="1";
+  form.addEventListener("submit",()=>{
+   const snapshot={
+    carId:String($("#carId")?.value||""),
+    plate:String($("#carPlate")?.value||"").trim(),
+    driverUserId:String($("#carDriverUserId")?.value||"").trim(),
+    manualName:String($("#carDriverManualName")?.value||$("#carTenant")?.value||"").trim(),
+    email:String($("#carDriverEmail")?.value||"").trim(),
+    phone:String($("#carDriverPhone")?.value||"").trim()
+   };
+   // Run after the original car save handler creates/updates the vehicle.
+   setTimeout(async()=>{
+    const target=(snapshot.carId&&car(snapshot.carId))||fleetCars().find(c=>String(c.plate||"").trim()===snapshot.plate);
+    if(!target)return;
+    try{
+     if(snapshot.driverUserId){
+      await assignVehicleDriverUnified(snapshot.driverUserId,target.id,{name:snapshot.manualName,email:snapshot.email,phone:snapshot.phone});
+      toast("Водитель назначен · ожидаем подтверждения")
+     }else if(snapshot.manualName){
+      // Manual driver has no acceptance flow/account.
+      target.driverUserId="";target.driverName=snapshot.manualName;target.driverEmail=snapshot.email;target.driverPhone=snapshot.phone;
+      target.driverAssignmentSource="manual";target.driverAcceptedAt="";target.tenant=snapshot.manualName;save?.();renderFleet?.();renderDriversRegistry?.();
+     }else if(target.driverUserId){
+      await unassignVehicleDriverUnified(target.driverUserId,target.id)
+     }
+    }catch(error){toast(error.message||String(error))}
+   },180)
+  },true)
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
+ setTimeout(install,700)
+})();

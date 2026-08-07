@@ -248,7 +248,7 @@ function toast(t){const x=$("#toast");x.textContent=t;x.classList.add("show");se
 function fleetCars(){return db.cars.filter(c=>c.inFleet!==false&&!c.archived)}
 function archivedCars(){return db.cars.filter(c=>c.inFleet!==false&&c.archived)}
 function opts(selected=""){return fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
-function statusText(s){return {active:"На линии",repair:"В ремонте",free:"Свободен"}[s]||s}
+function statusText(s){return {active:"На линии",pending:"Ожидает приёмки",repair:"В ремонте",free:"Свободен"}[s]||s}
 function recalculateVehicleMaintenance(carId){
  const c=car(carId);if(!c)return;
  const done=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&r.status==="done");
@@ -282,7 +282,14 @@ function inferRepairServiceType(repair={}){
  return"other"
 }
 function vehicleUsageStatus(c){
- return (c?.driverUserId||c?.tenant||c?.driverEmail)?"active":"free"
+ // V18.4: an account assignment is not an active vehicle until the driver
+ // completes the acceptance flow (mileage + photo). Manual drivers do not
+ // have a Driver Portal, so a manual assignment is treated as active.
+ const hasAccount=Boolean(c?.driverUserId);
+ const hasManual=Boolean(!hasAccount&&(c?.tenant||c?.driverEmail));
+ if(hasAccount)return c?.driverAcceptedAt?"active":"pending";
+ if(hasManual)return"active";
+ return"free"
 }
 function vehicleServiceState(c){
  const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);

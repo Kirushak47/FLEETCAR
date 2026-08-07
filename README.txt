@@ -1,58 +1,25 @@
-FleetPilot V18.3 — Driver State Model & Acceptance Fix
+FleetPilot V18.4 — Unified Driver Assignment & Acceptance Flow
 
-ЧТО ИСПРАВЛЕНО
+WHAT CHANGED
+- One single driver-assignment pipeline is now used from:
+  • Add vehicle
+  • Edit vehicle / Vehicle Profile
+  • Company → Drivers
+  • Create Driver → assign vehicle
+- Assigning a vehicle NEVER means that the driver accepted it.
+- Account driver lifecycle is now:
+  Assigned → Waiting for acceptance → Driver enters mileage + uploads photo → Accepted → On line.
+- On every new/re-assignment, driverAcceptedAt is cleared and the vehicle returns to Waiting for acceptance.
+- The Drivers Registry and Vehicle Profile use the same acceptance check.
+- issue_at alone no longer marks a vehicle as accepted.
+- Vehicle usage status now supports "Waiting for acceptance".
+- Manual driver entries remain supported and do not require Driver Portal acceptance.
+- Removing/replacing a driver uses the same shared unassignment logic.
 
-1. Статусы автомобиля разделены на два независимых состояния.
-   Использование:
-   - На линии — есть назначенный водитель.
-   - Свободно — водитель не назначен.
-
-   Сервис:
-   - В сервисе — автомобиль реально передан/принят сервисом или находится в активном ремонте.
-   - Требует ремонта — есть активная незакрытая задача, но автомобиль ещё не переведён в сервис.
-   - Сервис OK — активных сервисных задач нет.
-
-   Примеры:
-   - водитель + нет сервиса = На линии + Сервис OK
-   - водитель + сервис = На линии + В сервисе
-   - без водителя + требуется ремонт = Свободно + Требует ремонта
-   - без водителя + сервис = Свободно + В сервисе
-
-2. Добавлены отдельные цветные индикаторы использования и сервиса в Автопарке и профиле автомобиля.
-
-3. Фильтр «Ремонт» в Автопарке теперь смотрит на сервисное состояние, а не заменяет основной статус автомобиля.
-
-4. Сводка Автопарка показывает количество автомобилей «В сервисе» отдельно от «На линии».
-
-5. Driver Portal: водитель больше не получает ложное «У вашей роли нет доступа» при переходе со старой/чужой CRM-ссылки. Любая CRM-страница для роли Driver перенаправляется в Driver Portal без показа ошибки доступа.
-
-6. Принятие автомобиля:
-   - назначение автомобиля НЕ считается принятием;
-   - после назначения статус остаётся «Ожидает приёмки»;
-   - водитель должен открыть Driver Portal;
-   - указать пробег;
-   - добавить минимум одну фотографию;
-   - подтвердить приём;
-   - только после успешной передачи появляется «Автомобиль принят» и машина считается активной у водителя.
-
-7. Защита от ложного «vehicle is already issued»: если backend говорит, что автомобиль уже выдан, но нет подтверждённого пробега и фото передачи, CRM не считает автомобиль принятым.
-
-8. Сохраняются фиксы V18.1/V18.2:
-   - проверка пробега при возврате;
-   - проверка пробега в заявке о неисправности;
-   - отвязка водителя;
-   - редактирование данных водителя только компанией;
-   - имя, фамилия, пол, телефон, город при приглашении;
-   - синхронизация реестра водителей и автомобиля.
-
-ЗАМЕНИТЬ В КОРНЕ GITHUB
+FILES TO REPLACE
 - index.html
 - sw.js
-- cloud.js
 - fp-core-data.js
-- fp-roles-company.js
 - fp-driver-portal.js
-- fp-router-navigation.js
-- fp-fleet.js
-- fp-calendar-vehicle.js
+- fp-roles-company.js
 - fp-current-ui.css
