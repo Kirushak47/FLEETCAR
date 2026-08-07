@@ -5157,11 +5157,20 @@ const SERVICE_EXPENSE_CATEGORIES=new Set(["repair","tires","inspection"]);
 
 function plannedServiceExpenses(carId=null){
  return (db.expenses||[])
-  .filter(x=>
-   x.status==="planned"&&
-   (SERVICE_EXPENSE_CATEGORIES.has(String(x.category||""))||Boolean(x.linkedRepairId))&&
-   (!carId||String(x.carId)===String(carId))
-  )
+  .filter(x=>{
+   const linkedRepair=x.linkedRepairId
+    ?(db.repairs||[]).find(r=>String(r.id)===String(x.linkedRepairId))
+    :null;
+
+   // Once a planned service expense/request has been converted into a real
+   // service task, the repair becomes the operational record. Keep the
+   // expense in Finance, but do not show the same work twice in Service.
+   if(linkedRepair)return false;
+
+   return x.status==="planned"&&
+    SERVICE_EXPENSE_CATEGORIES.has(String(x.category||""))&&
+    (!carId||String(x.carId)===String(carId));
+  })
   .sort((a,b)=>String(a.date||"9999-12-31").localeCompare(String(b.date||"9999-12-31")))
 }
 
@@ -6272,6 +6281,7 @@ function createOrUpdateRepairFromExpense(expense){
 
  expense.linkedRepairId=repair.id;
  expense.financeSource=expense.financeSource||"expense";
+ expense.serviceConvertedAt=expense.serviceConvertedAt||new Date().toISOString();
  const c=car(expense.carId);
  if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
  return repair
