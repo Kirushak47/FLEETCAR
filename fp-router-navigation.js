@@ -131,7 +131,9 @@ function showPage(id){
  const resolvedRole=enterpriseCurrentRole();
  // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
  if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";
- if(!enterpriseCanOpen(id)){
+ // V18.3: Driver Portal is a dedicated shell. Never run CRM access denial against its own pages.
+ const driverOwnPage=resolvedRole==="driver"&&['driverPortalPage','driverProfilePage'].includes(id);
+ if(!driverOwnPage&&!enterpriseCanOpen(id)){
   if(fleetPilotEnterpriseAccessReady)toast("У вашей роли нет доступа к этому разделу");
   const role=enterpriseCurrentRole();
   id=role==="driver"?"driverPortalPage":"dashboardPage"
@@ -380,7 +382,9 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
    const alreadyIssued=type==="issue"&&(message.includes("already issued")||message.includes("vehicle is already issued"));
    if(!alreadyIssued)throw error;
    const state=await window.FleetPilotCloud.getDriverHandoverState?.();
-   if(!state?.active_handover_id)throw error;
+   const proofMileage=Number(state?.issue_mileage);
+   const proofPhotos=Number(state?.issue_photos_count||0)||(Array.isArray(state?.issue_photos)?state.issue_photos.length:0);
+   if(!state?.active_handover_id||!Number.isFinite(proofMileage)||proofPhotos<1)throw new Error("Автомобиль назначен, но ещё не подтверждён водителем. Добавьте пробег и фото, затем подтвердите приём.");
    result=state;
   }
 

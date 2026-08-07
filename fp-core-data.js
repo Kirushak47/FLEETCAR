@@ -281,12 +281,24 @@ function inferRepairServiceType(repair={}){
  if(/страхов|insurance|oc\b|ac\b/.test(text))return"insurance";
  return"other"
 }
-function vehicleEffectiveStatus(c){
+function vehicleUsageStatus(c){
+ return (c?.driverUserId||c?.tenant||c?.driverEmail)?"active":"free"
+}
+function vehicleServiceState(c){
  const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
- const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!terminal.has(String(r.status||"").toLowerCase()));
- if(active.some(r=>["repair","parts","service","accepted","scheduled"].includes(String(r.status||"").toLowerCase())))return"repair";
- if(String(c.status||"").toLowerCase()==="repair")return (c.driverUserId||c.tenant)?"active":"free";
- return c.status|| (c.driverUserId||c.tenant?"active":"free")
+ const rows=(db.repairs||[]).filter(r=>String(r.carId)===String(c?.id)&&!terminal.has(String(r.status||"").toLowerCase()));
+ const statuses=rows.map(r=>String(r.status||"").toLowerCase());
+ if(statuses.some(s=>["service","repair","parts","accepted","scheduled"].includes(s)))return"service";
+ if(rows.length)return"needed";
+ return"none"
+}
+function vehicleServiceStatusText(c){
+ const state=vehicleServiceState(c);
+ return state==="service"?"В сервисе":state==="needed"?"Требует ремонта":"Сервис не требуется"
+}
+function vehicleEffectiveStatus(c){
+ // V18.3: usage and service are independent. Effective status is ONLY usage.
+ return vehicleUsageStatus(c)
 }
 function vehicleHealthScore(c){
  let score=100;const reasons=[];

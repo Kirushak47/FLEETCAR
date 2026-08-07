@@ -433,7 +433,7 @@ function renderFleet(){
  const source=f==="archive"
   ?archivedCars().filter(c=>selectedFleetCity==="all"||normalizedCity(c.city)===selectedFleetCity)
   :cityFilteredCars();
- const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):c.status===f)))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
+ const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();const usage=vehicleUsageStatus(c),service=vehicleServiceState(c);return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):(f==="repair"?service!=="none":usage===f))))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
  const debt=db.payments.reduce((s,p)=>s+Math.max(0,p.expected-p.received),0);
  const healthRows=cityFilteredCars().map(c=>({c,h:healthDetails(c)}));
  const fleetHealthAverage=cityFilteredCars().length?Math.round(cityFilteredCars().reduce((sum,c)=>sum+vehicleHealthScore(c).score,0)/cityFilteredCars().length):100;
@@ -444,17 +444,17 @@ function renderFleet(){
   ["🛢️ ТО скоро",healthRows.filter(x=>x.h.oilLeft>0&&x.h.oilLeft<=1500).length,"warning"],
   ["🛡️ Страховка",healthRows.filter(x=>x.h.insuranceDays>=0&&x.h.insuranceDays<=30).length,"warning"]
  ].map((x,index)=>`<button class="health-tile ${x[2]} animated-health-tile" style="--tile-index:${index}" onclick="showPage('attentionPage')"><span>${x[0]}</span><strong data-animate-value="${x[1]}" data-animate-format="integer">${x[1]}</strong></button>`).join("");
- $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>vehicleEffectiveStatus(c)==="active").length],["В ремонте",cityFilteredCars().filter(c=>vehicleEffectiveStatus(c)==="repair").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Состояние парка",fleetHealthAverage+"/100"],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+ $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>vehicleEffectiveStatus(c)==="active").length],["В сервисе",cityFilteredCars().filter(c=>vehicleServiceState(c)==="service").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Состояние парка",fleetHealthAverage+"/100"],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c),effectiveStatus=vehicleEffectiveStatus(c),healthScore=vehicleHealthScore(c),activeRepairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c),effectiveStatus=vehicleUsageStatus(c),serviceState=vehicleServiceState(c),healthScore=vehicleHealthScore(c),activeRepairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
 <div class="no-photo-hero ${effectiveStatus} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="photo-service-task-badge">${fleetServiceBadgeMarkup(c.id)}</div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-health-inline">${healthScore.score}/100</span></div>
+  <div class="hero-status-row"><span class="status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-service-indicator ${serviceState}">${serviceState==="service"?"🔧 В сервисе":serviceState==="needed"?"🔧 Требует ремонта":"✓ Сервис OK"}</span><span class="vehicle-health-inline">${healthScore.score}/100</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
@@ -479,7 +479,7 @@ function renderFleet(){
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
  <div class="hero-title">
   <h3>${m.brand} ${m.model}</h3>
-  <p>${c.plate} · ${(window.fleetDriverLabel?.(c)||c.tenant||"Без водителя")}</p><div class="fleet-driver-assignment"><span>👤</span><div><strong>${window.fleetDriverLabel?.(c)||c.tenant||"Без водителя"}</strong><small>${window.fleetDriverMeta?.(c)||"Не назначен"}</small></div></div>
+  <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
  </div>
  <div class="hero-business-metrics">
   <button type="button" class="hero-business-metric mileage" onclick="event.stopPropagation();openMileage('${c.id}')">
@@ -533,8 +533,8 @@ function renderFleet(){
   </div>
   <div class="desktop-car-identity">
     <div class="desktop-car-title-line">
-      <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${(window.fleetDriverLabel?.(c)||c.tenant)?` · ${window.fleetDriverLabel?.(c)||c.tenant}`:""}</p><small class="desktop-driver-meta">${window.fleetDriverMeta?.(c)||"Не назначен"}</small></div>
-      <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span>
+      <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
+      <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-service-indicator ${serviceState}">${serviceState==="service"?"🔧 В сервисе":serviceState==="needed"?"🔧 Требует ремонта":"✓ Сервис OK"}</span>
     </div>
     ${(()=>{
       const gps=gpsStatusForCar(c);
