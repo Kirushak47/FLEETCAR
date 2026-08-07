@@ -8246,3 +8246,99 @@ html[data-theme="dark"] .repair-linked-finance-info{
 .repair-history{display:grid;gap:0}.repair-history-row{display:grid;grid-template-columns:18px 1fr;gap:8px;position:relative;padding:5px 0}.repair-history-row>span{width:9px;height:9px;border-radius:50%;background:#6d5dfc;margin-top:4px;position:relative}.repair-history-row:not(:last-child)>span:after{content:"";position:absolute;left:4px;top:10px;width:1px;height:31px;background:var(--line,#e1e5ec)}.repair-history-row strong,.repair-history-row small{display:block}.repair-history-row strong{font-size:10px}.repair-history-row small{font-size:8px;color:var(--muted,#8991a0);margin-top:2px}.repair-task-footer{display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;background:var(--card,#fff);border-top:1px solid var(--line,#e6e8ee)}
 @media(max-width:820px){.repair-task-dialog{width:100%;max-width:none;height:100dvh;max-height:100dvh;border-radius:0}.repair-task-modal{max-height:100dvh}.repair-task-layout{grid-template-columns:1fr;overflow:auto}.repair-task-sidebar{border-right:0;border-bottom:1px solid var(--line,#e6e8ee);display:grid;grid-template-columns:1fr 1fr;gap:8px}.repair-task-car{grid-column:1/-1}.repair-task-sidebar label{margin-top:0}.repair-task-main{overflow:visible}.repair-finance-grid{grid-template-columns:1fr 1fr}.repair-photo-columns{grid-template-columns:1fr}.repair-part-row{grid-template-columns:minmax(0,1fr) 58px 85px 32px}.repair-task-footer{position:sticky;bottom:0}.repair-task-footer .btn{flex:1}}
 @media(max-width:520px){.repair-task-sidebar,.repair-finance-grid{grid-template-columns:1fr}.repair-task-main{padding:10px}.repair-task-section{padding:12px}.repair-photo-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* FleetPilot V11.8 — unified UI metrics + linked profile/calendar/expenses */
+:root{
+ --fp-control-h:34px;
+ --fp-icon-box:32px;
+ --fp-icon-size:18px;
+ --fp-ui-gap:8px;
+ --fp-card-gap:12px;
+ --fp-ui-font:11px;
+ --fp-small-font:9px;
+ --fp-radius:11px;
+}
+#calendarPage *,#expensesPage *,#carPage *,#repairsPage *{box-sizing:border-box;min-width:0}
+#calendarPage button,#expensesPage button,#carPage button,#repairsPage button,
+#calendarPage input,#calendarPage select,#expensesPage input,#expensesPage select,#repairsPage input,#repairsPage select{
+ font-family:inherit;
+}
+#calendarPage .btn,#expensesPage .btn,#carPage .btn,#repairsPage .btn,
+#calendarPage .calendar-month-actions button{
+ min-height:var(--fp-control-h);
+ height:var(--fp-control-h);
+ padding:0 11px;
+ border-radius:9px;
+ font-size:var(--fp-ui-font);
+ line-height:1;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+.fp-standard-icon,.professional-row-icon,.calendar-professional-icon{
+ width:var(--fp-icon-box)!important;
+ height:var(--fp-icon-box)!important;
+ min-width:var(--fp-icon-box)!important;
+ max-width:var(--fp-icon-box)!important;
+ display:grid!important;
+ place-items:center!important;
+ border-radius:10px!important;
+ overflow:hidden!important;
+ line-height:1!important;
+ font-size:0!important;
+}
+.fp-standard-icon svg,.professional-row-icon svg,.calendar-professional-icon svg,
+.car-service-open svg,.fp-row-chevron svg,.car-expense-preview-row i svg{
+ width:var(--fp-icon-size);
+ height:var(--fp-icon-size);
+ display:block;
+ fill:currentColor;
+ flex:none;
+}
+.fp-row-chevron{display:grid;place-items:center;width:28px;height:28px;overflow:hidden;color:var(--muted,#7b8495)}
+.fp-row-chevron svg{width:17px;height:17px}
+.professional-row,.calendar-professional-row,.car-service-entry{overflow:hidden}
+.professional-row-main,.calendar-professional-main,.car-service-entry-main{min-width:0;overflow:hidden}
+.professional-row-main strong,.calendar-professional-main strong,.car-service-entry-title strong{
+ display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.professional-row-main span,.professional-row-main small,.calendar-professional-main span,.calendar-professional-main small,
+.car-service-entry p,.car-service-entry-meta{
+ overflow-wrap:anywhere;
+}
+.professional-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--fp-ui-gap);flex-wrap:wrap;max-width:100%}
+.professional-row-actions .btn{margin:0!important}
+.calendar-professional-row{grid-template-columns:46px var(--fp-icon-box) minmax(0,1fr) 28px;gap:var(--fp-ui-gap);min-height:58px;padding:10px 11px}
+.calendar-professional-date{width:46px;text-align:center}.calendar-professional-date strong{font-size:15px}.calendar-professional-date span{font-size:8px}
+.calendar-professional-main strong{font-size:var(--fp-ui-font)}.calendar-professional-main span{font-size:9px}.calendar-professional-main small{font-size:8px}
+.calendar-professional-icon{background:rgba(99,102,241,.08);color:#5667e8}
+.calendar-month-actions{gap:var(--fp-ui-gap)!important;flex-wrap:nowrap}.calendar-month-actions button:first-child,.calendar-month-actions button:last-child{width:var(--fp-control-h)!important;min-width:var(--fp-control-h)!important;padding:0!important;font-size:0!important}.calendar-month-actions button:first-child::before{content:'‹';font-size:20px}.calendar-month-actions button:last-child::before{content:'›';font-size:20px}
+.calendar-month-grid{gap:6px}.calendar-day{min-height:36px;aspect-ratio:1/1;overflow:hidden}.calendar-day strong{font-size:11px}.calendar-day.has-events span{right:2px;bottom:2px;min-width:14px;height:14px;font-size:8px}
+.calendar-month-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.calendar-month-card{min-height:62px;padding:10px;border-radius:var(--fp-radius);overflow:hidden}.calendar-month-card span,.calendar-month-card small{font-size:8px}.calendar-month-card strong{font-size:17px}.calendar-month-card.selected{border-color:#5667e8;box-shadow:inset 0 0 0 1px #5667e8;background:rgba(86,103,232,.05)}
+.professional-kpi-grid{gap:var(--fp-card-gap)}.professional-kpi{min-height:88px;padding:13px 15px;overflow:hidden}.professional-kpi span{font-size:9px}.professional-kpi strong{font-size:20px;overflow:hidden;text-overflow:ellipsis}.professional-kpi small{font-size:8px;overflow-wrap:anywhere}
+.car-service-profile,.detail-tab-grid{gap:var(--fp-card-gap)}
+.car-service-profile-head{gap:12px}.car-service-profile-head .btn{align-self:center}.car-service-entry{grid-template-columns:10px minmax(0,1fr) var(--fp-icon-box)!important;gap:10px!important}.car-service-open{width:var(--fp-icon-box)!important;height:var(--fp-icon-box)!important;min-width:var(--fp-icon-box)!important;display:grid!important;place-items:center!important;padding:0!important;border-radius:10px!important;overflow:hidden!important;font-size:0!important}.car-service-entry-title{gap:8px;min-width:0}.car-service-entry-title strong{font-size:11px}.car-service-entry-status{font-size:8px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}.car-service-entry-meta{display:flex;flex-wrap:wrap;gap:6px 10px}.car-service-entry-meta span,.car-service-entry-meta button{font-size:8px}
+.car-expense-preview{overflow:hidden}.car-expense-preview-row{width:100%;display:grid;grid-template-columns:var(--fp-icon-box) minmax(0,1fr) auto 24px;gap:9px;align-items:center;min-height:50px;padding:8px 0;border:0;border-bottom:1px solid var(--line,#e6e9ef);background:transparent;color:inherit;text-align:left;cursor:pointer;overflow:hidden}.car-expense-preview-row:last-child{border-bottom:0}.car-expense-preview-row>span:nth-child(2){min-width:0;overflow:hidden}.car-expense-preview-row strong,.car-expense-preview-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.car-expense-preview-row strong{font-size:10px}.car-expense-preview-row small{margin-top:3px;color:var(--muted,#7b8495);font-size:8px}.car-expense-preview-row>b{font-size:10px;white-space:nowrap}.car-expense-preview-row>i{display:grid;place-items:center;width:24px;height:24px;color:var(--muted,#7b8495);font-style:normal;overflow:hidden}
+@media(max-width:760px){
+ :root{--fp-control-h:32px;--fp-icon-box:30px;--fp-icon-size:16px;--fp-ui-gap:6px;--fp-card-gap:9px;--fp-ui-font:10px}
+ .professional-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .calendar-professional-row{grid-template-columns:40px var(--fp-icon-box) minmax(0,1fr) 24px!important;padding:9px 8px}
+ .calendar-professional-date{width:40px}.calendar-month-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .professional-row{grid-template-columns:var(--fp-icon-box) minmax(0,1fr)!important;gap:8px!important}
+ .professional-row-numbers,.professional-row-actions{grid-column:2;justify-content:flex-start!important;text-align:left!important}
+ .professional-row-actions{width:100%}.professional-row-actions .btn{flex:0 1 auto;max-width:100%}
+ .car-service-profile-head{display:grid!important}.car-service-profile-head .btn{justify-self:start;max-width:100%}
+ .car-expense-preview-row{grid-template-columns:var(--fp-icon-box) minmax(0,1fr) auto 20px}
+}
+@media(max-width:430px){
+ .professional-kpi-grid{grid-template-columns:1fr 1fr!important;gap:7px}.professional-kpi{min-height:78px;padding:10px}
+ .calendar-month-actions button#calendarToday{max-width:68px;padding:0 8px}
+ .calendar-day{min-height:32px;border-radius:8px}.calendar-weekday{font-size:8px}
+ .calendar-month-overview{grid-template-columns:1fr 1fr}
+ .professional-row-actions .btn{font-size:9px;padding:0 8px}
+ .car-service-entry-status{max-width:86px}
+}

@@ -5201,7 +5201,7 @@ function renderPlannedServiceExpenses(){
     <strong>${money(x.amount)}</strong>
     <span>Запланировано</span>
    </div>
-   <button type="button" class="service-row-open-button" onclick="editExpense('${x.id}')" title="Открыть расход">›</button>
+   <button type="button" class="service-row-open-button" onclick="editExpense('${x.id}')" title="Открыть расход">${fpUiIcon("arrow")}</button>
   </article>`
  }).join("")||`<div class="professional-empty planned-service-expense-empty">Плановых сервисных расходов нет.</div>`
 }
@@ -5596,7 +5596,7 @@ function renderExpenses(){
   const c=car(x.carId);
   const linkedRepair=x.linkedRepairId?db.repairs.find(r=>String(r.id)===String(x.linkedRepairId)):null;
   return `<article class="professional-row" data-expense-id="${x.id}">
-   <div class="professional-row-icon">${x.category==="repair"?"🔧":x.category==="insurance"?"🛡":x.category==="inspection"?"▤":x.category==="tires"?"◉":"↘"}</div>
+   <div class="professional-row-icon fp-standard-icon">${fpUiIcon(x.category==="repair"?"repair":x.category==="insurance"?"insurance":x.category==="inspection"?"inspection":x.category==="tires"?"tires":"expense")}</div>
    <div class="professional-row-main">
     <strong>${x.title}</strong>
     <span>${model(c).brand} ${model(c).model} · ${c?.plate||"Без номера"} · ${date(x.date)}</span>
@@ -5769,7 +5769,21 @@ function allEvents(){
  return result.filter(x=>x.date).map(x=>({...x,days:days(x.date)}))
 }
 function eventsForCar(carId){return allEvents().filter(x=>x.carId===carId)}
-function eventIcon(type){return{insurance:"🛡️",inspection:"🔍",repair:"🔧",expense:"💰",installment:"💳",document:"📄"}[type]||"📅"}
+function fpUiIcon(name){
+ const icons={
+  insurance:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3Zm0 3.1 4 1.7V11c0 3.1-1.7 5.5-4 6.9-2.3-1.4-4-3.8-4-6.9V7.8l4-1.7Z"/></svg>`,
+  inspection:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 4a5.5 5.5 0 1 0 3.4 9.8l4.7 4.7 1.4-1.4-4.7-4.7A5.5 5.5 0 0 0 9.5 4Zm0 2a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z"/></svg>`,
+  repair:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4.5 4.5 0 0 0-5.5 5.5L4 17l3 3 5.2-5.2a4.5 4.5 0 0 0 5.5-5.5l-2.8 2.8-2.1-.9-.9-2.1 2.8-2.8Z"/></svg>`,
+  expense:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5V5Zm2 3v2h10V8H7Zm0 4v2h6v-2H7Zm8 0v4h2v-4h-2Z"/></svg>`,
+  installment:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4V6Zm2 3h12V8H6v1Zm0 3v4h5v-4H6Zm7 0v1.8h5V12h-5Zm0 3v1h5v-1h-5Z"/></svg>`,
+  document:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6V3Zm2 2v14h8V8h-3V5H8Zm2 7h4v2h-4v-2Zm0 4h4v2h-4v-2Z"/></svg>`,
+  calendar:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h2v2h8V3h2v2h2v16H4V5h2V3Zm12 8H6v8h12v-8ZM6 7v2h12V7H6Z"/></svg>`,
+  tires:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 3a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2.5A3.5 3.5 0 1 0 12 15a3.5 3.5 0 0 0 0-7Z"/></svg>`,
+  arrow:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6L9 6Z"/></svg>`
+ };
+ return icons[name]||icons.calendar
+}
+function eventIcon(type){return fpUiIcon({insurance:"insurance",inspection:"inspection",repair:"repair",expense:"expense",installment:"installment",payment:"installment",document:"document"}[type]||"calendar") }
 let calendarViewMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 function calendarIsoLocal(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function selectCalendarDay(value){
@@ -5819,12 +5833,12 @@ function renderCalendar(){
 
  $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([group,items])=>{
   const groupLabel=selectedDate?new Date(group+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}):new Date(group+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
-  return `<section class="calendar-month-group"><h4>${groupLabel}</h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon">${eventIcon(e.type)}</div><div class="calendar-professional-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b>›</b></article>`).join("")}</section>`
+  return `<section class="calendar-month-group"><h4>${groupLabel}</h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon fp-standard-icon">${eventIcon(e.type)}</div><div class="calendar-professional-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b class="fp-row-chevron">${fpUiIcon("arrow")}</b></article>`).join("")}</section>`
  }).join(""):`<div class="professional-empty">${selectedDate?"На выбранный день событий нет.":"На выбранный период событий нет."}</div>`;
 
  renderCalendarMonthGrid(all);
  const overview=$("#calendarMonthOverview");
- if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);const key=calendarIsoLocal(d).slice(0,7);const count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}
+ if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);const key=calendarIsoLocal(d).slice(0,7);const count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card ${calendarViewMonth.getFullYear()===d.getFullYear()&&calendarViewMonth.getMonth()===d.getMonth()?"selected":""}" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}
 }
 
 function renderDocuments(){
@@ -5899,7 +5913,7 @@ function renderCarProfile(id,activeTab="info"){
        <p>${req.description||"Без описания"}</p>
        <div class="car-service-entry-meta"><span>${new Date(req.created_at).toLocaleDateString("ru-RU")}</span><span>${km(req.mileage)}</span><span>${req.driver_email||"Водитель"}</span></div>
       </div>
-      <button class="car-service-open" onclick="openRepairFromFleetRequest('${req.id}')" title="Открыть заявку">›</button>
+      <button class="car-service-open" onclick="openRepairFromFleetRequest('${req.id}')" title="Открыть заявку">${fpUiIcon("arrow")}</button>
      </article>`).join("")}
     ${serviceActive.sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map(r=>`<article class="car-service-entry ${serviceStatusClass(r.status)}">
       <div class="car-service-dot"></div>
@@ -5908,7 +5922,7 @@ function renderCarProfile(id,activeTab="info"){
        <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
        <div class="car-service-entry-meta"><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${serviceRepairCostMeta(r)}</span>${serviceLinkedExpense(r)?`<span>${expenseStatusText(serviceLinkedExpense(r).status)}</span>`:""}</div>
       </div>
-      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">${fpUiIcon("arrow")}</button>
      </article>`).join("")}
    </div>
   </section>`:""}
@@ -5923,7 +5937,7 @@ function renderCarProfile(id,activeTab="info"){
        <p>${expenseCategoryText(x.category)}${x.note?` · ${x.note}`:""}</p>
        <div class="car-service-entry-meta"><span>${date(x.date)}</span><span>${money(x.amount)}</span></div>
       </div>
-      <button class="car-service-open" onclick="openSmartEntity('expense','${x.id}','${c.id}')" title="Открыть расход">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('expense','${x.id}','${c.id}')" title="Открыть расход">${fpUiIcon("arrow")}</button>
      </article>`).join("")}
    </div>
   </section>`:""}
@@ -5944,12 +5958,12 @@ function renderCarProfile(id,activeTab="info"){
         ${serviceLinkedExpense(r)?`<button class="inline-entity-link" onclick="event.stopPropagation();openSmartEntity('expense','${serviceLinkedExpense(r).id}','${c.id}')">Расход ${money(serviceLinkedExpense(r).amount)}</button>`:""}
        </div>
       </div>
-      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">${fpUiIcon("arrow")}</button>
      </article>`).join("")||`<div class="professional-empty">История ремонтов пока пустая.</div>`}
    </div>
   </section>
  </div>`;
- const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card"><h3>Плановые расходы</h3>${exp.slice(0,10).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.amount)}</p>`).join("")||"Нет записей"}</div></div>`;
+ const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card car-expense-preview"><div class="section-head"><h3>Расходы автомобиля</h3><button class="btn" onclick="showPage('expensesPage')">Все расходы</button></div>${exp.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,8).map(x=>`<button type="button" class="car-expense-preview-row" onclick="openSmartEntity('expense','${x.id}','${c.id}')"><span class="fp-standard-icon">${fpUiIcon(x.category==="repair"?"repair":x.category==="insurance"?"insurance":x.category==="inspection"?"inspection":x.category==="tires"?"tires":"expense")}</span><span><strong>${x.title}</strong><small>${date(x.date)} · ${expenseCategoryText(x.category)}</small></span><b>${money(x.amount)}</b><i>${fpUiIcon("arrow")}</i></button>`).join("")||`<div class="professional-empty">Расходов пока нет.</div>`}</div></div>`;
  const history=`<div class="detail-tab-grid">
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
   <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
