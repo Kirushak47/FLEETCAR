@@ -1,4 +1,4 @@
-# FleetPilot V14.1.3 — Vehicle Finance
+# FleetPilot V14.1.4 — Vehicle Finance
 
 - Финансы конкретного автомобиля разделены на факт, план, доход и чистый результат.
 - Добавлены периоды: месяц / квартал / год.
@@ -18,3 +18,10 @@
 - Shows earnings, actual expenses, VAT breakdown, PIT/ryczałt, contributions, total obligations and remaining result.
 - Uses the same active tax profile and period as the current Analytics calculation.
 - Report opens in-app and can be printed / saved as PDF from the browser.
+
+
+## V14.1.4 Expense Drilldown
+- Факт расходов и План расходов открываются в отдельном информационном окне.
+- Категории, операции, процент от дохода, переход к исходной записи.
+- CSV и печать/PDF.
+- Исправлен период Квартал в финансовых расчётах автомобиля.

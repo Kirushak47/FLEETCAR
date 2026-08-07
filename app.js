@@ -2133,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"14.1.3",
+  appVersion:"14.1.4",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -5478,6 +5478,10 @@ function periodBounds(period){
   return{from:new Date(selectedYear,selectedMonth,1),to:new Date(selectedYear,selectedMonth+1,0),months:1,year:selectedYear,month:selectedMonth+1}
  }
  if(period==="month")return{from:new Date(year,month,1),to:new Date(year,month+1,0),months:1,year,month:month+1};
+ if(period==="quarter"){
+  const quarterStart=Math.floor(month/3)*3;
+  return{from:new Date(year,quarterStart,1),to:new Date(year,quarterStart+3,0),months:3,year,quarter:Math.floor(month/3)+1}
+ }
  if(period==="year")return{from:new Date(year,0,1),to:new Date(year,11,31),months:12,year};
  const paymentTimes=db.payments.map(p=>new Date((p.date||p.to||today())+"T12:00:00").getTime()).filter(Number.isFinite);
  const earliest=paymentTimes.length?Math.min(...paymentTimes):Date.now();
@@ -6090,6 +6094,75 @@ function setCarFinancePeriod(period){
  if(selectedCarId)renderCarProfile(selectedCarId,"finance")
 }
 
+let expenseDrilldownState={carId:null,tab:"fact",category:"all"};
+function carFinancePeriodRangeLabel(period){
+ const bounds=periodBounds(period),opts={day:"2-digit",month:"2-digit",year:"numeric"};
+ if(bounds.from&&bounds.to)return `${bounds.from.toLocaleDateString("ru-RU",opts)} — ${bounds.to.toLocaleDateString("ru-RU",opts)}`;
+ return carFinancePeriodLabel(period)
+}
+function carFinanceFactRows(carId,period){
+ const bounds=periodBounds(period),{paidExpenses,legacyRepairs}=financialExpenseRows(bounds,carId);
+ return [
+  ...paidExpenses.map(x=>({id:x.id,kind:"expense",title:x.title||expenseCategoryText(x.category||"other"),date:x.date,amount:Number(x.amount||0),category:x.category||"other",categoryLabel:expenseCategoryText(x.category||"other"),note:x.note||""})),
+  ...legacyRepairs.map(r=>({id:r.id,kind:"repair",title:r.title||"Ремонт",date:r.completedDate||r.date,amount:Number(r.actual||r.planned||0),category:"repair",categoryLabel:"Сервис и ремонты",note:r.service||r.note||""}))
+ ].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")))
+}
+function carFinancePlanRows(carId,period){
+ return plannedFinanceForCar(carId,period).rows.map(x=>({
+  ...x,
+  categoryKey:x.kind==="repair"?"repair":((db.expenses||[]).find(e=>String(e.id)===String(x.id))?.category||"other"),
+  categoryLabel:x.category||"Прочее",
+  note:""
+ }))
+}
+function expenseDrilldownCategoryKey(row){return row.categoryKey||row.category||"other"}
+function expenseDrilldownCategoryLabel(key){return key==="repair"?"Сервис":expenseCategoryText(key||"other")}
+function expenseDrilldownRows(){
+ const {carId,tab,category}=expenseDrilldownState,period=selectedCarFinancePeriod||"month";
+ const rows=tab==="plan"?carFinancePlanRows(carId,period):carFinanceFactRows(carId,period);
+ return category==="all"?rows:rows.filter(x=>expenseDrilldownCategoryKey(x)===category)
+}
+function expenseDrilldownAllRows(){
+ const {carId,tab}=expenseDrilldownState,period=selectedCarFinancePeriod||"month";
+ return tab==="plan"?carFinancePlanRows(carId,period):carFinanceFactRows(carId,period)
+}
+function expenseDrilldownCategories(rows){
+ const map=new Map();
+ rows.forEach(row=>{const key=expenseDrilldownCategoryKey(row),v=map.get(key)||{key,label:expenseDrilldownCategoryLabel(key),total:0,count:0};v.total+=Number(row.amount||0);v.count++;map.set(key,v)});
+ return [...map.values()].sort((a,b)=>b.total-a.total)
+}
+function renderExpenseDrilldown(){
+ const dialog=$("#expenseDrilldownDialog"),body=$("#expenseDrilldownBody");if(!dialog||!body)return;
+ const c=car(expenseDrilldownState.carId);if(!c)return;
+ const period=selectedCarFinancePeriod||"month",finance=financialData(period,c.id),allRows=expenseDrilldownAllRows(),rows=expenseDrilldownRows(),total=allRows.reduce((s,x)=>s+Number(x.amount||0),0),visibleTotal=rows.reduce((s,x)=>s+Number(x.amount||0),0),income=Number(finance.grossRevenue||0),pct=income>0?total/income*100:0;
+ const categories=expenseDrilldownCategories(allRows);
+ $("#expenseDrilldownTitle").textContent=`${expenseDrilldownState.tab==="plan"?"План расходов":"Факт расходов"} · ${c.plate}`;
+ const categoryButtons=[`<button type="button" class="${expenseDrilldownState.category==="all"?"active":""}" onclick="setExpenseDrilldownCategory('all')">Все <span>${allRows.length}</span></button>`,...categories.map(x=>`<button type="button" class="${expenseDrilldownState.category===x.key?"active":""}" onclick="setExpenseDrilldownCategory('${x.key}')">${x.label} <span>${x.count}</span></button>`)].join("");
+ const rowsHtml=rows.length?rows.map(x=>`<button type="button" class="expense-drilldown-row" onclick="openExpenseDrilldownEntity('${x.kind}','${x.id}')"><span class="expense-drilldown-row-main"><strong>${x.title||"Без названия"}</strong><small>${date(x.date)} · ${x.categoryLabel||expenseDrilldownCategoryLabel(expenseDrilldownCategoryKey(x))}${x.note?` · ${x.note}`:""}</small></span><b>${money(x.amount)}</b>${fpUiIcon("arrow")}</button>`).join(""):`<div class="professional-empty">Для выбранного фильтра записей нет.</div>`;
+ body.innerHTML=`<div class="expense-drilldown-tabs"><button type="button" class="${expenseDrilldownState.tab==="fact"?"active":""}" onclick="setExpenseDrilldownTab('fact')">Факт</button><button type="button" class="${expenseDrilldownState.tab==="plan"?"active":""}" onclick="setExpenseDrilldownTab('plan')">План</button></div>
+  <div class="expense-drilldown-kpis"><article><small>${expenseDrilldownState.tab==="plan"?"Запланировано":"Потрачено"}</small><strong>${money(total)}</strong><span>${allRows.length} операций</span></article><article><small>Доля от дохода</small><strong>${pct.toLocaleString("ru-RU",{maximumFractionDigits:1})}%</strong><span>Доход ${money(income)}</span></article><article><small>Показано</small><strong>${money(visibleTotal)}</strong><span>${rows.length} операций</span></article></div>
+  <div class="expense-drilldown-period">${carFinancePeriodLabel(period)} · ${carFinancePeriodRangeLabel(period)}</div>
+  <div class="expense-drilldown-filters">${categoryButtons}</div>
+  <div class="expense-drilldown-list">${rowsHtml}</div>`
+}
+function openExpenseDrilldown(carId,tab="fact"){
+ expenseDrilldownState={carId,tab:tab==="plan"?"plan":"fact",category:"all"};
+ renderExpenseDrilldown();$("#expenseDrilldownDialog")?.showModal()
+}
+function setExpenseDrilldownTab(tab){expenseDrilldownState.tab=tab==="plan"?"plan":"fact";expenseDrilldownState.category="all";renderExpenseDrilldown()}
+function setExpenseDrilldownCategory(category){expenseDrilldownState.category=category||"all";renderExpenseDrilldown()}
+function openExpenseDrilldownEntity(kind,id){$("#expenseDrilldownDialog")?.close();openSmartEntity(kind,id,expenseDrilldownState.carId)}
+function expenseDrilldownCsv(){
+ const rows=expenseDrilldownAllRows(),header=["Дата","Тип","Название","Категория","Сумма"],lines=[header,...rows.map(x=>[x.date||"",x.kind||"",x.title||"",x.categoryLabel||expenseDrilldownCategoryLabel(expenseDrilldownCategoryKey(x)),Number(x.amount||0).toFixed(2)])];
+ const csv=lines.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n"),blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`FleetPilot_${expenseDrilldownState.tab}_${car(expenseDrilldownState.carId)?.plate||"car"}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)
+}
+function printExpenseDrilldown(){
+ const c=car(expenseDrilldownState.carId),rows=expenseDrilldownAllRows(),total=rows.reduce((s,x)=>s+Number(x.amount||0),0),title=expenseDrilldownState.tab==="plan"?"План расходов":"Факт расходов",period=selectedCarFinancePeriod||"month";
+ const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;color:#172033;padding:24px}h1{margin:0 0 4px;font-size:22px}p{color:#64748b;margin:0 0 18px}.row{display:grid;grid-template-columns:110px 1fr auto;gap:14px;padding:9px 0;border-bottom:1px solid #e5e7eb}.row small{display:block;color:#64748b;margin-top:3px}.total{display:flex;justify-content:space-between;padding-top:14px;margin-top:8px;border-top:2px solid #cbd5e1;font-size:18px;font-weight:700}</style></head><body><h1>${title} · ${c?.plate||""}</h1><p>${carFinancePeriodLabel(period)} · ${carFinancePeriodRangeLabel(period)}</p>${rows.map(x=>`<div class="row"><span>${date(x.date)}</span><span><strong>${x.title||"Без названия"}</strong><small>${x.categoryLabel||expenseDrilldownCategoryLabel(expenseDrilldownCategoryKey(x))}</small></span><b>${money(x.amount)}</b></div>`).join("")}<div class="total"><span>Всего</span><strong>${money(total)}</strong></div></body></html>`;
+ const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0";document.body.appendChild(frame);frame.onload=()=>setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}finally{setTimeout(()=>frame.remove(),1200)}},100);frame.srcdoc=html
+}
+window.openExpenseDrilldown=openExpenseDrilldown;window.setExpenseDrilldownTab=setExpenseDrilldownTab;window.setExpenseDrilldownCategory=setExpenseDrilldownCategory;window.openExpenseDrilldownEntity=openExpenseDrilldownEntity;window.expenseDrilldownCsv=expenseDrilldownCsv;window.printExpenseDrilldown=printExpenseDrilldown;
+
 function renderCarProfile(id,activeTab="info"){
  if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
@@ -6206,8 +6279,8 @@ function renderCarProfile(id,activeTab="info"){
   </div>
   <div class="car-finance-kpis">
    <article class="income"><small>Получено</small><strong>${money(financeData.grossRevenue)}</strong><span>ожидается ${money(financeData.expectedRevenue)}</span></article>
-   <article class="expense"><small>Факт расходов</small><strong>${money(financeData.grossCosts)}</strong><span>сервис ${money(financeData.repairGross)} · прочее ${money(financeData.otherGross)}</span></article>
-   <article class="planned"><small>План расходов</small><strong>${money(financePlan.total)}</strong><span>${financePlan.rows.length} будущих записей</span></article>
+   <article class="expense interactive" role="button" tabindex="0" onclick="openExpenseDrilldown('${c.id}','fact')"><small>Факт расходов <i>ⓘ</i></small><strong>${money(financeData.grossCosts)}</strong><span>${financeData.grossRevenue>0?(financeData.grossCosts/financeData.grossRevenue*100).toLocaleString("ru-RU",{maximumFractionDigits:1}):"0"}% дохода · открыть состав</span></article>
+   <article class="planned interactive" role="button" tabindex="0" onclick="openExpenseDrilldown('${c.id}','plan')"><small>План расходов <i>ⓘ</i></small><strong>${money(financePlan.total)}</strong><span>${financeData.grossRevenue>0?(financePlan.total/financeData.grossRevenue*100).toLocaleString("ru-RU",{maximumFractionDigits:1}):"0"}% дохода · ${financePlan.rows.length} записей</span></article>
    <article class="result ${financeData.finalProfit<0?"negative":"positive"}"><small>Чистый результат</small><strong>${money(financeData.finalProfit)}</strong><span>операционно ${money(operatingResult)}</span></article>
   </div>
   <div class="car-finance-grid car-finance-masonry">
@@ -7617,6 +7690,18 @@ window.toggleServicePlanning=()=>setServicePlanningCollapsed(!$("#servicePlannin
   $("#closeTaxBreakdown")?.addEventListener("click",()=>$("#taxBreakdownDialog")?.close());
   $("#printTaxBreakdown")?.addEventListener("click",printTaxBreakdown);
   $("#taxBreakdownDialog")?.addEventListener("click",event=>{if(event.target===$("#taxBreakdownDialog"))$("#taxBreakdownDialog").close()})
+ };
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind()
+})();
+
+
+// FleetPilot V14.1.4 — expense drilldown
+(function initExpenseDrilldownDialog(){
+ const bind=()=>{
+  $("#closeExpenseDrilldown")?.addEventListener("click",()=>$("#expenseDrilldownDialog")?.close());
+  $("#exportExpenseDrilldownCsv")?.addEventListener("click",expenseDrilldownCsv);
+  $("#printExpenseDrilldown")?.addEventListener("click",printExpenseDrilldown);
+  $("#expenseDrilldownDialog")?.addEventListener("click",event=>{if(event.target===$("#expenseDrilldownDialog"))$("#expenseDrilldownDialog").close()})
  };
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind()
 })();
