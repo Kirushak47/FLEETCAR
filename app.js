@@ -3147,7 +3147,7 @@ function scheduleDesktopLiveRefresh(options={}){
 
   syncDesktopSelection();
   requestAnimationFrame(()=>{
-   leafletFleetMap?.invalidateSize({pan:false});
+   invalidateFleetLeafletMap();
   })
  })
 }
@@ -4571,7 +4571,7 @@ function initializeDesktopCommandCenter(){
    if(view==="list"&&carsBlock){carsBlock.classList.remove("desktop-command-hidden");carsBlock.style.removeProperty("display")}
    safeDesktopRender("events second pass",renderDesktopEvents);
    safeDesktopRender("insights second pass",renderDesktopInsights);
-   leafletFleetMap?.invalidateSize({pan:false})
+   invalidateFleetLeafletMap()
   })
  })
 }
@@ -6128,12 +6128,39 @@ async function addRepairPhotos(type,files){
 function openRepairDialog(carId="",id=""){
  if(!requireFleetCar())return;
  const r=id?db.repairs.find(v=>v.id===id):null,selected=r?.carId||carId||fleetCars()[0]?.id||"";
+ if(!selected)return toast("Сначала добавьте автомобиль");
  const latestMileage=currentConfirmedMileage(selected);
- repairEditorParts=structuredClone(Array.isArray(r?.parts)?r.parts:[]);repairEditorChecklist=structuredClone(Array.isArray(r?.checklist)?r.checklist:[]);repairEditorPhotos={before:[...(r?.photosBefore||[])],after:[...(r?.photosAfter||[])]};
- $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairProblem").value=r?.problem||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=Math.max(Number(r?.mileage||0),latestMileage);$("#repairPlanned").value=r?.planned||"";$("#repairLaborCost").value=r?.laborCost||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairMechanic").value=r?.mechanic||"";$("#repairPriority").value=serviceRepairPriority(r||{});$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Заявка водителя</strong><span>${repairSafe(r.problem||r.note||"")}</span>`:"";$("#repairNote").value=r?.note||"";
- $("#repairDialogTitle").textContent=r?.title||"Новая сервисная задача";$("#repairDialogSubtitle").textContent=r?`ID ${String(r.id).slice(0,8)} · ${repairStatusText(r.status)}`:"Создайте задачу и ведите весь ремонт в одной карточке";
+ repairEditorParts=structuredClone(Array.isArray(r?.parts)?r.parts:[]);
+ repairEditorChecklist=structuredClone(Array.isArray(r?.checklist)?r.checklist:[]);
+ repairEditorPhotos={before:[...(r?.photosBefore||[])],after:[...(r?.photosAfter||[])]};
+ const setValue=(id,value)=>{const el=$(id);if(el)el.value=value??""};
+ const setHtml=(id,value)=>{const el=$(id);if(el)el.innerHTML=value??""};
+ setValue("#repairId",r?.id||"");
+ setHtml("#repairCarId",opts(selected));
+ setValue("#repairTitle",r?.title||"");
+ setValue("#repairProblem",r?.problem||"");
+ setValue("#repairDate",r?.date||today());
+ setValue("#repairMileage",Math.max(Number(r?.mileage||0),latestMileage));
+ setValue("#repairPlanned",r?.planned||"");
+ setValue("#repairLaborCost",r?.laborCost||"");
+ setValue("#repairActual",r?.actual||"");
+ setValue("#repairStatus",r?.status||"planned");
+ setValue("#repairService",r?.service||"");
+ setValue("#repairMechanic",r?.mechanic||"");
+ setValue("#repairPriority",serviceRepairPriority(r||{}));
+ setValue("#repairPaymentStatus",r?.paymentStatus||"unpaid");
+ setValue("#repairPaidAmount",r?.paidAmount||"");
+ setValue("#repairCompletedDate",r?.completedDate||"");
+ setValue("#repairWarrantyUntil",r?.warrantyUntil||"");
+ setValue("#repairLinkedRequestId",r?.linkedRequestId||"");
+ setValue("#repairLinkedExpenseId",r?.linkedExpenseId||"");
+ const source=$("#repairSourceRequest");
+ if(source){source.hidden=!r?.linkedRequestId;source.innerHTML=r?.linkedRequestId?`<strong>Заявка водителя</strong><span>${repairSafe(r.problem||r.note||"")}</span>`:""}
+ setValue("#repairNote",r?.note||"");
+ const title=$("#repairDialogTitle");if(title)title.textContent=r?.title||"Новая сервисная задача";
+ const subtitle=$("#repairDialogSubtitle");if(subtitle)subtitle.textContent=r?`ID ${String(r.id).slice(0,8)} · ${repairStatusText(r.status)}`:"Создайте задачу";
  updateRepairCarMeta();renderRepairPartsEditor();renderRepairChecklistEditor();renderRepairPhotos();renderRepairHistory(r);updateRepairCalculatedTotal();
- $("#repairDialog").showModal()
+ const dialog=$("#repairDialog");if(dialog&&!dialog.open)dialog.showModal();
 }
 function openPaymentDialog(carId="",id=""){
  if(!requireFleetCar())return;const p=id?db.payments.find(x=>x.id===id):null,c=car(p?.carId||carId||db.cars[0]?.id),timing=p?.timing||c?.paymentTiming||"advance",period=suggestedPaymentPeriod(timing);
@@ -6288,7 +6315,7 @@ function syncLinkedExpenseFromRepair(repair){
 }
 function syncServiceRelations(repair){
  if(!repair)return;
- syncServiceRelations(repair);
+ syncLinkedExpenseFromRepair(repair);
  const c=car(repair.carId);
  if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
 }
@@ -7093,7 +7120,7 @@ async function renderWorkspaceRepairRequests(){
 
 
 /* =========================================================
-   FleetPilot V13.0 — Service CRM action fixes
+   FleetPilot V13.1 — Service request & task hotfix
    ========================================================= */
 let serviceRequestDialogId="";
 function fpFindServiceRequest(requestId){
@@ -7150,13 +7177,14 @@ function transferServiceRequest(requestId){
  if(!request)return toast("Заявка не найдена");
  const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
  serviceRequestDialogId=String(request.id);
- try{$("#serviceRequestDialog")?.close()}catch{}
- openRepairFromDriverRequest(request);
- requestAnimationFrame(()=>{
-  const dialog=$("#repairDialog");
-  if(dialog&&!dialog.open)dialog.showModal();
-  $("#repairTitle")?.focus();
- });
+ try{
+  openRepairFromDriverRequest(request);
+  $("#serviceRequestDialog")?.close();
+  requestAnimationFrame(()=>$("#repairTitle")?.focus());
+ }catch(error){
+  console.error("Service request transfer failed",error);
+  toast("Не удалось открыть сервисную задачу");
+ }
 }
 window.transferServiceRequest=transferServiceRequest;
 
@@ -7192,7 +7220,7 @@ function renderServiceCarTasks(row){
    </div>
   </header>
   <div class="service-car-task-list" ${collapsed?"hidden":""}>
-   ${requests.map(req=>`<div class="service-task-row request ${String(selectedServiceRequestId)===String(req.id)?"selected":""}" data-service-request-task="${req.id}"><span class="service-task-icon">${fpUiIcon("repair")||"!"}</span><div class="service-task-copy"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span>${req.description||"Без описания"}</span><small>${req.driver_email||"Водитель"} · ${km(req.mileage)}</small></div><span></span><span class="service-task-status request">${req.status==="accepted"?"Принято":"Новая"}</span><div class="service-task-actions"><button type="button" class="btn" onclick="openServiceRequestDetails('${req.id}')">Открыть</button><button type="button" class="btn primary" onclick="transferServiceRequest('${req.id}')">Передать</button></div></div>`).join("")}
+   ${requests.map(req=>`<div class="service-task-row request ${String(selectedServiceRequestId)===String(req.id)?"selected":""}" data-service-request-task="${req.id}"><span class="service-task-icon">${fpUiIcon("repair")||"!"}</span><div class="service-task-copy"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span>${req.description||"Без описания"}</span><small>${req.driver_email||"Водитель"} · ${km(req.mileage)}</small></div><span></span><span class="service-task-status request">${req.status==="accepted"?"Принято":"Новая"}</span><div class="service-task-actions"><button type="button" class="btn" onclick="openServiceRequestDetails('${req.id}')">Открыть</button></div></div>`).join("")}
    ${expenseTasks.map(x=>`<div class="service-task-row planned-expense"><span class="service-task-icon">${fpUiIcon("expense")||""}</span><div class="service-task-copy"><strong>${x.title}</strong><span>${expenseCategoryText(x.category)}${x.note?` · ${x.note}`:""}</span><small>${date(x.date)} · ${money(x.amount)}</small></div><span></span><span class="service-task-status planned">Расход</span><div class="service-task-actions"><button type="button" class="btn" onclick="editExpense('${x.id}')">Открыть</button></div></div>`).join("")}
    ${repairsToShow.map(r=>{const linkedExpense=serviceLinkedExpense(r),priority=serviceRepairPriority(r),overdue=serviceRepairIsOverdue(r),[simpleLabel,simpleClass]=fpSimpleTaskStatus(r);return `<div class="service-task-row service-sortable-row priority-${priority} ${overdue?"overdue":""} ${String(selectedServiceTaskId)===String(r.id)?"selected":""}" data-repair-id="${r.id}" draggable="true" ondragstart="serviceDragStart(event,'${r.id}')" ondragover="serviceDragOver(event)" ondrop="serviceTaskDrop(event,'${r.id}')" onclick="selectServiceTask('${r.id}')"><span class="service-task-icon">${fpUiIcon("repair")||""}</span><div class="service-task-copy"><div class="service-task-titleline"><strong>${r.title}</strong><span class="service-priority-chip ${priority}">${servicePriorityText(priority)}</span>${overdue?`<span class="service-overdue-chip">Просрочено</span>`:""}</div><span>${r.service||"Сервис не указан"}${r.mechanic?` · ${r.mechanic}`:""}${r.problem?` · ${r.problem}`:r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}</small></div><div class="service-task-inline-controls"><select aria-label="Приоритет" onclick="event.stopPropagation()" onchange="updateServiceRepairField('${r.id}','priority',this.value)"><option value="planned" ${priority==="planned"?"selected":""}>Планово</option><option value="today" ${priority==="today"?"selected":""}>Сегодня</option><option value="critical" ${priority==="critical"?"selected":""}>Срочно</option></select></div><span class="service-task-status ${simpleClass}">${simpleLabel}</span><div class="service-task-actions"><button type="button" class="service-order-button" onclick="event.stopPropagation();moveServiceTask('${r.id}',-1)" title="Выше">↑</button><button type="button" class="service-order-button" onclick="event.stopPropagation();moveServiceTask('${r.id}',1)" title="Ниже">↓</button>${linkedExpense?`<button type="button" class="btn" onclick="event.stopPropagation();openSmartEntity('expense','${linkedExpense.id}','${c.id}')">Расход</button>`:""}<button type="button" class="btn primary" onclick="event.stopPropagation();editRepair('${r.id}')">Открыть</button></div></div>`}).join("")}
   </div>
@@ -7214,7 +7242,7 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
    const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";const state=String(row.status||"new");
-   return `<article class="workspace-request-row service-inbox-request urgency-${row.urgency} ${String(selectedServiceRequestId)===String(row.id)?"selected":""}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}"><div class="service-inbox-request-main"><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong><span class="service-inbox-request-badge ${state}">${state==="accepted"?"Принято":"Новая"}</span></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small></div><div class="service-inbox-request-actions"><select data-request-status="${row.id}"><option value="new" ${state==="new"?"selected":""}>Новая</option><option value="accepted" ${state==="accepted"?"selected":""}>Принято</option><option value="rejected">Отклонена</option></select><button type="button" class="btn" onclick="openServiceRequestDetails('${row.id}')">Открыть</button><button type="button" class="btn primary" onclick="transferServiceRequest('${row.id}')">Передать в сервис</button></div></article>`;
+   return `<article class="workspace-request-row service-inbox-request urgency-${row.urgency} ${String(selectedServiceRequestId)===String(row.id)?"selected":""}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}"><div class="service-inbox-request-main"><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong><span class="service-inbox-request-badge ${state}">${state==="accepted"?"Принято":"Новая"}</span></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small></div><div class="service-inbox-request-actions"><select data-request-status="${row.id}"><option value="new" ${state==="new"?"selected":""}>Новая</option><option value="accepted" ${state==="accepted"?"selected":""}>Принято</option><option value="rejected">Отклонена</option></select><button type="button" class="btn" onclick="openServiceRequestDetails('${row.id}')">Открыть</button></div></article>`;
   }).join("")||'<div class="driver-empty-state service-inbox-empty">Новых заявок нет. Все обращения обработаны.</div>');
   $$('[data-request-status]').forEach(select=>select.onchange=async()=>{const request=fpFindServiceRequest(select.dataset.requestStatus);const next=select.value;try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,next,"");if(request)request.status=next;const local=(db.serviceRequests||[]).find(x=>String(x.id)===String(select.dataset.requestStatus));if(local)local.status=next;save();toast(next==="accepted"?"Заявка принята":next==="rejected"?"Заявка отклонена":"Статус заявки обновлён");await renderWorkspaceRepairRequests();renderRepairs();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}});
   requestAnimationFrame(renderFleetServiceAlertIndicators);

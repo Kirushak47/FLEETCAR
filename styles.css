@@ -8537,7 +8537,7 @@ button,select,input,textarea{max-width:100%}
   .service-task-actions .btn{font-size:10px!important}
 }
 
-/* FleetPilot V13.0 — Service CRM desktop redesign + action containment */
+/* FleetPilot V13.1 — Service CRM desktop redesign + action containment */
 @media (min-width: 900px){
   #repairsPage{max-width:none!important;padding-right:18px!important}
   #repairsPage .professional-page-head{padding-bottom:14px!important}
@@ -8666,3 +8666,37 @@ button,select,input,textarea{max-width:100%}
 .service-request-dialog-field strong{font-size:12px;font-weight:600}.service-request-dialog-field span{font-size:12px;line-height:1.45}
 .service-request-dialog-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px 18px;border-top:1px solid var(--line,#e5e7eb)}
 @media(max-width:640px){.service-request-dialog-body{grid-template-columns:1fr}.service-request-dialog-field.wide{grid-column:auto}.service-request-dialog-actions{flex-wrap:wrap}.service-request-dialog-actions .btn{flex:1}}
+
+
+/* FleetPilot V13.1 — service request hotfix & compact layout */
+@media (min-width:900px){
+  #repairsPage .service-inbox-request{
+    grid-template-columns:minmax(0,1fr) 220px!important;
+    gap:12px!important;
+    padding:8px 12px!important;
+    min-height:64px!important;
+    overflow:hidden!important;
+  }
+  #repairsPage .service-inbox-request-actions{
+    display:grid!important;
+    grid-template-columns:128px 84px!important;
+    gap:7px!important;
+    justify-content:end!important;
+    align-items:center!important;
+  }
+  #repairsPage .service-inbox-request-actions select{width:128px!important}
+  #repairsPage .service-inbox-request-actions .btn{width:84px!important}
+  #repairsPage .service-task-row.request{
+    grid-template-columns:30px minmax(0,1fr) 76px 86px!important;
+  }
+  #repairsPage .service-task-row.request .service-task-actions{justify-self:end!important}
+  #repairsPage .service-task-row.request .service-task-actions .btn{min-width:82px!important;max-width:82px!important}
+}
+.service-request-dialog{width:min(500px,calc(100vw - 28px))!important;max-width:500px!important}
+.service-request-dialog-head{padding:14px 16px 11px!important}
+.service-request-dialog-body{gap:8px!important;padding:12px 16px!important}
+.service-request-dialog-field{padding:9px 10px!important;border-radius:10px!important}
+.service-request-dialog-actions{padding:11px 16px 14px!important;gap:8px!important}
+.service-request-dialog-actions #serviceRequestTransferButton{margin-left:auto!important}
+#repairDialog .modal{max-width:560px!important;width:min(560px,calc(100vw - 24px))!important;max-height:88vh!important;overflow:auto!important}
+#repairDialog .grid2{gap:10px!important}
