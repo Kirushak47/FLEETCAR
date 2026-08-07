@@ -282,9 +282,11 @@ function inferRepairServiceType(repair={}){
  return"other"
 }
 function vehicleEffectiveStatus(c){
- const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));
- if(active.some(r=>["repair","parts","service"].includes(String(r.status||""))))return"repair";
- return c.status|| (c.tenant?"active":"free")
+ const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!terminal.has(String(r.status||"").toLowerCase()));
+ if(active.some(r=>["repair","parts","service","accepted","scheduled"].includes(String(r.status||"").toLowerCase())))return"repair";
+ if(String(c.status||"").toLowerCase()==="repair")return (c.driverUserId||c.tenant)?"active":"free";
+ return c.status|| (c.driverUserId||c.tenant?"active":"free")
 }
 function vehicleHealthScore(c){
  let score=100;const reasons=[];

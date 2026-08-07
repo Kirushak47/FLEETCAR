@@ -40,6 +40,7 @@ function enterpriseCanOpen(pageId){
  if(window.FleetPilotCloud?.session&&!window.FleetPilotCloud?.membership)return false;
  const role=enterpriseCurrentRole();
  const legacy=(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId);
+ if(role==="driver"&&["driverPortalPage","driverProfilePage"].includes(pageId))return true;
  if(role==="owner"||window.FleetPilotCloud?.isWorkspaceOwner)return legacy;
  if(enterprisePermissionConfigured(role)){
   if(["dashboardPage","morePage","attentionPage"].includes(pageId))return true;
@@ -485,12 +486,19 @@ async function renderDriversRegistry(){
   const members=(workspaceDriverDirectory||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
   const query=($("#driversRegistrySearch")?.value||"").trim().toLowerCase();
   const filter=$("#driversRegistryFilter")?.value||"";
-  const accountRows=members.map(member=>{
+  const accountRows=await Promise.all(members.map(async member=>{
    const assignment=driverRegistryAssignmentRow(member.user_id);
    const assignedCar=driverRegistryCarForRow(assignment);
-   const accepted=driverRegistryAccepted(assignment);
+   let accepted=driverRegistryAccepted(assignment);
+   if(assignment?.car_id&&!accepted&&window.FleetPilotCloud?.getVehicleHandoverHistory){
+    try{
+     const history=await window.FleetPilotCloud.getVehicleHandoverHistory(assignment.car_id);
+     const active=[...(history||[])].reverse().find(row=>!row.return_at&&String(row.driver_user_id||member.user_id)===String(member.user_id));
+     if(active){accepted=true;assignment.issue_at=active.issue_at||new Date().toISOString();assignment.handover_id=active.id||assignment.handover_id;if(assignedCar)assignedCar.driverAcceptedAt=assignment.issue_at}
+    }catch(error){console.warn("Driver acceptance sync",error)}
+   }
    return{type:"account",member,assignment,assignedCar,accepted,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}
-  });
+  }));
   const knownEmails=new Set(accountRows.map(x=>normalizeDriverIdentity(x.email)).filter(Boolean));
   const manualRows=fleetCars().filter(c=>c.tenant&&!c.driverUserId&&!knownEmails.has(normalizeDriverIdentity(c.driverEmail))).map(c=>({
    type:"manual",member:null,assignment:null,assignedCar:c,accepted:false,name:c.tenant||c.driverName||"Водитель",email:c.driverEmail||""

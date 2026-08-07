@@ -84,7 +84,7 @@ function renderDriverPickerCards(query=""){
 function ensureRichDriverPicker(){
  const input=$("#carTenant");if(!input||$("#carDriverPickerPanel"))return;
  input.type="hidden";
- input.insertAdjacentHTML("afterend",`<div class="rich-driver-picker"><div id="carDriverSelected" class="driver-picker-selected" hidden></div><div id="carDriverPickerPanel" class="driver-picker-panel"><div class="driver-picker-search-wrap"><span>⌕</span><input id="carDriverPickerSearch" type="search" placeholder="Найти по имени, фамилии или e-mail"></div><div id="carDriverPickerResults" class="driver-picker-results"></div><button type="button" id="carDriverManualToggle" class="driver-picker-manual-toggle">+ Ввести водителя вручную</button><div id="carDriverManualFields" class="driver-picker-manual-fields" hidden><input id="carDriverManualName" placeholder="Имя и фамилия"><input id="carDriverEmail" type="email" placeholder="E-mail (необязательно)"><input id="carDriverPhone" type="tel" placeholder="Телефон (необязательно)"></div></div></div>`);
+ input.insertAdjacentHTML("afterend",`<div class="rich-driver-picker"><div id="carDriverSelected" class="driver-picker-selected" hidden></div><div id="carDriverPickerPanel" class="driver-picker-panel"><div class="driver-picker-search-wrap"><span>⌕</span><input id="carDriverPickerSearch" type="search" placeholder="Найти по имени, фамилии или e-mail"></div><div id="carDriverPickerResults" class="driver-picker-results"></div><button type="button" id="carDriverManualToggle" class="driver-picker-manual-toggle">+ Ввести водителя вручную</button><div id="carDriverManualFields" class="driver-picker-manual-fields" hidden><input id="carDriverManualName" placeholder="Имя и фамилия"><input id="carDriverEmail" type="email" placeholder="E-mail (необязательно)"><input id="carDriverPhone" type="tel" placeholder="Телефон (необязательно)"></div></div><button type="button" id="carDriverUnlinkButton" class="driver-picker-unlink" hidden>Отвязать водителя</button></div>`);
  const search=$("#carDriverPickerSearch");if(search)search.oninput=()=>renderDriverPickerCards(search.value);
  $("#carDriverManualToggle").onclick=()=>{const fields=$("#carDriverManualFields");fields.hidden=!fields.hidden;if(!fields.hidden){$("#carDriverUserId").value="";$("#carDriverSelected").hidden=true}};
  [$("#carDriverManualName"),$("#carDriverEmail")].filter(Boolean).forEach(el=>el.addEventListener("input",()=>{if(!$("#carDriverUserId").value)input.value=$("#carDriverManualName").value.trim()||$("#carDriverEmail").value.trim()}));
@@ -98,6 +98,24 @@ function renderCarDriverPicker(c=null){
  if(current?.userId){const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(current.userId));if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(current.name||"D").charAt(0).toUpperCase()}</span><span><strong>${current.name||current.email}</strong><small>${current.email||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;panel?.removeAttribute("hidden")}}panel?.setAttribute("hidden","");if(manual)manual.hidden=true}
  else if(c?.tenant){if(manual){manual.hidden=false;$("#carDriverManualName").value=c.tenant||c.driverName||"";$("#carDriverEmail").value=c.driverEmail||"";$("#carDriverPhone").value=c.driverPhone||""}panel?.removeAttribute("hidden")}
  else{selected&&(selected.hidden=true);panel?.removeAttribute("hidden");manual&&(manual.hidden=true)}
+ const unlink=$("#carDriverUnlinkButton");
+ if(unlink){
+  unlink.hidden=!(current?.userId||c?.tenant);
+  unlink.onclick=async()=>{
+   if(!c||!confirm("Отвязать водителя от этого автомобиля? История выдач останется сохранена."))return;
+   try{
+    if(current?.userId&&window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(current.userId,null);
+    c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignmentSource="";c.tenant="";
+    if(c.status==="active"||c.status==="repair")c.status="free";
+    save?.();
+    await loadWorkspaceDriverAssignments?.();
+    renderFleet?.();
+    renderCarDriverPicker(c);
+    renderDriversRegistry?.();
+    toast("Водитель отвязан")
+   }catch(error){toast(error.message||String(error))}
+  }
+ }
  if(hint)hint.textContent=current?.userId?"Водитель связан с аккаунтом FleetPilot.":c?.tenant?"Водитель введён вручную.":"Выберите водителя из списка или введите вручную."
 }
 async function prepareCarDriverPicker(c=null){await loadWorkspaceDriverDirectory();renderCarDriverPicker(c)}
@@ -185,6 +203,8 @@ async function loadDriverHandoverState(){
   if(!actions)return;
   actions.hidden=!driverPortalContext?.car_id;
   const issued=driverVehicleIsAlreadyAccepted();
+  const assignedCar=driverAssignedCar();
+  if(assignedCar&&issued&&!assignedCar.driverAcceptedAt){assignedCar.driverAcceptedAt=driverHandoverState?.issue_at||new Date().toISOString();save?.()}
   actions.dataset.issued=issued?"1":"0";
   const issueButton=$("#startVehicleIssue"),returnButton=$("#startVehicleReturn");
   if(issueButton){issueButton.hidden=issued;issueButton.style.display=issued?"none":""}
@@ -469,7 +489,9 @@ async function openDriverRepairDialog(){
   toast("Сначала нужно назначить автомобиль");
   return
  }
- $("#driverRepairMileage").value=assignedCar?.mileage||driverPortalContext?.mileage||0;
+ const minimumMileage=Number(assignedCar?.mileage||driverPortalContext?.mileage||0);
+ $("#driverRepairMileage").value=minimumMileage;
+ $("#driverRepairMileage").min=Math.max(0,Math.round(minimumMileage));
  const brand=assignedCar?model(assignedCar).brand:(driverPortalContext?.vehicle_snapshot?.brand||"");
  const modelName=assignedCar?model(assignedCar).model:(driverPortalContext?.vehicle_snapshot?.model||"");
  $("#driverRepairVehicleSummary").innerHTML=`<strong>${brand} ${modelName}</strong><span>${assignedCar?.plate||driverPortalContext?.vehicle_snapshot?.plate||"—"}</span>`;

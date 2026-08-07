@@ -1157,9 +1157,10 @@ async function getDriverHandoverState(){
 async function submitVehicleHandover(payload){
  if(!client||!membership)throw new Error("Workspace недоступен");
  if(enterpriseRole()!=="driver")throw new Error("Только водитель может подтвердить передачу");
+ const normalizeMileage=value=>{const raw=String(value??"").replace(/\s+/g,"").replace(",",".").replace(/[^0-9.]/g,"");const n=Number(raw);return Number.isFinite(n)?Math.max(0,Math.round(n)):0};
  const {data,error}=await client.rpc("submit_vehicle_handover",{
   handover_type_value:String(payload.type),
-  mileage_value:Number(payload.mileage||0),
+  mileage_value:normalizeMileage(payload.mileage),
   fuel_level_value:Number(payload.fuelLevel||0),
   equipment_value:payload.equipment||{},
   photos_value:payload.photos||[],

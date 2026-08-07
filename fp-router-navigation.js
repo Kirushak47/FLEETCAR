@@ -131,7 +131,7 @@ function showPage(id){
   const role=enterpriseCurrentRole();
   id=role==="driver"?"driverPortalPage":"dashboardPage"
  }
- if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
+ if(enterpriseCurrentRole()!=="driver"&&window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  if(id!=="carPage"&&fleetPilotRouteReady&&!fleetPilotApplyingRoute){
   fleetPilotSetRoute(fleetPilotRouteForPage(id))
  }
@@ -347,11 +347,24 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
  handoverMessage("Сохраняем передачу автомобиля…");
  try{
   const type=$("#vehicleHandoverType").value;
+  const normalizeMileageValue=value=>{
+   const raw=String(value??"").replace(/\s+/g,"").replace(",",".").replace(/[^0-9.]/g,"");
+   const parsed=Number(raw);
+   return Number.isFinite(parsed)?Math.max(0,Math.round(parsed)):0
+  };
+  const enteredMileage=normalizeMileageValue($("#vehicleHandoverMileage").value);
+  const assignedBeforeSubmit=driverAssignedCar();
+  const currentMileage=normalizeMileageValue(assignedBeforeSubmit?.mileage||driverPortalContext?.mileage||0);
+  const issueMileage=normalizeMileageValue(driverHandoverState?.issue_mileage||driverHandoverState?.mileage||0);
+  const minimumMileage=type==="return"?Math.max(currentMileage,issueMileage):currentMileage;
+  if(type==="return"&&enteredMileage<minimumMileage){
+   throw new Error(`Пробег при возврате не может быть меньше ${minimumMileage.toLocaleString("ru-RU")} км`)
+  }
   let result;
   try{
    result=await window.FleetPilotCloud.submitVehicleHandover({
     type,
-    mileage:$("#vehicleHandoverMileage").value,
+    mileage:enteredMileage,
     fuelLevel:$("#vehicleHandoverFuel").value,
     equipment,
     photos:vehicleHandoverPhotoData,
@@ -367,7 +380,13 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
   }
 
   const assignedCar=driverAssignedCar();
-  if(assignedCar&&result?.mileage!=null)assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),Number(result.mileage));
+  if(assignedCar){
+   const savedMileage=Number(result?.mileage??enteredMileage);
+   if(Number.isFinite(savedMileage))assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),savedMileage);
+   if(type==="issue")assignedCar.driverAcceptedAt=result?.issue_at||driverHandoverState?.issue_at||new Date().toISOString();
+   if(type==="return")assignedCar.driverAcceptedAt="";
+   save?.()
+  }
   $("#vehicleHandoverDialog").close();
   toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
   await window.FleetPilotCloud.checkCloudForUpdates?.();
@@ -445,13 +464,27 @@ if(driverRepairForm)driverRepairForm.onsubmit=async event=>{
  event.preventDefault();
  driverRepairMessage("Отправляем заявку…");
  try{
+  const assignedCar=driverAssignedCar();
+  const normalizeMileageValue=value=>{
+   const raw=String(value??"").replace(/\s+/g,"").replace(",",".").replace(/[^0-9.]/g,"");
+   const parsed=Number(raw);
+   return Number.isFinite(parsed)?Math.max(0,Math.round(parsed)):0
+  };
+  const currentMileage=normalizeMileageValue(assignedCar?.mileage||driverPortalContext?.mileage||0);
+  const reportMileage=normalizeMileageValue($("#driverRepairMileage").value);
+  if(reportMileage<currentMileage)throw new Error(`Пробег не может быть меньше текущего: ${currentMileage.toLocaleString("ru-RU")} км`);
   await window.FleetPilotCloud.submitDriverRepairRequest({
    category:$("#driverRepairCategory").value,
    urgency:$("#driverRepairUrgency").value,
-   mileage:$("#driverRepairMileage").value,
+   mileage:reportMileage,
    description:$("#driverRepairDescription").value,
    dashboardWarning:$("#driverRepairDashboardWarning").checked
   });
+  if(assignedCar&&reportMileage>currentMileage){
+   assignedCar.mileage=reportMileage;
+   save?.();
+   try{await window.FleetPilotCloud.updateDriverMileage?.(reportMileage,"driver_repair_request")}catch(error){console.warn("Driver mileage sync",error)}
+  }
   $("#driverRepairDialog").close();
   driverRepairForm.reset();
   toast("Заявка отправлена");
