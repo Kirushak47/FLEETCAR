@@ -483,6 +483,15 @@
         <select id="serviceCityFilter">
           <option value="all">Все города</option>
         </select>
+        <select id="servicePriorityFilter">
+          <option value="all">Все приоритеты</option>
+          <option value="critical">Срочно</option>
+          <option value="today">Сегодня</option>
+          <option value="planned">Планово</option>
+        </select>
+        <select id="serviceMechanicFilter">
+          <option value="all">Все исполнители</option>
+        </select>
         <select id="serviceSort">
           <option value="priority">Сначала важные</option>
           <option value="newest">Сначала новые</option>
@@ -1338,6 +1347,8 @@
     <label>Фактическая сумма<input id="repairActual" type="number" step="0.01"></label>
     <label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="parts">Ожидает запчасти</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option><option value="cancelled">Отменён</option></select></label>
     <label>Сервис<input id="repairService"></label>
+    <label>Исполнитель<input id="repairMechanic" placeholder="Механик / сервис-менеджер"></label>
+    <label>Приоритет<select id="repairPriority"><option value="planned">Планово</option><option value="today">Сегодня</option><option value="critical">Срочно</option></select></label>
     <label>Статус оплаты<select id="repairPaymentStatus"><option value="unpaid">Не оплачено</option><option value="partial">Частично</option><option value="paid">Оплачено</option><option value="driver">Оплата водителем</option><option value="insurance">Страховая</option><option value="warranty">Гарантия</option></select></label>
     <label>Оплачено<input id="repairPaidAmount" type="number" step="0.01" min="0"></label>
     <label>Дата завершения<input id="repairCompletedDate" type="date"></label>

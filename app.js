@@ -1204,6 +1204,8 @@ function openFleetServiceAlert(carId){
  if(serviceCollapsedCars.has(String(carId))){serviceCollapsedCars.delete(String(carId));try{localStorage.setItem(SERVICE_COLLAPSED_CARS_KEY,JSON.stringify([...serviceCollapsedCars]))}catch{}}
  const search=$("#serviceSearch");if(search)search.value="";
  const city=$("#serviceCityFilter");if(city)city.value="all";
+ const priority=$("#servicePriorityFilter");if(priority)priority.value="all";
+ const mechanic=$("#serviceMechanicFilter");if(mechanic)mechanic.value="all";
  const status=$("#serviceStatusFilter");if(status)status.value="all";
  showPage("repairsPage");
  setTimeout(async()=>{
@@ -1761,6 +1763,10 @@ const serviceStatusFilter=$("#serviceStatusFilter");
 if(serviceStatusFilter)serviceStatusFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
 const serviceCityFilter=$("#serviceCityFilter");
 if(serviceCityFilter)serviceCityFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const servicePriorityFilter=$("#servicePriorityFilter");
+if(servicePriorityFilter)servicePriorityFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const serviceMechanicFilter=$("#serviceMechanicFilter");
+if(serviceMechanicFilter)serviceMechanicFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
 const serviceSort=$("#serviceSort");
 if(serviceSort)serviceSort.onchange=renderRepairs;
 const clearServiceFilters=$("#clearServiceFilters");
@@ -1768,6 +1774,8 @@ if(clearServiceFilters)clearServiceFilters.onclick=()=>{
  if(serviceSearch)serviceSearch.value="";
  if(serviceStatusFilter)serviceStatusFilter.value="all";
  if(serviceCityFilter)serviceCityFilter.value="all";
+ if(servicePriorityFilter)servicePriorityFilter.value="all";
+ if(serviceMechanicFilter)serviceMechanicFilter.value="all";
  if(serviceSort)serviceSort.value="priority";
  selectedWorkspaceRepairCarId=null;
  renderRepairs()
@@ -5049,6 +5057,44 @@ function serviceTaskPriority(carId){
 function serviceStatusClass(status){
  return {repair:"danger",service:"service",parts:"parts",planned:"planned",done:"done",cancelled:"cancelled"}[status]||"planned"
 }
+function servicePriorityValue(priority){return {critical:3,today:2,planned:1}[String(priority||"planned")]||1}
+function servicePriorityText(priority){return {critical:"Срочно",today:"Сегодня",planned:"Планово"}[String(priority||"planned")]||"Планово"}
+function serviceRepairIsOverdue(repair){
+ if(!repair?.date||["done","cancelled"].includes(String(repair.status||"")))return false;
+ return String(repair.date)<today()
+}
+function serviceRepairPriority(repair){
+ if(repair?.priority)return repair.priority;
+ if(serviceRepairIsOverdue(repair))return "critical";
+ return String(repair?.date||"")===today()?"today":"planned"
+}
+function populateServiceMechanicFilter(){
+ const select=$("#serviceMechanicFilter");if(!select)return;
+ const current=select.value||"all";
+ const names=[...new Set((db.repairs||[]).map(r=>String(r.mechanic||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pl"));
+ select.innerHTML='<option value="all">Все исполнители</option>'+names.map(name=>`<option value="${name.replaceAll('"','&quot;')}">${name}</option>`).join("");
+ select.value=names.includes(current)?current:"all"
+}
+function updateServiceRepairField(id,field,value){
+ const repair=(db.repairs||[]).find(r=>String(r.id)===String(id));if(!repair)return;
+ if(!["priority","mechanic","status"].includes(field))return;
+ if(field==="status"&&value==="done"&&Number(repair.actual||0)<=0&&repair.paymentStatus!=="warranty"){
+  editRepair(repair.id);setTimeout(()=>toast("Для завершения укажите фактическую сумму или гарантию"),80);return
+ }
+ repair[field]=value;
+ if(field==="status"&&value==="done")repair.completedDate=repair.completedDate||today();
+ syncLinkedExpenseFromRepair(repair);syncCarServiceStatus(repair.carId);
+ logActivity("Изменена сервисная задача","Сервис",`${repair.title} · ${field}`,repair.carId);
+ save();renderRepairs();renderExpenses();renderFleet()
+}
+window.updateServiceRepairField=updateServiceRepairField;
+function serviceDragStart(event,id){event.dataTransfer.setData("text/service-repair",String(id));event.dataTransfer.effectAllowed="move"}
+function serviceDragOver(event){event.preventDefault();event.dataTransfer.dropEffect="move"}
+function serviceDrop(event,status){
+ event.preventDefault();const id=event.dataTransfer.getData("text/service-repair");if(!id)return;
+ updateServiceRepairField(id,"status",status)
+}
+window.serviceDragStart=serviceDragStart;window.serviceDragOver=serviceDragOver;window.serviceDrop=serviceDrop;
 function serviceFilterMatchesRepair(repair,filter){
  if(filter==="all")return repair.status!=="done"&&repair.status!=="cancelled";
  if(filter==="done")return repair.status==="done";
@@ -5059,6 +5105,8 @@ function serviceCarsForCurrentView(){
  const search=String($("#serviceSearch")?.value||"").trim().toLowerCase();
  const statusFilter=$("#serviceStatusFilter")?.value||"all";
  const cityFilter=$("#serviceCityFilter")?.value||"all";
+ const priorityFilter=$("#servicePriorityFilter")?.value||"all";
+ const mechanicFilter=$("#serviceMechanicFilter")?.value||"all";
  const sort=$("#serviceSort")?.value||"priority";
 
  const rows=fleetCars().map(c=>{
@@ -5066,14 +5114,17 @@ function serviceCarsForCurrentView(){
   const repairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id));
   const requests=activeDriverRepairRequests().filter(r=>String(r.car_id)===String(c.id));
   const plannedExpenses=plannedServiceExpenses(c.id);
-  const visibleRepairs=repairs.filter(r=>serviceFilterMatchesRepair(r,statusFilter));
+  const visibleRepairs=repairs.filter(r=>serviceFilterMatchesRepair(r,statusFilter)).filter(r=>
+   (priorityFilter==="all"||serviceRepairPriority(r)===priorityFilter)&&
+   (mechanicFilter==="all"||String(r.mechanic||"")===mechanicFilter)
+  );
   const statusMatch=statusFilter==="requests"?requests.length>0:
    statusFilter==="planned"?(visibleRepairs.length>0||plannedExpenses.length>0):
    statusFilter==="all"?(visibleRepairs.length>0||requests.length>0||plannedExpenses.length>0):
    statusFilter==="done"?visibleRepairs.length>0:visibleRepairs.length>0;
   const hay=[
    m.brand,m.model,c.plate,c.tenant,c.city,
-   ...repairs.flatMap(r=>[r.title,r.service,r.note,repairStatusText(r.status)]),
+   ...repairs.flatMap(r=>[r.title,r.service,r.mechanic,r.note,repairStatusText(r.status),servicePriorityText(serviceRepairPriority(r))]),
    ...requests.flatMap(r=>[r.driver_email,r.description,DRIVER_REPAIR_CATEGORY_LABELS[r.category]||r.category]),
    ...plannedExpenses.flatMap(x=>[x.title,x.note,expenseCategoryText(x.category),x.amount])
   ].join(" ").toLowerCase();
@@ -5276,17 +5327,26 @@ function renderServiceCarTasks(row){
      <span class="service-task-status planned">План. расход</span>
      <button class="btn" onclick="editExpense('${x.id}')">Открыть</button>
     </div>`).join("")}
-   ${repairsToShow.map(r=>{const linkedExpense=serviceLinkedExpense(r),nextLabel=serviceNextStatusLabel(r.status);return `<div class="service-task-row ${serviceStatusClass(r.status)}" data-repair-id="${r.id}">
+   ${repairsToShow.map(r=>{const linkedExpense=serviceLinkedExpense(r),nextLabel=serviceNextStatusLabel(r.status),priority=serviceRepairPriority(r),overdue=serviceRepairIsOverdue(r);return `<div class="service-task-row ${serviceStatusClass(r.status)} priority-${priority} ${overdue?"overdue":""}" data-repair-id="${r.id}" draggable="true" ondragstart="serviceDragStart(event,'${r.id}')">
      <span class="service-task-icon">🔧</span>
-     <div class="service-task-copy"><strong>${r.title}</strong><span>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}${linkedExpense?` · расход ${expenseStatusText(linkedExpense.status)}`:""}</small></div>
+     <div class="service-task-copy"><div class="service-task-titleline"><strong>${r.title}</strong><span class="service-priority-chip ${priority}">${servicePriorityText(priority)}</span>${overdue?`<span class="service-overdue-chip">Просрочено</span>`:""}</div><span>${r.service||"Сервис не указан"}${r.mechanic?` · ${r.mechanic}`:""}${r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}${linkedExpense?` · расход ${expenseStatusText(linkedExpense.status)}`:""}</small></div>
+     <div class="service-task-inline-controls"><select aria-label="Приоритет" onchange="updateServiceRepairField('${r.id}','priority',this.value)"><option value="planned" ${priority==="planned"?"selected":""}>Планово</option><option value="today" ${priority==="today"?"selected":""}>Сегодня</option><option value="critical" ${priority==="critical"?"selected":""}>Срочно</option></select><input aria-label="Исполнитель" value="${String(r.mechanic||"").replaceAll('"','&quot;')}" placeholder="Исполнитель" onchange="updateServiceRepairField('${r.id}','mechanic',this.value.trim())"></div>
      <span class="service-task-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span>
      <div class="service-task-actions">${linkedExpense?`<button class="btn" onclick="openSmartEntity('expense','${linkedExpense.id}','${c.id}')">Расход</button>`:""}${nextLabel?`<button class="btn primary" onclick="advanceServiceRepair('${r.id}')">${nextLabel}</button>`:""}<button class="btn" onclick="editRepair('${r.id}')">Подробнее</button></div>
     </div>`}).join("")}
+  </div>
+  <div class="service-drop-zones" aria-label="Быстро изменить статус">
+   <button type="button" ondragover="serviceDragOver(event)" ondrop="serviceDrop(event,'planned')">План</button>
+   <button type="button" ondragover="serviceDragOver(event)" ondrop="serviceDrop(event,'parts')">Запчасти</button>
+   <button type="button" ondragover="serviceDragOver(event)" ondrop="serviceDrop(event,'service')">Запись</button>
+   <button type="button" ondragover="serviceDragOver(event)" ondrop="serviceDrop(event,'repair')">В ремонте</button>
+   <button type="button" ondragover="serviceDragOver(event)" ondrop="serviceDrop(event,'done')">Готово</button>
   </div>
  </article>`
 }
 function renderRepairs(){
  populateServiceCityFilter();
+ populateServiceMechanicFilter();
  renderServiceCrmSummary();
  renderPlannedServiceExpenses();
  const rows=serviceCarsForCurrentView();
@@ -5649,6 +5709,8 @@ function openSmartEntity(type,entityId,carId=''){
   const search=$("#serviceSearch");if(search)search.value="";
   const status=$("#serviceStatusFilter");if(status)status.value="all";
   const city=$("#serviceCityFilter");if(city)city.value="all";
+  const priority=$("#servicePriorityFilter");if(priority)priority.value="all";
+  const mechanic=$("#serviceMechanicFilter");if(mechanic)mechanic.value="all";
   selectedWorkspaceRepairCarId=row?.carId?String(row.carId):String(carId||"");
   if(row?.carId&&serviceCollapsedCars?.has(String(row.carId))){
    serviceCollapsedCars.delete(String(row.carId));
@@ -6011,7 +6073,7 @@ function openRepairDialog(carId="",id=""){
  if(!requireFleetCar())return;
  const r=id?db.repairs.find(v=>v.id===id):null,selected=r?.carId||carId||fleetCars()[0]?.id||"";
  const latestMileage=currentConfirmedMileage(selected);
- $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=Math.max(Number(r?.mileage||0),latestMileage);$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Связанная заявка водителя</strong><span>${r.note||""}</span>`:"";$("#repairNote").value=r?.note||"";
+ $("#repairId").value=r?.id||"";$("#repairCarId").innerHTML=opts(selected);$("#repairTitle").value=r?.title||"";$("#repairDate").value=r?.date||today();$("#repairMileage").value=Math.max(Number(r?.mileage||0),latestMileage);$("#repairPlanned").value=r?.planned||"";$("#repairActual").value=r?.actual||"";$("#repairStatus").value=r?.status||"planned";$("#repairService").value=r?.service||"";$("#repairMechanic").value=r?.mechanic||"";$("#repairPriority").value=serviceRepairPriority(r||{});$("#repairPaymentStatus").value=r?.paymentStatus||"unpaid";$("#repairPaidAmount").value=r?.paidAmount||"";$("#repairCompletedDate").value=r?.completedDate||"";$("#repairWarrantyUntil").value=r?.warrantyUntil||"";$("#repairLinkedRequestId").value=r?.linkedRequestId||"";$("#repairLinkedExpenseId").value=r?.linkedExpenseId||"";$("#repairSourceRequest").hidden=!r?.linkedRequestId;$("#repairSourceRequest").innerHTML=r?.linkedRequestId?`<strong>Связанная заявка водителя</strong><span>${r.note||""}</span>`:"";$("#repairNote").value=r?.note||"";
  $("#repairDialog").showModal()
 }
 function openPaymentDialog(carId="",id=""){
@@ -6428,6 +6490,7 @@ $("#repairForm").onsubmit=async e=>{
    service:$("#repairService").value.trim(),note:$("#repairNote").value.trim(),
    paymentStatus,paidAmount:Number($("#repairPaidAmount").value||0),
    completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),
+   mechanic:$("#repairMechanic")?.value.trim()||"",priority:$("#repairPriority")?.value||"planned",
    warrantyUntil:$("#repairWarrantyUntil").value,
    linkedRequestId:$("#repairLinkedRequestId").value,
    linkedExpenseId:$("#repairLinkedExpenseId").value

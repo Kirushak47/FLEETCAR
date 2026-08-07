@@ -8215,3 +8215,18 @@ html[data-theme="dark"] .repair-linked-finance-info{
 .service-car-collapse-button:not(.collapsed) .service-collapse-chevron{transform:rotate(0deg)}
 .service-task-row.smart-target-highlight,.service-task-row.smart-entity-highlight{outline:2px solid currentColor;outline-offset:2px}
 @media(max-width:900px){.service-task-actions{grid-column:1/-1;justify-content:flex-start}.service-task-actions .btn{flex:1 1 auto}}
+
+/* FleetPilot V11.5 — Service work queue */
+.service-crm-toolbar{grid-template-columns:minmax(240px,1fr) 160px 140px 140px 155px 160px auto}
+.service-task-row{grid-template-columns:34px minmax(260px,1fr) 190px 100px minmax(220px,auto)}
+.service-task-titleline{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.service-priority-chip,.service-overdue-chip{display:inline-flex;align-items:center;padding:3px 6px;border-radius:999px;font-size:7px;font-weight:900}
+.service-priority-chip.planned{background:#eef1f5;color:#697386}.service-priority-chip.today{background:#fff5df;color:#9a6500}.service-priority-chip.critical,.service-overdue-chip{background:#fff0f0;color:#c53d3d}
+.service-task-row.priority-critical{box-shadow:inset 3px 0 0 #ef4444}.service-task-row.priority-today{box-shadow:inset 3px 0 0 #f59e0b}
+.service-task-inline-controls{display:grid;grid-template-columns:86px minmax(90px,1fr);gap:5px}.service-task-inline-controls select,.service-task-inline-controls input{width:100%;min-width:0;height:30px;padding:0 7px;border:1px solid var(--line,#e1e5ec);border-radius:8px;background:var(--card,#fff);color:inherit;font-size:8px}
+.service-task-actions{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap}.service-task-actions .btn{min-height:30px;padding:0 8px;font-size:7px}
+.service-drop-zones{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:7px 14px;border-top:1px dashed var(--line,#e4e7ed);background:color-mix(in srgb,var(--card,#fff) 97%,#f5f6fa)}
+.service-drop-zones button{min-height:28px;border:1px dashed #cfd5df;border-radius:8px;background:transparent;color:var(--muted,#737d8e);font-size:7px;font-weight:800}.service-drop-zones button:hover{border-color:#5b4df5;color:#5b4df5;background:rgba(91,77,245,.05)}
+.service-task-row[draggable="true"]{cursor:grab}.service-task-row[draggable="true"]:active{cursor:grabbing;opacity:.72}
+@media(max-width:1200px){.service-crm-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.service-crm-search{grid-column:1/-1}.service-task-row{grid-template-columns:34px minmax(0,1fr) 170px}.service-task-status,.service-task-actions{grid-column:2/-1}.service-task-inline-controls{grid-column:3}}
+@media(max-width:760px){.service-crm-toolbar{grid-template-columns:1fr 1fr}.service-task-row{grid-template-columns:32px minmax(0,1fr)}.service-task-inline-controls,.service-task-status,.service-task-actions{grid-column:2}.service-task-inline-controls{grid-template-columns:1fr}.service-drop-zones{grid-template-columns:repeat(2,1fr)}}
