@@ -4,19 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V17.3 Drivers Registry</title>
+  <title>FleetPilot V18.0 Drivers Registry</title>
   <link rel="manifest" href="manifest.webmanifest?v=160000">
   <!-- FleetPilot styles: load in this order; CSS cascade depends on it -->
-  <link rel="stylesheet" href="fp-base.css?v=173000">
-  <link rel="stylesheet" href="fp-service-layout.css?v=173000">
-  <link rel="stylesheet" href="fp-desktop-gps.css?v=173000">
-  <link rel="stylesheet" href="fp-cloud-roles.css?v=173000">
-  <link rel="stylesheet" href="fp-driver.css?v=173000">
-  <link rel="stylesheet" href="fp-crm-service.css?v=173000">
-  <link rel="stylesheet" href="fp-current-ui.css?v=173000">
+  <link rel="stylesheet" href="fp-base.css?v=180000">
+  <link rel="stylesheet" href="fp-service-layout.css?v=180000">
+  <link rel="stylesheet" href="fp-desktop-gps.css?v=180000">
+  <link rel="stylesheet" href="fp-cloud-roles.css?v=180000">
+  <link rel="stylesheet" href="fp-driver.css?v=180000">
+  <link rel="stylesheet" href="fp-crm-service.css?v=180000">
+  <link rel="stylesheet" href="fp-current-ui.css?v=180000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="fp-mobile-v17.css?v=173000">
-  <script>window.FLEETPILOT_VERSION="17.3";window.FLEETPILOT_BUILD="173000";</script>
+  <link rel="stylesheet" href="fp-mobile-v17.css?v=180000">
+  <script>window.FLEETPILOT_VERSION="18.0";window.FLEETPILOT_BUILD="180000";</script>
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -47,7 +47,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V17.3</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V18.0</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -854,7 +854,7 @@
           <h3>Водители</h3>
           <p>Водители текущего Workspace, назначенные автомобили и статус приёмки.</p>
         </div>
-        <button type="button" id="refreshDriversRegistry" class="btn">Обновить</button>
+        <div class="drivers-registry-head-actions"><button type="button" id="openCreateDriver" class="btn primary">+ Создать водителя</button><button type="button" id="refreshDriversRegistry" class="btn">Обновить</button></div>
       </div>
       <div class="drivers-registry-toolbar">
         <input id="driversRegistrySearch" type="search" placeholder="Поиск по имени, e-mail или автомобилю">
@@ -1271,6 +1271,30 @@
     <div class="settings-actions">
       <button type="button" class="btn" data-close="driverRepairDialog">Отмена</button>
       <button class="btn primary">Отправить заявку</button>
+    </div>
+  </form>
+</dialog>
+
+
+<dialog id="createDriverDialog" class="enterprise-dialog">
+  <form method="dialog" id="createDriverForm" class="modal driver-create-modal">
+    <div class="modal-head">
+      <div><span class="eyebrow">Новый водитель</span><h2>Создать аккаунт водителя</h2></div>
+      <button type="button" data-close="createDriverDialog">✕</button>
+    </div>
+    <div class="driver-create-grid">
+      <label><span>Имя *</span><input id="createDriverFirstName" required autocomplete="given-name" placeholder="Jan"></label>
+      <label><span>Фамилия *</span><input id="createDriverLastName" required autocomplete="family-name" placeholder="Kowalski"></label>
+      <label class="driver-create-wide"><span>E-mail *</span><input id="createDriverEmail" type="email" required autocomplete="email" placeholder="jan@example.com"></label>
+      <label><span>Телефон</span><input id="createDriverPhone" type="tel" autocomplete="tel" placeholder="+48 ..."></label>
+      <label><span>Город</span><input id="createDriverCity" placeholder="Warszawa"></label>
+      <label class="driver-create-wide"><span>Сразу назначить автомобиль</span><select id="createDriverCar"><option value="">Не назначать сейчас</option></select></label>
+    </div>
+    <p class="settings-help">Аккаунт создаётся администратором. Водитель получит приглашение на e-mail и установит пароль по ссылке.</p>
+    <div id="createDriverMessage" class="cloud-message" hidden></div>
+    <div class="settings-actions">
+      <button type="button" class="btn" data-close="createDriverDialog">Отмена</button>
+      <button class="btn primary">Создать и отправить приглашение</button>
     </div>
   </form>
 </dialog>
@@ -1878,16 +1902,16 @@
 <script src="cloud-config.js?v=158000"></script>
 <script src="cloud.js?v=158000"></script>
 <!-- FleetPilot application code: order is intentional -->
-<script src="fp-core-data.js?v=173000"></script>
-<script src="fp-roles-company.js?v=173000"></script>
-<script src="fp-driver-portal.js?v=173000"></script>
-<script src="fp-router-navigation.js?v=173000"></script>
-<script src="fp-files-backups.js?v=173000"></script>
-<script src="fp-analytics-dashboard.js?v=173000"></script>
-<script src="fp-gps-map.js?v=173000"></script>
-<script src="fp-fleet.js?v=173000"></script>
-<script src="fp-service-finance.js?v=173000"></script>
-<script src="fp-calendar-vehicle.js?v=173000"></script>
-<script src="fp-actions-documents.js?v=173000"></script>
-<script src="fp-boot-hotfixes.js?v=173000"></script>
+<script src="fp-core-data.js?v=180000"></script>
+<script src="fp-roles-company.js?v=180000"></script>
+<script src="fp-driver-portal.js?v=180000"></script>
+<script src="fp-router-navigation.js?v=180000"></script>
+<script src="fp-files-backups.js?v=180000"></script>
+<script src="fp-analytics-dashboard.js?v=180000"></script>
+<script src="fp-gps-map.js?v=180000"></script>
+<script src="fp-fleet.js?v=180000"></script>
+<script src="fp-service-finance.js?v=180000"></script>
+<script src="fp-calendar-vehicle.js?v=180000"></script>
+<script src="fp-actions-documents.js?v=180000"></script>
+<script src="fp-boot-hotfixes.js?v=180000"></script>
 </body></html>

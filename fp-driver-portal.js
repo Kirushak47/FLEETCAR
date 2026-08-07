@@ -21,7 +21,13 @@ let workspaceDriverDirectory=[];
 
 function normalizeDriverIdentity(value){return String(value||"").trim().toLowerCase()}
 function workspaceDriverEmail(member){return member?.profiles?.email||member?.email||member?.driver_email||""}
-function workspaceDriverName(member){return member?.display_name||member?.name||member?.full_name||""}
+function driverMetaStorageKey(){return `fleetpilot.driver.meta.${window.FleetPilotCloud?.workspace?.id||"default"}`}
+function loadDriverMetaStore(){try{return JSON.parse(localStorage.getItem(driverMetaStorageKey())||"{}")||{}}catch{return{}}}
+function saveDriverMetaStore(store){try{localStorage.setItem(driverMetaStorageKey(),JSON.stringify(store||{}))}catch{}}
+function driverMetaFor(member){const store=loadDriverMetaStore();const email=normalizeDriverIdentity(workspaceDriverEmail(member));return store[String(member?.user_id||"")]||store[email]||{}}
+function workspaceDriverName(member){const meta=driverMetaFor(member);return member?.display_name||member?.name||member?.full_name||[member?.first_name||meta.firstName,member?.last_name||meta.lastName].filter(Boolean).join(" ")||""}
+function workspaceDriverPhone(member){const meta=driverMetaFor(member);return member?.phone||member?.profiles?.phone||meta.phone||""}
+window.FleetPilotDriverMeta={load:loadDriverMetaStore,save:saveDriverMetaStore,key:driverMetaStorageKey};
 function workspaceDriverMemberByEmail(email){
  const q=normalizeDriverIdentity(email);if(!q)return null;
  return workspaceDriverDirectory.find(member=>normalizeDriverIdentity(workspaceDriverEmail(member))===q)||null
@@ -55,27 +61,44 @@ async function loadWorkspaceDriverDirectory(){
  try{
   const result=await window.FleetPilotCloud?.enterpriseList?.();
   workspaceDriverDirectory=(result?.members||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
+  const api=window.FleetPilotDriverMeta,store=api?.load?.()||{};
+  for(const member of workspaceDriverDirectory){const email=normalizeDriverIdentity(workspaceDriverEmail(member));const meta=store[String(member.user_id)]||store[email];if(meta&&email&&!store[String(member.user_id)])store[String(member.user_id)]=meta;if(meta?.pendingCarId&&!workspaceDriverAssignmentRows.some(r=>String(r.driver_user_id)===String(member.user_id)&&String(r.status)!=="returned")){try{await window.FleetPilotCloud.assignDriverVehicle(member.user_id,meta.pendingCarId);meta.pendingCarId="";store[String(member.user_id)]=meta;store[email]=meta}catch(error){console.warn("Pending driver assignment",error)}}}
+  api?.save?.(store);
  }catch(error){console.warn("Driver directory",error);workspaceDriverDirectory=[]}
  return workspaceDriverDirectory
 }
+function driverPickerStatus(member){
+ const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
+ if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
+ const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
+ const accepted=Boolean(row.active_handover_id||row.handover_id||row.issue_at||row.status==="issued"||row.status==="active");
+ return{label:accepted?"Автомобиль принят":"Ожидает приёмки",cls:accepted?"accepted":"pending",vehicle}
+}
+function renderDriverPickerCards(query=""){
+ const root=$("#carDriverPickerResults");if(!root)return;
+ const q=String(query||"").trim().toLowerCase();
+ const rows=(workspaceDriverDirectory||[]).filter(member=>{const text=`${workspaceDriverName(member)} ${workspaceDriverEmail(member)} ${workspaceDriverPhone(member)}`.toLowerCase();return !q||text.includes(q)});
+ root.innerHTML=rows.map(member=>{const status=driverPickerStatus(member);const name=workspaceDriverName(member)||workspaceDriverEmail(member)||"Водитель";const email=workspaceDriverEmail(member);return `<button type="button" class="driver-picker-card" data-pick-driver="${member.user_id}"><span class="driver-picker-avatar">${String(name).trim().charAt(0).toUpperCase()}</span><span class="driver-picker-person"><strong>${name}</strong><small>${email||"Без e-mail"}</small>${status.vehicle?`<em>${status.vehicle}</em>`:""}</span><span class="driver-picker-status ${status.cls}">${status.label}</span></button>`}).join("")||'<div class="driver-picker-empty">Водители не найдены</div>';
+ root.querySelectorAll('[data-pick-driver]').forEach(btn=>btn.onclick=()=>{const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(btn.dataset.pickDriver));if(!member)return;const input=$("#carTenant"),hidden=$("#carDriverUserId"),manual=$("#carDriverManualFields"),selected=$("#carDriverSelected");if(input)input.value=workspaceDriverName(member)||workspaceDriverEmail(member);if(hidden)hidden.value=member.user_id||"";const emailField=$("#carDriverEmail");if(emailField)emailField.value=workspaceDriverEmail(member)||"";if(manual)manual.hidden=true;if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(workspaceDriverName(member)||"D").charAt(0).toUpperCase()}</span><span><strong>${workspaceDriverName(member)||workspaceDriverEmail(member)}</strong><small>${workspaceDriverEmail(member)||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;$("#carDriverPickerPanel")?.removeAttribute("hidden")}}$("#carDriverPickerPanel")?.setAttribute("hidden","")});
+}
+function ensureRichDriverPicker(){
+ const input=$("#carTenant");if(!input||$("#carDriverPickerPanel"))return;
+ input.type="hidden";
+ input.insertAdjacentHTML("afterend",`<div class="rich-driver-picker"><div id="carDriverSelected" class="driver-picker-selected" hidden></div><div id="carDriverPickerPanel" class="driver-picker-panel"><div class="driver-picker-search-wrap"><span>⌕</span><input id="carDriverPickerSearch" type="search" placeholder="Найти по имени, фамилии или e-mail"></div><div id="carDriverPickerResults" class="driver-picker-results"></div><button type="button" id="carDriverManualToggle" class="driver-picker-manual-toggle">+ Ввести водителя вручную</button><div id="carDriverManualFields" class="driver-picker-manual-fields" hidden><input id="carDriverManualName" placeholder="Имя и фамилия"><input id="carDriverEmail" type="email" placeholder="E-mail (необязательно)"><input id="carDriverPhone" type="tel" placeholder="Телефон (необязательно)"></div></div></div>`);
+ const search=$("#carDriverPickerSearch");if(search)search.oninput=()=>renderDriverPickerCards(search.value);
+ $("#carDriverManualToggle").onclick=()=>{const fields=$("#carDriverManualFields");fields.hidden=!fields.hidden;if(!fields.hidden){$("#carDriverUserId").value="";$("#carDriverSelected").hidden=true}};
+ [$("#carDriverManualName"),$("#carDriverEmail")].filter(Boolean).forEach(el=>el.addEventListener("input",()=>{if(!$("#carDriverUserId").value)input.value=$("#carDriverManualName").value.trim()||$("#carDriverEmail").value.trim()}));
+}
 function renderCarDriverPicker(c=null){
- const list=$("#carDriverOptions"),input=$("#carTenant"),hidden=$("#carDriverUserId"),hint=$("#carDriverHint");
- if(!list||!input||!hidden)return;
- list.innerHTML=workspaceDriverDirectory.map(member=>{const email=workspaceDriverEmail(member);return email?`<option value="${email}"></option>`:""}).join("");
- const current=workspaceDriverForCar(c);
- if(current?.source==="account"){
-  input.value=current.email||current.name||"";
-  hidden.value=current.userId||"";
- }else{
-  input.value=c?.tenant||"";
-  hidden.value="";
- }
- const sync=()=>{
-  const member=workspaceDriverMemberByEmail(input.value);
-  hidden.value=member?.user_id||"";
-  if(hint)hint.textContent=member?`Пользователь FleetPilot · ${workspaceDriverEmail(member)}`:(input.value.trim()?"Водитель будет сохранён вручную — без подтверждения в кабинете.":"Можно выбрать пользователя с ролью «Водитель» или вписать данные вручную.")
- };
- input.oninput=sync;input.onchange=sync;sync()
+ ensureRichDriverPicker();
+ const input=$("#carTenant"),hidden=$("#carDriverUserId"),hint=$("#carDriverHint");if(!input||!hidden)return;
+ const current=workspaceDriverForCar(c);hidden.value=current?.userId||"";input.value=current?.name||c?.tenant||"";
+ renderDriverPickerCards("");
+ const selected=$("#carDriverSelected"),panel=$("#carDriverPickerPanel"),manual=$("#carDriverManualFields");
+ if(current?.userId){const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(current.userId));if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(current.name||"D").charAt(0).toUpperCase()}</span><span><strong>${current.name||current.email}</strong><small>${current.email||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;panel?.removeAttribute("hidden")}}panel?.setAttribute("hidden","");if(manual)manual.hidden=true}
+ else if(c?.tenant){if(manual){manual.hidden=false;$("#carDriverManualName").value=c.tenant||c.driverName||"";$("#carDriverEmail").value=c.driverEmail||"";$("#carDriverPhone").value=c.driverPhone||""}panel?.removeAttribute("hidden")}
+ else{selected&&(selected.hidden=true);panel?.removeAttribute("hidden");manual&&(manual.hidden=true)}
+ if(hint)hint.textContent=current?.userId?"Водитель связан с аккаунтом FleetPilot.":c?.tenant?"Водитель введён вручную.":"Выберите водителя из списка или введите вручную."
 }
 async function prepareCarDriverPicker(c=null){await loadWorkspaceDriverDirectory();renderCarDriverPicker(c)}
 window.prepareCarDriverPicker=prepareCarDriverPicker;
@@ -314,8 +337,9 @@ async function renderDriverServiceFeed(){
  try{
   const rows=await window.FleetPilotCloud.getDriverServiceFeed();
   driverServiceFeedRows=rows;
-  if(count)count.textContent=String(rows.filter(row=>row.status!=="done").length);
-  root.innerHTML=rows.map(row=>{
+  const visibleRows=rows.filter(row=>row.status==="done"||row.driver_action_required===true||row.requires_driver===true||row.driver_message||row.appointment_at||row.scheduled_at);
+  if(count)count.textContent=String(visibleRows.filter(row=>row.status!=="done").length);
+  root.innerHTML=visibleRows.map(row=>{
    const due=row.date?days(row.date):null;
    const urgency=due!=null&&due<0?"overdue":due!=null&&due<=3?"urgent":due!=null&&due<=14?"soon":"normal";
    const statusLabel=repairStatusText(row.status);
@@ -331,7 +355,7 @@ async function renderDriverServiceFeed(){
       </div>
     </div>
    </article>`
-  }).join("")||'<div class="driver-empty-state">Запланированных сервисных работ нет.</div>';
+  }).join("")||'<div class="driver-empty-state">Для вас сейчас нет действий по сервису.</div>';
   renderDriverProfileService()
  }catch(error){
   if(count)count.textContent="!";
@@ -360,6 +384,7 @@ async function renderDriverPortal(){
   renderDriverDocuments();
   renderDriverProfile();
   await Promise.all([renderDriverRepairRequests(),renderDriverNotifications(),renderDriverServiceFeed()]);
+  document.body.classList.add("driver-portal-v18")
   driverPortalMessage("")
  }catch(error){
   driverPortalMessage(error.message||String(error),"error")

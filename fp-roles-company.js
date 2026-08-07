@@ -143,6 +143,10 @@ function inviteMessage(text,type=""){
 function enterpriseMemberEmail(member){
  return member?.profiles?.email||member?.email||"Без email"
 }
+function driverDisplayName(member){return workspaceDriverName?.(member)||enterpriseMemberEmail(member)}
+function createDriverMessage(text,type=""){const el=$("#createDriverMessage");if(!el)return;el.hidden=!text;el.textContent=text;el.className=`cloud-message ${type}`}
+function rememberDriverInviteMeta({email,userId,firstName,lastName,phone}){const api=window.FleetPilotDriverMeta;if(!api)return;const store=api.load();const meta={firstName:firstName||"",lastName:lastName||"",phone:phone||"",updatedAt:new Date().toISOString()};if(email)store[normalizeDriverIdentity(email)]=meta;if(userId)store[String(userId)]=meta;api.save(store)}
+async function syncDriverAssignmentLocal(userId,carId){workspaceDriverAssignments[userId]=carId||"";const member=(workspaceDriverDirectory||[]).find(x=>String(x.user_id)===String(userId));fleetCars().forEach(c=>{if(String(c.driverUserId||"")===String(userId)&&String(c.id)!==String(carId||"")){c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}}});if(carId){const c=car(String(carId));if(c){c.driverUserId=userId;c.driverEmail=workspaceDriverEmail(member)||c.driverEmail||"";c.driverName=workspaceDriverName(member)||c.driverName||"";c.driverAssignmentSource="account";c.tenant=c.driverName||c.driverEmail||c.tenant||""}}save?.()}
 function enterpriseRoleOptions(selected){
  return Object.entries(ENTERPRISE_ROLE_LABELS)
   .filter(([key])=>key!=="user")
@@ -468,7 +472,8 @@ async function renderCompanyActivity(){
 }
 
 function driverRegistryAssignmentRow(userId){
- return (workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||"")===String(userId||"")&&String(row.status||"")!=="returned")||null
+ const row=(workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||"")===String(userId||"")&&String(row.status||"")!=="returned");if(row)return row;
+ const c=fleetCars().find(c=>String(c.driverUserId||"")===String(userId||""));return c?{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}:null
 }
 function driverRegistryCarForRow(row){return row?.car_id?car(String(row.car_id)):null}
 function driverRegistryAccepted(row){return Boolean(row?.active_handover_id||row?.handover_id||row?.issue_at||row?.status==="issued"||row?.status==="active")}
@@ -511,15 +516,17 @@ async function renderDriversRegistry(){
     <div class="driver-registry-main">
       <strong>${item.name||"Водитель"}</strong>
       <small>${item.email||"Без e-mail"}</small>
+      ${item.member&&workspaceDriverPhone?.(item.member)?`<small>${workspaceDriverPhone(item.member)}</small>`:""}
       <div class="driver-registry-vehicle"><span>🚗</span><b>${vehicle}</b></div>
     </div>
     <span class="driver-registry-status ${cls}">${status}</span>
-    ${item.type==="account"?`<label class="driver-registry-select"><small>Автомобиль</small>${driverAssignmentControl(item.member)}</label>`:`<span class="driver-registry-manual">Ручная запись</span>`}
+    <div class="driver-registry-actions">${item.type==="account"?`<label class="driver-registry-select"><small>Автомобиль</small>${driverAssignmentControl(item.member)}</label><button type="button" class="driver-delete-button" data-delete-driver="${item.member.user_id}">Удалить</button>`:`<span class="driver-registry-manual">Ручная запись</span><button type="button" class="driver-delete-button" data-delete-manual-driver="${c?.id||""}">Удалить</button>`}</div>
    </article>`
   }).join("")||'<div class="owner-empty">Водители не найдены.</div>';
   $$('[data-driver-assignment]').forEach(select=>select.onchange=async()=>{
    try{
     await window.FleetPilotCloud.assignDriverVehicle(select.dataset.driverAssignment,select.value||null);
+    await syncDriverAssignmentLocal(select.dataset.driverAssignment,select.value||null);
     await loadWorkspaceDriverAssignments?.();
     renderFleet?.();
     renderDriversRegistry();
@@ -527,9 +534,15 @@ async function renderDriversRegistry(){
     toast(select.value?"Автомобиль назначен":"Назначение снято")
    }catch(error){toast(error.message||String(error));renderDriversRegistry()}
   })
+  root.querySelectorAll('[data-delete-driver]').forEach(button=>button.onclick=async()=>{const userId=button.dataset.deleteDriver;const assignment=driverRegistryAssignmentRow(userId);if(assignment?.car_id)return toast("Сначала снимите автомобиль с водителя");if(!confirm("Удалить водителя из текущего Workspace? История останется сохранена."))return;try{await window.FleetPilotCloud.enterpriseUpdateMember(userId,{status:"disabled"});toast("Водитель удалён");await loadWorkspaceDriverDirectory?.();renderDriversRegistry();renderEnterprisePage?.()}catch(error){toast(error.message||String(error))}});
+  root.querySelectorAll('[data-delete-manual-driver]').forEach(button=>button.onclick=()=>{const c=car(String(button.dataset.deleteManualDriver));if(!c)return;if(!confirm("Удалить ручного водителя из автомобиля?"))return;c.tenant="";c.driverName="";c.driverEmail="";c.driverPhone="";c.driverUserId="";c.driverAssignmentSource="";save?.();renderFleet?.();renderDriversRegistry()});
  }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
 }
 window.renderDriversRegistry=renderDriversRegistry;
+function fillCreateDriverCars(){const select=$("#createDriverCar");if(!select)return;select.innerHTML='<option value="">Не назначать сейчас</option>'+fleetCars().map(c=>`<option value="${c.id}">${model(c).brand} ${model(c).model} · ${c.plate||"—"}</option>`).join("")}
+function openCreateDriverDialog(){createDriverMessage("");$("#createDriverForm")?.reset();fillCreateDriverCars();$("#createDriverDialog")?.showModal()}
+window.openCreateDriverDialog=openCreateDriverDialog;
+setTimeout(()=>{const b=$("#openCreateDriver");if(b)b.onclick=openCreateDriverDialog;const form=$("#createDriverForm");if(form)form.onsubmit=async e=>{e.preventDefault();const firstName=$("#createDriverFirstName").value.trim(),lastName=$("#createDriverLastName").value.trim(),email=$("#createDriverEmail").value.trim(),phone=$("#createDriverPhone").value.trim(),city=$("#createDriverCity").value.trim(),carId=$("#createDriverCar").value;createDriverMessage("Создаём приглашение…");try{const result=await window.FleetPilotCloud.enterpriseInvite({email,role:"driver",city,first_name:firstName,last_name:lastName,display_name:`${firstName} ${lastName}`.trim(),phone});rememberDriverInviteMeta({email,firstName,lastName,phone});if(carId){const api=window.FleetPilotDriverMeta,store=api?.load?.()||{},key=normalizeDriverIdentity(email),meta=store[key]||{};meta.pendingCarId=carId;store[key]=meta;api?.save?.(store)}$("#createDriverDialog").close();toast(result?.emailSent===false?"Водитель добавлен. Аккаунт уже существует.":"Приглашение водителю отправлено");await loadWorkspaceDriverDirectory?.();if(carId){const member=workspaceDriverMemberByEmail(email);if(member){await window.FleetPilotCloud.assignDriverVehicle(member.user_id,carId);await syncDriverAssignmentLocal(member.user_id,carId);const api=window.FleetPilotDriverMeta,store=api?.load?.()||{},key=normalizeDriverIdentity(email);if(store[key]){store[key].pendingCarId="";api.save(store)}}}renderDriversRegistry();renderEnterprisePage?.()}catch(error){createDriverMessage(error.message||String(error),"error")}}},100);
 async function renderEnterprisePage(){
  const root=$("#enterpriseMembersList");if(!root)return;
  applyEnterpriseAccess();

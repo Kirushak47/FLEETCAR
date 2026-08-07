@@ -292,3 +292,5 @@
 
 /* V17.3 Drivers Registry mobile */
 @media(max-width:760px){.drivers-registry-toolbar{grid-template-columns:1fr;gap:8px}.driver-registry-card{grid-template-columns:42px minmax(0,1fr);gap:10px;padding:14px}.driver-registry-avatar{width:42px;height:42px;border-radius:13px}.driver-registry-status{grid-column:1/-1;justify-self:start}.driver-registry-select,.driver-registry-manual{grid-column:1/-1;width:100%;text-align:left}.driver-registry-vehicle{align-items:flex-start}.company-tabs{overflow-x:auto;scrollbar-width:none}.company-tabs::-webkit-scrollbar{display:none}#driverHandoverActions[data-issued="1"] #startVehicleIssue{display:none!important}}
+
+@media(max-width:760px){.driver-registry-card{grid-template-columns:42px 1fr!important}.driver-registry-status,.driver-registry-actions{grid-column:1/-1!important}.driver-registry-actions{width:100%}.driver-registry-select{flex:1}.driver-registry-select select{width:100%}.rich-driver-picker{width:100%}}
