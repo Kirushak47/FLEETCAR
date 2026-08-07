@@ -1,13 +1,11 @@
-# FleetPilot V11.3.9.3 — Route / Photo Badge / Service Collapse Fix
+# FleetPilot V11.3.9.4 — Auth Route Boot Fix
 
-Fixes:
-- Deep link/hash route is restored after the complete UI boot, so F5 no longer leaves the wrong page visible under another active menu item.
-- Browser Back/Forward and refresh continue to use the hash route as the final navigation authority.
-- Desktop service task indicator is physically inside the vehicle photo wrapper at top-left.
-- Mobile indicator remains attached to the image hero.
-- The indicator no longer floats at the bottom-left of the desktop vehicle row.
-- Service CRM vehicle task lists can be collapsed/expanded with an arrow.
-- Collapsing hides only the task rows; the vehicle header stays visible.
-- Collapse state is remembered locally.
-- Existing car-save fix, Service CRM, planned service expenses, Supabase schema and finance logic are unchanged.
-- No SQL required.
+Fixes the remaining refresh/deep-link race:
+- access checks no longer reject pages while Supabase membership/role is still loading;
+- logged-in deep links wait for `fleetpilot:access-ready`;
+- once role/membership is resolved, the URL hash is the final navigation authority;
+- removes the false “У вашей роли нет доступа к этому разделу” toast during F5 startup;
+- performs a second route restore after late desktop initialization;
+- real role restrictions still work after access is ready;
+- previous photo service badge and collapsible Service queue remain unchanged.
+No SQL required.

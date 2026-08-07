@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V11.3.9.3 Route Photo Service Fix Cloud Beta",
+  "name": "FleetPilot V11.3.9.4 Auth Route Boot Fix Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113930",
+  "start_url": "./?v=113940",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

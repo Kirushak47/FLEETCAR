@@ -374,10 +374,14 @@ const ENTERPRISE_ROLE_ACCESS={
  driver:["driverPortalPage","driverProfilePage"],
  user:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","morePage","mobileMapPage","searchPage","carPage"]
 };
+let fleetPilotEnterpriseAccessReady=false;
+
 function enterpriseCurrentRole(){
  return window.FleetPilotCloud?.role||document.body.dataset.enterpriseRole||"user"
 }
 function enterpriseCanOpen(pageId){
+ // Before Supabase resolves workspace membership, do not generate false "no access" errors.
+ if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady)return true;
  if(window.FleetPilotCloud?.session&&!window.FleetPilotCloud?.membership)return false;
  const role=enterpriseCurrentRole();
  return(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId)
@@ -420,14 +424,24 @@ function applyEnterpriseAccess(){
 }
 window.applyEnterpriseAccess=applyEnterpriseAccess;
 window.addEventListener("fleetpilot:access-ready",()=>{
+ fleetPilotEnterpriseAccessReady=true;
  applyEnterpriseAccess();
+
  const role=enterpriseCurrentRole();
- const activePage=document.querySelector(".page.active")?.id;
  const defaultPage=role==="driver"?"driverPortalPage":"dashboardPage";
 
- if(!activePage||!enterpriseCanOpen(activePage)){
-  showPage(defaultPage)
+ // The URL/deep-link wins after role and membership are known.
+ const currentRoute=fleetPilotCurrentRoute();
+ if(currentRoute){
+  fleetPilotApplyRoute({replaceInvalid:true})
+ }else{
+  const activePage=document.querySelector(".page.active")?.id;
+  if(!activePage||!enterpriseCanOpen(activePage))showPage(defaultPage)
  }
+
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(fleetPilotCurrentRoute())fleetPilotApplyRoute({replaceInvalid:false})
+ }));
 
  if(role==="driver"){
   document.body.classList.add("driver-only-ui");
@@ -1416,8 +1430,9 @@ window.addEventListener("hashchange",()=>{
 function showPage(id){
  applyEnterpriseAccess();
  if(!enterpriseCanOpen(id)){
-  toast("У вашей роли нет доступа к этому разделу");
-  id="dashboardPage"
+  if(fleetPilotEnterpriseAccessReady)toast("У вашей роли нет доступа к этому разделу");
+  const role=enterpriseCurrentRole();
+  id=role==="driver"?"driverPortalPage":"dashboardPage"
  }
  if(window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
  if(id!=="carPage"&&fleetPilotRouteReady&&!fleetPilotApplyingRoute){
@@ -6520,10 +6535,14 @@ fleetPilotRouteReady=true;
    else if(typeof renderFleet==="function")renderFleet();
    if(window.innerWidth>=1100&&typeof initializeDesktopCommandCenter==="function")initializeDesktopCommandCenter();
 
-   // Route is always the final authority after all render/init code.
+   // If Supabase session exists, route is restored by fleetpilot:access-ready
+   // after membership/role resolution. Guests/demo can restore immediately.
    requestAnimationFrame(()=>{
-    try{fleetPilotApplyRoute({replaceInvalid:false})}
-    catch(error){console.error("FleetPilot route restore error",error)}
+    try{
+     if(!window.FleetPilotCloud?.session||fleetPilotEnterpriseAccessReady){
+      fleetPilotApplyRoute({replaceInvalid:false})
+     }
+    }catch(error){console.error("FleetPilot route restore error",error)}
    })
   }catch(error){console.error("FleetPilot final boot error",error)}
  }
