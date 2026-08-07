@@ -329,23 +329,39 @@ if(vehicleHandoverPhotos)vehicleHandoverPhotos.onchange=async event=>{
  }catch(error){handoverMessage(error.message||String(error),"error")}
 };
 
+let vehicleHandoverSubmitting=false;
 const vehicleHandoverForm=$("#vehicleHandoverForm");
 if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
  event.preventDefault();
+ if(vehicleHandoverSubmitting)return;
  if(vehicleHandoverPhotoData.length<1)return handoverMessage("Добавьте хотя бы одну фотографию.","error");
  const equipment={};
  $$("[data-handover-equipment]").forEach(input=>equipment[input.dataset.handoverEquipment]=input.checked);
+ const submitButton=$("#vehicleHandoverSubmit");
+ const originalSubmitText=submitButton?.textContent||"Подтвердить";
+ vehicleHandoverSubmitting=true;
+ if(submitButton){submitButton.disabled=true;submitButton.textContent="Сохраняем…"}
  handoverMessage("Сохраняем передачу автомобиля…");
  try{
   const type=$("#vehicleHandoverType").value;
-  const result=await window.FleetPilotCloud.submitVehicleHandover({
-   type,
-   mileage:$("#vehicleHandoverMileage").value,
-   fuelLevel:$("#vehicleHandoverFuel").value,
-   equipment,
-   photos:vehicleHandoverPhotoData,
-   notes:$("#vehicleHandoverNotes").value
-  });
+  let result;
+  try{
+   result=await window.FleetPilotCloud.submitVehicleHandover({
+    type,
+    mileage:$("#vehicleHandoverMileage").value,
+    fuelLevel:$("#vehicleHandoverFuel").value,
+    equipment,
+    photos:vehicleHandoverPhotoData,
+    notes:$("#vehicleHandoverNotes").value
+   });
+  }catch(error){
+   const message=String(error?.message||error||"").toLowerCase();
+   const alreadyIssued=type==="issue"&&(message.includes("already issued")||message.includes("vehicle is already issued"));
+   if(!alreadyIssued)throw error;
+   const state=await window.FleetPilotCloud.getDriverHandoverState?.();
+   if(!state?.active_handover_id)throw error;
+   result=state;
+  }
 
   const assignedCar=driverAssignedCar();
   if(assignedCar&&result?.mileage!=null)assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),Number(result.mileage));
@@ -353,7 +369,12 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
   toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
   await window.FleetPilotCloud.checkCloudForUpdates?.();
   await renderDriverPortal()
- }catch(error){handoverMessage(error.message||String(error),"error")}
+ }catch(error){
+  handoverMessage(error.message||String(error),"error")
+ }finally{
+  vehicleHandoverSubmitting=false;
+  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalSubmitText}
+ }
 };
 
 const openDriverRepairRequest=$("#openDriverRepairRequest");
