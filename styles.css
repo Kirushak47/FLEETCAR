@@ -9499,3 +9499,20 @@ body[hidden]{display:none}
   .bottom-nav button{flex-basis:64px!important;width:64px!important;min-width:64px!important}
   .bottom-nav button small{max-width:58px!important;font-size:7.5px!important}
 }
+
+
+/* FleetPilot V15.5 — stable mobile role navigation */
+@media(max-width:1099px){
+  .bottom-nav{
+    display:flex!important;align-items:stretch!important;justify-content:flex-start!important;gap:2px!important;
+    left:6px!important;right:6px!important;bottom:calc(6px + env(safe-area-inset-bottom))!important;
+    width:auto!important;max-width:none!important;height:64px!important;padding:5px 4px!important;
+    overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity!important;
+  }
+  .bottom-nav::-webkit-scrollbar{display:none!important}
+  .bottom-nav button[data-page]{display:flex!important;flex:0 0 68px!important;width:68px!important;min-width:68px!important;max-width:68px!important;min-height:52px!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:4px 2px!important;scroll-snap-align:center!important}
+  .bottom-nav button[data-page][hidden]{display:none!important}
+  .bottom-nav .mobile-nav-icon{display:block!important;font-size:16px!important;line-height:1!important;margin:0!important}
+  .bottom-nav button[data-page] small{display:block!important;width:64px!important;max-width:64px!important;font-size:7.5px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-align:center!important;margin:0!important}
+}

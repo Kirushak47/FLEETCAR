@@ -49,7 +49,7 @@ const demoSeed=(()=>{
  const cars=[
   {id:"d1",modelKey:"toyota-prius-3",year:2017,plate:"WX 4821P",tenant:"Алексей",status:"active",city:"Warszawa",mileage:286420,oilInterval:10000,lastOil:279800,weeklyRent:760,insurance:d(14),inspection:d(92),tireSeason:"summer",tireSize:"195/65 R15",tireInstalled:d(-118),tireMileage:278400},
   {id:"d2",modelKey:"toyota-auris",year:2016,plate:"WA 7316K",tenant:"Михаил",status:"active",city:"Warszawa",mileage:241880,oilInterval:10000,lastOil:233000,weeklyRent:720,insurance:d(164),inspection:d(22),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-96),tireMileage:235200},
-  {id:"d3",modelKey:"toyota-corolla",year:2020,plate:"WZ 9054C",tenant:"Олег",status:"active",city:"Warszawa",mileage:164230,oilInterval:15000,lastOil:154000,weeklyRent:850,insurance:d(244),inspection:d(187),tireSeason:"winter",tireSize:"205/55 R16",tireInstalled:d(-280),tireMileage:151500},
+  {id:"d3",modelKey:"toyota-corolla",year:2020,plate:"WZ 9054C",tenant:"Олег",status:"active",city:"Warszawa",mileage:164230,oilInterval:15000,lastOil:155000,weeklyRent:850,insurance:d(244),inspection:d(187),tireSeason:"winter",tireSize:"205/55 R16",tireInstalled:d(-280),tireMileage:151500},
   {id:"d4",modelKey:"skoda-octavia-3",year:2019,plate:"WE 1187L",tenant:"Андрей",status:"repair",city:"Warszawa",mileage:198760,oilInterval:15000,lastOil:188500,weeklyRent:820,insurance:d(61),inspection:d(116),tireSeason:"allseason",tireSize:"225/45 R17",tireInstalled:d(-210),tireMileage:187000},
   {id:"d5",modelKey:"kia-ceed",year:2018,plate:"WU 4428N",tenant:"Игорь",status:"active",city:"Warszawa",mileage:173910,oilInterval:15000,lastOil:161000,weeklyRent:740,insurance:d(-3),inspection:d(203),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-132),tireMileage:165100},
   {id:"d6",modelKey:"hyundai-ioniq",year:2019,plate:"WI 6305H",tenant:"Владимир",status:"active",city:"Warszawa",mileage:152480,oilInterval:15000,lastOil:147200,weeklyRent:790,insurance:d(118),inspection:d(9),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-104),tireMileage:145600},
@@ -787,42 +787,26 @@ function applyMobileRoleNavigation(){
  const role=enterpriseCurrentRole();
  if(role==="driver")return;
 
- // Mobile navigation mirrors the SAME permissions as desktop.
- // Keep the proven old behaviour: all allowed sections stay in one horizontally
- // scrollable bottom bar instead of being cut to 4/5 entries or moved into a
- // separate mobile-only permission matrix.
- const items=[
-  ["dashboardPage","⌂","Сегодня"],
-  ["fleetPage","◫","Автопарк"],
-  ["repairsPage","🔧","Сервис"],
-  ["paymentsPage","💳","Аренда"],
-  ["expensesPage","💸","Расходы"],
-  ["documentsPage","▤","Документы"],
-  ["calendarPage","🗓️","Календарь"],
-  ["analyticsPage","▥","Аналитика"],
-  ["mobileMapPage","⌖","Карта"],
-  ["companyPage","♟","Компания"],
-  ["dataPage","⤓","Данные"],
-  ["searchPage","⌕","Поиск"]
- ];
- const desired=new Set(items.map(x=>x[0]));
- nav.querySelectorAll('button[data-page="morePage"]').forEach(button=>button.remove());
- items.forEach(([page,icon,label])=>{
-  let button=nav.querySelector(`button[data-page="${page}"]`);
-  if(!button){
-   button=document.createElement("button");
-   button.type="button";
-   button.dataset.page=page;
-   nav.appendChild(button)
-  }
-  button.innerHTML=`<span class="mobile-nav-icon">${icon}</span><small>${label}</small>`;
-  button.hidden=!enterpriseCanOpen(page);
-  button.onclick=()=>showPage(page)
- });
- // Do not leave obsolete dynamically-created role navigation entries behind.
+ // V15.5: stable mobile navigation. The menu itself is static (as in the old
+ // working version). Existing role permissions only hide/show items.
  nav.querySelectorAll("button[data-page]").forEach(button=>{
-  if(!desired.has(button.dataset.page))button.hidden=true
+  const page=button.dataset.page;
+  const allowed=enterpriseCanOpen(page);
+  button.hidden=!allowed;
+  button.setAttribute("aria-hidden",String(!allowed));
+  if(!button.dataset.mobileNavBound){
+   button.addEventListener("click",()=>showPage(page));
+   button.dataset.mobileNavBound="1";
+  }
  });
+
+ // When a permitted page becomes active, keep its button in view.
+ const active=nav.querySelector("button.active:not([hidden])");
+ if(active&&window.matchMedia?.("(max-width: 1099px)").matches){
+  requestAnimationFrame(()=>{
+   try{active.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"})}catch(_){ }
+  });
+ }
  const menu=$("#mobileRoleMenu");if(menu)menu.remove();
 }
 function activateCompanyTab(tab){

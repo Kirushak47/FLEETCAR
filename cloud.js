@@ -4,6 +4,7 @@ const TABLE="fleet_states",PROFILE_TABLE="profiles";
 const STATUS_KEY="fleetpilot.cloud.status.v3";
 const PENDING_EMAIL_KEY="fleetpilot.cloud.pending_email.v1";
 const DEMO_KEY="fleetpilot.demo.active.v1";
+const DEMO_INIT_KEY="fleetpilot.demo.initialized.v2";
 const PHOTO_KEY_BASE="fleetpilot.profile.photo.v2";
 const NAME_KEY_BASE="fleetpilot.profile.name.v2";
 const DEVICE_ID_KEY="fleetpilot.cloud.device_id.v1";
@@ -736,6 +737,7 @@ async function signOut(){
  authResolved=true;
  workspaceResolved=true;
  localStorage.removeItem(DEMO_KEY);
+ localStorage.removeItem(DEMO_INIT_KEY);
  localStorage.removeItem(STATUS_KEY);
  window.clearFleetPilotLocalDatabase?.();
 
@@ -759,17 +761,27 @@ async function signOut(){
  if($("#cloudPassword"))$("#cloudPassword").value="";
  setTimeout(()=>$("#cloudEmail")?.focus(),50)
 }
+function demoDatabaseNeedsSeed(){
+ try{
+  const current=window.getFleetPilotDatabase?.();
+  return !current||!Array.isArray(current.cars)||current.cars.length===0
+ }catch{return true}
+}
+function seedDemoDatabase(){
+ const demo=window.createFleetPilotDemoDatabase?.();
+ if(!demo||!Array.isArray(demo.cars)||demo.cars.length===0)return false;
+ window.replaceFleetPilotDatabase?.(demo);
+ localStorage.setItem(DEMO_INIT_KEY,"1");
+ return true
+}
 function startDemo(reset=false){
  localStorage.setItem(DEMO_KEY,"1");
- if(reset||!localStorage.getItem("fleetpilot.demo.initialized.v2")){
-  const demo=window.createFleetPilotDemoDatabase?.();
-  if(demo)window.replaceFleetPilotDatabase(demo);
-  localStorage.setItem("fleetpilot.demo.initialized.v2","1")
- }
+ if(reset||!localStorage.getItem(DEMO_INIT_KEY)||demoDatabaseNeedsSeed())seedDemoDatabase();
  location.reload()
 }
 function exitDemo(){
  localStorage.removeItem(DEMO_KEY);
+ localStorage.removeItem(DEMO_INIT_KEY);
  window.clearFleetPilotLocalDatabase?.();
  location.reload()
 }
@@ -906,6 +918,15 @@ async function start(){
  authResolved=false;
  workspaceResolved=false;
  recoveryMode=hasRecoveryMarker();
+
+ // Demo is a self-contained showcase. If logout/old cache left an empty local DB,
+ // restore the full demo seed before any page is rendered.
+ if(isDemo()&&demoDatabaseNeedsSeed()){
+  if(seedDemoDatabase()){
+   location.reload();
+   return
+  }
+ }
 
  removeOldQuotaBackups();
  bind();
