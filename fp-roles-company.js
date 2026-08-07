@@ -279,13 +279,13 @@ function ensureMobileMoreNavigation(){
  if(sheet)return sheet;
  sheet=document.createElement("div");
  sheet.id="mobileMoreNavSheet";
- sheet.className="mobile-more-nav-sheet";
+ sheet.className="mobile-more-nav-sheet mobile-menu-v16";
  sheet.hidden=true;
  sheet.innerHTML=`
   <button type="button" class="mobile-more-nav-backdrop" data-mobile-more-close aria-label="Закрыть меню"></button>
-  <section class="mobile-more-nav-panel" role="dialog" aria-modal="true" aria-label="Дополнительные разделы">
+  <section class="mobile-more-nav-panel" role="dialog" aria-modal="true" aria-label="Меню FleetPilot">
    <header class="mobile-more-nav-head">
-    <div><small>Навигация</small><strong>Ещё</strong></div>
+    <div><small>FleetPilot</small><strong>Меню</strong><span id="mobileMenuRoleLabel"></span></div>
     <button type="button" class="mobile-more-nav-close" data-mobile-more-close aria-label="Закрыть">×</button>
    </header>
    <div class="mobile-more-nav-grid" id="mobileMoreNavGrid"></div>
@@ -302,6 +302,11 @@ function closeMobileMoreNavigation(){
 }
 function openMobileMoreNavigation(){
  const sheet=ensureMobileMoreNavigation();
+ const roleLabel=sheet.querySelector("#mobileMenuRoleLabel");
+ if(roleLabel){
+  const role=enterpriseCurrentRole();
+  roleLabel.textContent=ROLE_PERMISSION_LABELS?.[role]||role||"Пользователь"
+ }
  sheet.hidden=false;
  document.body.classList.add("mobile-more-nav-open")
 }
@@ -319,18 +324,17 @@ function renderMobileMoreNavigation(buttons){
  grid.innerHTML=buttons.map(button=>{
   const item=mobileNavItemMeta(button);
   const active=button.classList.contains("active")?" active":"";
-  return `<button type="button" class="mobile-more-nav-item${active}" data-mobile-more-page="${item.page}"><span class="mobile-more-nav-icon">${item.icon}</span><strong>${item.label}</strong><span class="mobile-more-nav-arrow">›</span></button>`
- }).join("")||`<div class="mobile-more-nav-empty">Других доступных разделов нет</div>`;
+  return `<button type="button" class="mobile-more-nav-item${active}" data-mobile-more-page="${item.page}"><span class="mobile-more-nav-icon">${item.icon}</span><span class="mobile-more-nav-copy"><strong>${item.label}</strong><small>${button.classList.contains("active")?"Открыто сейчас":"Открыть раздел"}</small></span><span class="mobile-more-nav-arrow">›</span></button>`
+ }).join("")||`<div class="mobile-more-nav-empty">Для этой роли нет доступных разделов</div>`;
  grid.querySelectorAll("[data-mobile-more-page]").forEach(button=>button.addEventListener("click",()=>{
   closeMobileMoreNavigation();
   showPage(button.dataset.mobileMorePage)
- }));
+ }))
 }
 function applyMobileRoleNavigation(){
  const nav=document.querySelector(".bottom-nav");if(!nav)return;
  const role=enterpriseCurrentRole();
  if(role==="driver")return;
-
  const allButtons=[...nav.querySelectorAll("button[data-page]")];
  allButtons.forEach(button=>{
   const page=button.dataset.page;
@@ -341,55 +345,29 @@ function applyMobileRoleNavigation(){
    button.dataset.mobileNavBound="1"
   }
  });
-
- // Desktop keeps the complete menu logic. Mobile receives a compact 4 + More layout.
  if(!window.matchMedia?.("(max-width: 1099px)").matches){
   allButtons.forEach(button=>button.hidden=button.dataset.roleAllowed!=="1");
-  nav.querySelector(".mobile-more-nav-button")?.remove();
+  nav.querySelector(".mobile-menu-launcher")?.remove();
   closeMobileMoreNavigation();
   return
  }
-
  const allowedButtons=allButtons.filter(button=>button.dataset.roleAllowed==="1");
- const existingMore=nav.querySelector(".mobile-more-nav-button");
- if(allowedButtons.length<=5){
-  existingMore?.remove();
-  allowedButtons.forEach(button=>button.hidden=false);
-  allButtons.filter(button=>button.dataset.roleAllowed!=="1").forEach(button=>button.hidden=true);
-  closeMobileMoreNavigation();
-  return
- }
-
- // Keep the three most useful role-allowed destinations stable. The fourth slot
- // is the active page (when it would otherwise live in More), or the next allowed item.
- const priority=["dashboardPage","fleetPage","repairsPage","paymentsPage","documentsPage","calendarPage","analyticsPage","mobileMapPage","companyPage","dataPage","expensesPage","searchPage"];
- const byPage=new Map(allowedButtons.map(button=>[button.dataset.page,button]));
- const primary=[];
- const take=button=>{if(button&&!primary.includes(button)&&primary.length<4)primary.push(button)};
- priority.forEach(page=>{if(primary.length<3)take(byPage.get(page))});
- allowedButtons.forEach(button=>{if(primary.length<3)take(button)});
- const active=allowedButtons.find(button=>button.classList.contains("active"));
- if(active&&!primary.includes(active))take(active);
- allowedButtons.forEach(button=>take(button));
-
- const overflow=allowedButtons.filter(button=>!primary.includes(button));
- allButtons.forEach(button=>button.hidden=!primary.includes(button));
-
- let moreButton=nav.querySelector(".mobile-more-nav-button");
- if(!moreButton){
-  moreButton=document.createElement("button");
-  moreButton.type="button";
-  moreButton.className="mobile-more-nav-button";
-  moreButton.innerHTML=`<span class="mobile-nav-icon">•••</span><small>Ещё</small>`;
-  moreButton.addEventListener("click",()=>{
-   const currentOverflow=allowedButtons.filter(button=>button.hidden&&button.dataset.roleAllowed==="1");
-   renderMobileMoreNavigation(currentOverflow);
+ allButtons.forEach(button=>button.hidden=true);
+ let launcher=nav.querySelector(".mobile-menu-launcher");
+ if(!launcher){
+  launcher=document.createElement("button");
+  launcher.type="button";
+  launcher.className="mobile-menu-launcher";
+  launcher.innerHTML=`<span class="mobile-menu-launcher-icon">☰</span><span class="mobile-menu-launcher-copy"><strong>Меню</strong><small>Разделы FleetPilot</small></span><span class="mobile-menu-launcher-arrow">⌃</span>`;
+  launcher.addEventListener("click",()=>{
+   const currentAllowed=[...nav.querySelectorAll("button[data-page]")].filter(button=>button.dataset.roleAllowed==="1");
+   renderMobileMoreNavigation(currentAllowed);
    openMobileMoreNavigation()
   });
-  nav.appendChild(moreButton)
+  nav.appendChild(launcher)
  }
- moreButton.hidden=false;
- renderMobileMoreNavigation(overflow);
+ launcher.hidden=false;
+ renderMobileMoreNavigation(allowedButtons);
  closeMobileMoreNavigation()
 }
 window.closeMobileMoreNavigation=closeMobileMoreNavigation;

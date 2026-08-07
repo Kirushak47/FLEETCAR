@@ -1,0 +1,175 @@
+/* =========================================================
+   FleetPilot V16.0 — Mobile UI Rebuild
+   Scope: phones/tablets only. Desktop is intentionally untouched.
+   ========================================================= */
+@media (max-width:1099px){
+  :root{
+    --m-bg:#f3f6fb;
+    --m-card:#ffffff;
+    --m-soft:#f7f9fc;
+    --m-line:#e6ebf2;
+    --m-text:#111827;
+    --m-muted:#718096;
+    --m-brand:#5b5ce2;
+    --m-brand-soft:#eef0ff;
+    --m-green:#169b62;
+    --m-orange:#c77b18;
+    --m-red:#d74c4c;
+    --m-radius:18px;
+    --m-shadow:0 10px 30px rgba(22,34,54,.055);
+  }
+  html,body{background:var(--m-bg)!important;color:var(--m-text)!important}
+  body{font-size:14px!important;line-height:1.42!important;-webkit-font-smoothing:antialiased;overflow-x:hidden!important}
+  .app{background:var(--m-bg)!important;min-height:100dvh!important}
+  .ambient-background,.desktop-sidebar{display:none!important}
+
+  /* Header */
+  .topbar{position:sticky!important;top:0!important;z-index:80!important;min-height:64px!important;padding:9px 14px!important;border:0!important;border-bottom:1px solid rgba(15,23,42,.06)!important;background:rgba(255,255,255,.92)!important;backdrop-filter:blur(20px)!important;box-shadow:none!important}
+  .topbar>div:first-child{min-width:0!important}
+  .topbar .eyebrow{display:block!important;margin:0 0 2px!important;color:#8a94a6!important;font-size:8px!important;line-height:1!important;font-weight:800!important;letter-spacing:.09em!important;text-transform:uppercase!important}
+  .topbar h1{margin:0!important;max-width:62vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px!important;line-height:1.15!important;font-weight:750!important;letter-spacing:-.025em!important}
+  .mobile-role-context{display:none!important}
+  .topbar-actions{display:flex!important;align-items:center!important;gap:7px!important;margin-left:auto!important}
+  .topbar .round,.profile-avatar-button{width:40px!important;height:40px!important;min-width:40px!important;border:1px solid var(--m-line)!important;border-radius:13px!important;background:#fff!important;box-shadow:none!important}
+  #headerAdd{display:none!important}
+
+  /* Main canvas */
+  main{width:100%!important;max-width:none!important;padding:12px 10px 92px!important;margin:0!important;box-sizing:border-box!important}
+  .page{width:100%!important;max-width:none!important;animation:none!important}
+  .page>.desktop-fleet-page-head,.desktop-fleet-page-head,.section-head{margin:0 0 10px!important}
+  .desktop-page-kicker{display:none!important}
+  .desktop-fleet-page-head h2,.section-head h2{font-size:19px!important;font-weight:760!important;letter-spacing:-.025em!important}
+  .section-head h3,.section-head h4{font-size:15px!important;font-weight:720!important}
+  .desktop-fleet-page-head p,.section-head p,.muted,.helper-text{font-size:10px!important;color:var(--m-muted)!important}
+
+  /* Universal cards */
+  .card,.summary-card,.professional-card,.professional-kpi,.owner-dashboard-widget,.owner-kpi-card,.vehicle-core-card,.finance-card,.control-card,.service-planning-card,.document-register-shell,.calendar-shell,.analytics-card,.repair-card,.payment-card,.expense-card,.document-card,.gps-settings-card,.activity-log-card{
+    border:1px solid var(--m-line)!important;border-radius:var(--m-radius)!important;background:var(--m-card)!important;box-shadow:var(--m-shadow)!important
+  }
+  .card{padding:13px!important;margin-bottom:10px!important}
+
+  /* KPI / summaries */
+  .summary,.summary-grid,.kpi-grid,.owner-dashboard-kpis,.professional-kpi-grid,.desktop-fleet-summary,.health-summary,.analytics-kpis{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:0 0 10px!important
+  }
+  .summary-card,.kpi-card,.owner-kpi,.professional-kpi,.owner-kpi-card{min-height:72px!important;padding:11px 12px!important;border-radius:15px!important}
+  .summary-card span,.kpi-card span,.owner-kpi span,.professional-kpi span,.owner-kpi-card small{font-size:8px!important;color:var(--m-muted)!important}
+  .summary-card strong,.kpi-card strong,.owner-kpi strong,.professional-kpi strong,.owner-kpi-card strong{margin-top:5px!important;font-size:17px!important;line-height:1.05!important;letter-spacing:-.02em!important}
+
+  /* Toolbars and controls */
+  .toolbar,.desktop-fleet-toolbar,.document-register-toolbar,.service-toolbar,.calendar-toolbar,.analytics-toolbar{
+    display:grid!important;grid-template-columns:1fr!important;gap:7px!important;padding:9px!important;margin:0 0 10px!important;border:1px solid var(--m-line)!important;border-radius:16px!important;background:var(--m-card)!important;box-shadow:none!important
+  }
+  input,select,textarea{width:100%;box-sizing:border-box!important;border:1px solid var(--m-line)!important;background:#fff!important;color:var(--m-text)!important;font-size:13px!important}
+  input,select{min-height:43px!important;border-radius:12px!important;padding:0 11px!important}
+  textarea{min-height:90px!important;border-radius:12px!important;padding:10px 11px!important}
+  .btn{min-height:40px!important;padding:0 12px!important;border-radius:12px!important;font-size:11px!important;font-weight:750!important;box-shadow:none!important}
+  .btn.primary{background:var(--m-brand)!important}
+
+  /* Fleet */
+  .fleet-grid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+  .car-card{overflow:hidden!important;margin:0!important;border:1px solid var(--m-line)!important;border-radius:19px!important;background:#fff!important;box-shadow:var(--m-shadow)!important}
+  .car-card .car-image{height:150px!important;min-height:150px!important;border-radius:0!important}
+  .car-card-content{padding:12px!important}
+  .car-card h3{font-size:16px!important;font-weight:760!important;letter-spacing:-.02em!important}
+  .minimal-service-strip{margin-top:9px!important;border-radius:13px!important}
+  .desktop-fleet-card{border-radius:19px!important}
+
+  /* Vehicle profile tabs */
+  .car-detail-tabs{position:sticky!important;top:64px!important;z-index:40!important;display:flex!important;gap:6px!important;overflow-x:auto!important;margin:0 0 10px!important;padding:6px!important;border:1px solid var(--m-line)!important;border-radius:15px!important;background:rgba(255,255,255,.95)!important;backdrop-filter:blur(18px)!important;scrollbar-width:none!important;box-shadow:0 6px 20px rgba(15,23,42,.04)!important}
+  .car-detail-tabs::-webkit-scrollbar{display:none!important}
+  .car-detail-tabs button{flex:0 0 auto!important;min-height:36px!important;padding:0 12px!important;border-radius:10px!important;font-size:10px!important;font-weight:750!important;white-space:nowrap!important}
+  .car-detail-tabs button.active{background:var(--m-brand)!important;color:#fff!important}
+
+  /* Vehicle Core rebuilt */
+  .vehicle-core-card{padding:13px!important}
+  .vehicle-core-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:10px!important}
+  .vehicle-core-metric{display:flex!important;flex-direction:column!important;justify-content:center!important;min-height:72px!important;padding:10px 11px!important;border:1px solid var(--m-line)!important;border-radius:14px!important;background:var(--m-soft)!important;overflow:hidden!important}
+  .vehicle-core-metric span,.vehicle-core-metric small{font-size:8px!important;color:var(--m-muted)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .vehicle-core-metric strong{display:block!important;margin-top:5px!important;font-size:16px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .vehicle-core-actions,.detail-action-row,.car-management-card{display:grid!important;grid-template-columns:1fr 1fr!important;gap:7px!important;margin-top:9px!important}
+  .vehicle-core-actions .btn,.detail-action-row .btn,.car-management-card .btn{width:100%!important;min-width:0!important}
+
+  /* Stacked content areas */
+  .owner-dashboard-grid,.analytics-grid,.detail-tab-grid,.documents-layout,.finance-layout,.service-layout,.company-layout{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+  .owner-dashboard-widget{padding:12px!important;min-height:0!important}
+  .intelligence-grid{grid-template-columns:1fr!important}
+
+  /* Lists */
+  .service-request-card,.service-row,.repair-row,.payment-row,.expense-row,.document-register-row,.calendar-item,.activity-row,.cloud-version-row{
+    min-height:0!important;padding:11px!important;gap:8px!important;border-radius:14px!important
+  }
+  .document-register-row{grid-template-columns:minmax(0,1fr) 36px!important;align-items:center!important}
+  .document-register-meta,.document-register-details{font-size:10px!important;line-height:1.35!important}
+  .document-file-indicator{width:34px!important;height:34px!important;min-width:34px!important}
+
+  /* Dialogs become true bottom sheets */
+  dialog{position:fixed!important;inset:auto 6px 6px!important;width:auto!important;max-width:none!important;max-height:92dvh!important;margin:0!important;padding:0!important;border:0!important;border-radius:24px 24px 18px 18px!important;background:transparent!important;overflow:visible!important}
+  dialog::backdrop{background:rgba(15,23,42,.48)!important;backdrop-filter:blur(4px)!important}
+  dialog .modal,.cloud-shell{max-height:92dvh!important;overflow:auto!important;padding:15px!important;border-radius:24px 24px 18px 18px!important;background:#fff!important;box-shadow:0 26px 70px rgba(15,23,42,.28)!important}
+  .modal-head{position:sticky!important;top:-15px!important;z-index:5!important;margin:-15px -15px 12px!important;padding:15px!important;border-bottom:1px solid var(--m-line)!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(16px)!important}
+  .modal-head h2{font-size:18px!important}
+  .form-grid,.grid2,.handover-form-grid,.cloud-sync-grid{grid-template-columns:1fr!important;gap:9px!important}
+
+  /* Mobile navigation: ONE button only */
+  .bottom-nav{position:fixed!important;left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;z-index:120!important;display:block!important;width:auto!important;height:auto!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
+  .bottom-nav>button[data-page],.bottom-nav>.mobile-more-nav-button{display:none!important}
+  .bottom-nav .mobile-menu-launcher{display:grid!important;grid-template-columns:42px minmax(0,1fr) 24px!important;align-items:center!important;gap:10px!important;width:100%!important;max-width:none!important;min-height:60px!important;padding:8px 12px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:19px!important;background:rgba(23,28,45,.94)!important;color:#fff!important;box-shadow:0 16px 40px rgba(15,23,42,.25)!important;backdrop-filter:blur(20px)!important;text-align:left!important}
+  .mobile-menu-launcher-icon{display:grid!important;place-items:center!important;width:42px!important;height:42px!important;border-radius:13px!important;background:rgba(255,255,255,.12)!important;font-size:19px!important}
+  .mobile-menu-launcher-copy{display:block!important;min-width:0!important}
+  .mobile-menu-launcher-copy strong,.mobile-menu-launcher-copy small{display:block!important;margin:0!important}
+  .mobile-menu-launcher-copy strong{font-size:13px!important;font-weight:780!important;color:#fff!important}
+  .mobile-menu-launcher-copy small{margin-top:2px!important;font-size:9px!important;color:#b8c0d4!important}
+  .mobile-menu-launcher-arrow{font-size:16px!important;color:#cbd5e1!important;text-align:center!important}
+
+  /* Full role-aware menu */
+  .mobile-more-nav-sheet{position:fixed!important;inset:0!important;z-index:240!important;display:block!important}
+  .mobile-more-nav-sheet[hidden]{display:none!important}
+  .mobile-more-nav-backdrop{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;background:rgba(10,15,28,.52)!important;backdrop-filter:blur(5px)!important}
+  .mobile-more-nav-panel{position:absolute!important;left:7px!important;right:7px!important;bottom:calc(7px + env(safe-area-inset-bottom))!important;max-height:82dvh!important;overflow:hidden!important;border:1px solid rgba(255,255,255,.45)!important;border-radius:26px 26px 20px 20px!important;background:#fff!important;box-shadow:0 30px 80px rgba(15,23,42,.32)!important;animation:mobileV16SheetIn .2s ease-out!important}
+  .mobile-more-nav-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:17px 17px 13px!important;border-bottom:1px solid var(--m-line)!important}
+  .mobile-more-nav-head small,.mobile-more-nav-head strong,.mobile-more-nav-head span{display:block!important}
+  .mobile-more-nav-head small{font-size:8px!important;font-weight:800!important;letter-spacing:.1em!important;text-transform:uppercase!important;color:#9aa4b5!important}
+  .mobile-more-nav-head strong{margin-top:3px!important;font-size:21px!important;font-weight:790!important;letter-spacing:-.025em!important}
+  .mobile-more-nav-head span{margin-top:2px!important;font-size:9px!important;color:var(--m-muted)!important}
+  .mobile-more-nav-close{width:38px!important;height:38px!important;border:1px solid var(--m-line)!important;border-radius:13px!important;background:var(--m-soft)!important;color:#293246!important;font-size:22px!important}
+  .mobile-more-nav-grid{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;max-height:calc(82dvh - 78px)!important;padding:9px 9px calc(12px + env(safe-area-inset-bottom))!important;overflow:auto!important}
+  .mobile-more-nav-item{display:grid!important;grid-template-columns:42px minmax(0,1fr) 20px!important;align-items:center!important;gap:11px!important;min-height:61px!important;padding:9px 11px!important;border:1px solid transparent!important;border-radius:15px!important;background:#fff!important;color:var(--m-text)!important;text-align:left!important}
+  .mobile-more-nav-item:active{transform:scale(.99)!important;background:var(--m-soft)!important}
+  .mobile-more-nav-item.active{border-color:#d9dcff!important;background:var(--m-brand-soft)!important;color:#4143be!important}
+  .mobile-more-nav-icon{display:grid!important;place-items:center!important;width:42px!important;height:42px!important;border-radius:13px!important;background:var(--m-soft)!important;font-size:18px!important}
+  .mobile-more-nav-item.active .mobile-more-nav-icon{background:#dfe2ff!important}
+  .mobile-more-nav-copy{display:block!important;min-width:0!important}
+  .mobile-more-nav-copy strong,.mobile-more-nav-copy small{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .mobile-more-nav-copy strong{font-size:13px!important;font-weight:740!important}
+  .mobile-more-nav-copy small{margin-top:2px!important;font-size:9px!important;color:var(--m-muted)!important}
+  .mobile-more-nav-arrow{font-size:21px!important;color:#a4adbc!important;text-align:right!important}
+  body.mobile-more-nav-open{overflow:hidden!important}
+  @keyframes mobileV16SheetIn{from{transform:translateY(24px);opacity:.25}to{transform:none;opacity:1}}
+
+  /* Floating quick action sits above menu */
+  .quick-action-button{right:14px!important;bottom:calc(84px + env(safe-area-inset-bottom))!important;width:50px!important;height:50px!important;border-radius:16px!important;box-shadow:0 12px 28px rgba(91,92,226,.30)!important}
+  .quick-action-menu{right:10px!important;bottom:calc(142px + env(safe-area-inset-bottom))!important;width:min(270px,calc(100vw - 20px))!important;border-radius:18px!important}
+
+  /* Driver navigation stays separate */
+  .driver-bottom-nav{left:10px!important;right:10px!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;width:auto!important;border-radius:19px!important}
+
+  /* Dark mode */
+  html[data-theme="dark"]{--m-bg:#0d1423;--m-card:#131c2e;--m-soft:#182236;--m-line:rgba(255,255,255,.075);--m-text:#f3f6fb;--m-muted:#93a0b5;--m-brand-soft:rgba(91,92,226,.18)}
+  html[data-theme="dark"] body,html[data-theme="dark"] .app{background:var(--m-bg)!important;color:var(--m-text)!important}
+  html[data-theme="dark"] .topbar{background:rgba(15,23,38,.92)!important;border-color:rgba(255,255,255,.06)!important}
+  html[data-theme="dark"] .card,html[data-theme="dark"] .summary-card,html[data-theme="dark"] .professional-card,html[data-theme="dark"] .professional-kpi,html[data-theme="dark"] .owner-dashboard-widget,html[data-theme="dark"] .owner-kpi-card,html[data-theme="dark"] .vehicle-core-card,html[data-theme="dark"] .finance-card,html[data-theme="dark"] .control-card,html[data-theme="dark"] .service-planning-card,html[data-theme="dark"] .document-register-shell,html[data-theme="dark"] .calendar-shell,html[data-theme="dark"] .analytics-card{background:var(--m-card)!important;border-color:var(--m-line)!important}
+  html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:#121b2d!important;color:#f3f6fb!important;border-color:var(--m-line)!important}
+  html[data-theme="dark"] .car-detail-tabs{background:rgba(19,28,46,.95)!important;border-color:var(--m-line)!important}
+  html[data-theme="dark"] .mobile-more-nav-panel,html[data-theme="dark"] .mobile-more-nav-item{background:#121b2d!important;color:#f3f6fb!important;border-color:var(--m-line)!important}
+  html[data-theme="dark"] .mobile-more-nav-head{border-color:var(--m-line)!important}
+  html[data-theme="dark"] dialog .modal,html[data-theme="dark"] .cloud-shell,html[data-theme="dark"] .modal-head{background:#121b2d!important;color:#f3f6fb!important}
+}
+
+@media(max-width:520px){
+  main{padding-left:8px!important;padding-right:8px!important}
+  .vehicle-core-grid,.summary,.summary-grid,.kpi-grid,.owner-dashboard-kpis,.professional-kpi-grid,.desktop-fleet-summary,.health-summary,.analytics-kpis{gap:7px!important}
+  .vehicle-core-metric,.summary-card,.kpi-card,.owner-kpi,.professional-kpi,.owner-kpi-card{min-height:68px!important;padding:9px 10px!important}
+  .vehicle-core-metric strong,.summary-card strong,.kpi-card strong,.owner-kpi strong,.professional-kpi strong,.owner-kpi-card strong{font-size:15px!important}
+  .vehicle-core-actions,.detail-action-row,.car-management-card{grid-template-columns:1fr!important}
+}

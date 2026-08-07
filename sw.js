@@ -1,5 +1,10 @@
-const CACHE="fleetpilot-v15-6-modular";
-const ASSETS=["./", "./index.html", "./css/00-base-legacy.css?v=156000", "./css/01-service-layout.css?v=156000", "./css/02-desktop-gps.css?v=156000", "./css/03-cloud-roles.css?v=156000", "./css/04-driver.css?v=156000", "./css/05-crm-service.css?v=156000", "./css/06-current-ui.css?v=156000", "./cloud-config.js?v=156000", "./cloud.js?v=156000", "./js/00-core-data.js?v=156000", "./js/01-roles-company.js?v=156000", "./js/02-driver-portal.js?v=156000", "./js/03-router-navigation.js?v=156000", "./js/04-files-backups.js?v=156000", "./js/05-analytics-dashboard.js?v=156000", "./js/06-gps-map.js?v=156000", "./js/07-fleet.js?v=156000", "./js/08-service-finance.js?v=156000", "./js/09-calendar-vehicle.js?v=156000", "./js/10-actions-documents.js?v=156000", "./js/11-boot-hotfixes.js?v=156000", "./manifest.webmanifest"];
+const CACHE="fleetpilot-v16-0-mobile-ui";
+const ASSETS=[
+  "./","./index.html","./manifest.webmanifest",
+  "./fp-base.css?v=158000","./fp-service-layout.css?v=158000","./fp-desktop-gps.css?v=158000","./fp-cloud-roles.css?v=158000","./fp-driver.css?v=158000","./fp-crm-service.css?v=158000","./fp-current-ui.css?v=158000","./fp-mobile-v16.css?v=160000",
+  "./cloud-config.js?v=158000","./cloud.js?v=158000",
+  "./fp-core-data.js?v=158000","./fp-roles-company.js?v=160000","./fp-driver-portal.js?v=158000","./fp-router-navigation.js?v=158000","./fp-files-backups.js?v=158000","./fp-analytics-dashboard.js?v=158000","./fp-gps-map.js?v=158000","./fp-fleet.js?v=158000","./fp-service-finance.js?v=158000","./fp-calendar-vehicle.js?v=158000","./fp-actions-documents.js?v=158000","./fp-boot-hotfixes.js?v=158000"
+];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",event=>{if(event.request.method!=="GET")return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request)))});
