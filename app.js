@@ -785,29 +785,23 @@ function applyActionPermissions(){
 function applyMobileRoleNavigation(){
  const nav=document.querySelector(".bottom-nav");if(!nav)return;
  const role=enterpriseCurrentRole();
- if(role==="driver")return;
  const labels={dashboardPage:["⌂","Сегодня"],fleetPage:["◫","Автопарк"],repairsPage:["🔧","Сервис"],paymentsPage:["💳","Аренда"],expensesPage:["↘","Расходы"],calendarPage:["□","Календарь"],documentsPage:["▤","Документы"],analyticsPage:["▥","Аналитика"],mobileMapPage:["⌖","Карта"],companyPage:["♟","Компания"],dataPage:["⤓","Данные"],searchPage:["⌕","Поиск"]};
- // Mobile does not invent its own role matrix. It mirrors the same permissions
- // already used by the desktop sidebar for the current workspace role.
- const canonicalOrder=["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","documentsPage","calendarPage","analyticsPage","mobileMapPage","companyPage","dataPage","searchPage"];
- const desktopAllowed=new Set(
-  [...document.querySelectorAll("[data-desktop-page]")]
-   .filter(button=>!button.hidden)
-   .map(button=>button.dataset.desktopPage)
- );
- const allowed=canonicalOrder.filter(page=>{
-  if(page==="dashboardPage")return enterpriseCanOpen(page);
-  return enterpriseCanOpen(page)&&(desktopAllowed.size===0||desktopAllowed.has(page)||![...document.querySelectorAll("[data-desktop-page]")].some(b=>b.dataset.desktopPage===page));
- });
+ const orderByRole={
+  owner:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","analyticsPage","paymentsPage","expensesPage","mobileMapPage","companyPage","dataPage"],
+  coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","mobileMapPage","companyPage","paymentsPage","expensesPage","analyticsPage","dataPage"],
+  accountant:["dashboardPage","paymentsPage","expensesPage","documentsPage","analyticsPage","calendarPage","fleetPage","repairsPage"],
+  mechanic:["dashboardPage","repairsPage","fleetPage","documentsPage","calendarPage","mobileMapPage"],
+  user:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","paymentsPage","expensesPage","analyticsPage","mobileMapPage"]
+ };
+ const order=orderByRole[role]||orderByRole.user;
+ const allowed=order.filter(page=>enterpriseCanOpen(page));
  const primary=allowed.length<=5?allowed:allowed.slice(0,4);
  let more=nav.querySelector('[data-page="morePage"]');
  if(!more){more=document.createElement("button");more.type="button";more.dataset.page="morePage";more.onclick=()=>showPage("morePage");nav.appendChild(more)}
  more.innerHTML='<span class="mobile-nav-icon">•••</span><small>Ещё</small>';
  nav.querySelectorAll("button[data-page]").forEach(button=>{
   const page=button.dataset.page;
-  const item=labels[page];
-  if(item&&page!=="morePage")button.innerHTML=`<span class="mobile-nav-icon">${item[0]}</span><small>${item[1]}</small>`;
-  button.hidden=page==="morePage"?!(allowed.length>5):!primary.includes(page);
+  button.hidden=page==="morePage"?!(allowed.length>5):!primary.includes(page)
  });
  const morePage=$("#morePage");
  if(morePage){
