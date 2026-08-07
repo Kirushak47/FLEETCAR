@@ -9065,3 +9065,12 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 @media(max-width:1180px){.documents-toolbar{grid-template-columns:1fr 1fr}.document-register-row{grid-template-columns:minmax(230px,1.5fr) minmax(160px,1fr) minmax(145px,.8fr) auto}.document-register-cell.document-number-cell{display:none}}
 @media(max-width:820px){.documents-toolbar{grid-template-columns:1fr}.document-register-row{grid-template-columns:1fr auto;gap:10px}.document-register-cell{grid-column:1}.document-register-actions{grid-column:2;grid-row:1 / span 3;align-self:center;flex-direction:column}.document-register-cell.document-number-cell{display:block}}
 [data-theme="dark"] .document-register-row{background:var(--card,#151a24);border-color:#2b3342}.document-register-icon{background:rgba(255,255,255,.055)}
+/* FleetPilot V14.2.4 — vehicle profile/document sync */
+.profile-document-sync-note{margin:-4px 0 12px;color:var(--muted,#64748b);font-size:12px}
+.profile-document-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border,#e5e7eb)}
+.profile-document-row:last-child{border-bottom:0}
+.profile-document-main{flex:1;min-width:0;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:inherit;cursor:pointer}
+.profile-document-main>div{min-width:0;display:flex;flex-direction:column;gap:3px}.profile-document-main strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.profile-document-main small{color:var(--muted,#64748b)}
+.profile-document-actions{display:flex;align-items:center;gap:8px;flex:none}.profile-document-actions .btn{min-height:30px;padding:5px 9px}.profile-installment-link{display:block;width:100%;text-align:left;margin:6px 0}
+.profile-fallback-documents{display:grid;gap:8px;margin-top:16px}.profile-fallback-documents h4{margin:0 0 4px}
+@media(max-width:760px){.profile-document-row{align-items:flex-start}.profile-document-main{align-items:flex-start;flex-direction:column}.profile-document-actions{margin-left:auto}}

@@ -6170,6 +6170,28 @@ function printExpenseDrilldown(){
 }
 window.openExpenseDrilldown=openExpenseDrilldown;window.setExpenseDrilldownTab=setExpenseDrilldownTab;window.setExpenseDrilldownCategory=setExpenseDrilldownCategory;window.openExpenseDrilldownEntity=openExpenseDrilldownEntity;window.expenseDrilldownCsv=expenseDrilldownCsv;window.printExpenseDrilldown=printExpenseDrilldown;
 
+function vehicleProfileDocuments(c){
+ if(!c)return[];
+ const ids=new Set([c.insuranceDocumentId,c.inspectionDocumentId].filter(Boolean).map(String));
+ return [...(db.documents||[])].filter(d=>String(d.carId||"")===String(c.id)||ids.has(String(d.id))).sort((a,b)=>{
+  const aa=String(a.expiry||"9999-12-31"),bb=String(b.expiry||"9999-12-31");
+  return aa.localeCompare(bb)
+ })
+}
+function renderCarProfileFallback(id,activeTab,error){
+ const c=car(id);if(!c)return;
+ const m=model(c),docs=vehicleProfileDocuments(c),safeTab=FLEETPILOT_CAR_TABS.has(activeTab)?activeTab:"info";
+ console.error("FleetPilot car profile render error",error);
+ showPage("carPage");
+ const root=$("#carDetail");if(!root)return;
+ root.innerHTML=`<div class="detail-summary ${c.status||"active"}"><div class="detail-content"><span class="status ${c.status||"active"}">${statusText(c.status||"active")}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate||"Без номера"} · ${c.year||""} · ${c.city||"Город не указан"}</p></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Обзор",safeTab)}${carTabButton(c.id,"service","Сервис",safeTab)}${carTabButton(c.id,"finance","Финансы",safeTab)}${carTabButton(c.id,"documents","Документы",safeTab)}${carTabButton(c.id,"history","История",safeTab)}${carTabButton(c.id,"damages","Повреждения",safeTab)}</div><div class="card"><h3>Профиль автомобиля</h3><p>Основные данные автомобиля загружены. Один из дополнительных виджетов не смог отрисоваться.</p><div class="vehicle-core-actions"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button><button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button></div>${safeTab==="documents"?`<div class="profile-fallback-documents"><h4>Документы</h4>${docs.map(d=>`<button class="inline-entity-link" onclick="openDocumentDialog('', '${d.id}')">${d.title||documentTypeText(d.type)} · ${d.expiry?date(d.expiry):"без срока"}</button>`).join("")||"Документов нет"}</div>`:""}</div>`;
+ toast("Профиль открыт в безопасном режиме")
+}
+function renderCarProfile(id,activeTab="info"){
+ try{return renderCarProfileCore(id,activeTab)}catch(error){return renderCarProfileFallback(id,activeTab,error)}
+}
+window.renderCarProfile=renderCarProfile;
+
 function openCar(id,activeTab="info"){
  const target=car(id);
  if(!target){toast("Автомобиль не найден");return}
@@ -6182,10 +6204,10 @@ function openCar(id,activeTab="info"){
 }
 window.openCar=openCar;
 
-function renderCarProfile(id,activeTab="info"){
+function renderCarProfileCore(id,activeTab="info"){
  if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
- const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
+ const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=vehicleProfileDocuments(c),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
  const tire=carTireSnapshot(c);
  const effectiveStatus=vehicleEffectiveStatus(c),healthScore=vehicleHealthScore(c);
  const lastCompleted=[...rep].filter(r=>r.status==="done").sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||"")))[0];
@@ -6334,7 +6356,7 @@ function renderCarProfile(id,activeTab="info"){
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
   <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
  </div>`;
- const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><h3>Документы автомобиля</h3><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div>${docs.map(d=>`<div class="detail-document-row"><div><strong>${d.title}</strong><small>${documentTypeText(d.type)} · до ${date(d.expiry)}</small></div><b>${money(d.cost)}</b></div>`).join("")||"Документов нет"}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<p>${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</p>`}).join("")||"Нет страховых рат"}</div></div>`;
+ const documents=`<div class="detail-tab-grid"><div class="card"><div class="section-head"><div><span class="eyebrow">Единый реестр</span><h3>Документы автомобиля</h3></div><button class="btn" onclick="openDocumentDialog('${c.id}')">+ Документ</button></div><p class="profile-document-sync-note">Здесь отображаются те же документы, что и в основном разделе «Документы». Изменения синхронизируются автоматически.</p>${docs.map(d=>{const st=fpDocumentState(d);return `<div class="detail-document-row profile-document-row" data-document-id="${d.id}"><button type="button" class="profile-document-main" onclick="openDocumentDialog('', '${d.id}')"><div><strong>${d.title||documentTypeText(d.type)||"Документ"}</strong><small>${documentTypeText(d.type)}${d.number?` · № ${d.number}`:""}${d.expiry?` · до ${date(d.expiry)}`:" · без срока"}</small></div><span class="professional-status ${st.key}">${st.label}</span></button><div class="profile-document-actions"><b>${money(d.cost||0)}</b>${d.fileId?`<button type="button" class="btn" onclick="openDocumentAttachment('${d.fileId}','${String(d.title||"Документ").replaceAll("'","&#39;")}')">Файл</button>`:""}</div></div>`}).join("")||`<div class="professional-empty">Документов автомобиля пока нет.</div>`}</div><div class="card"><h3>Страховка в рассрочку</h3>${docs.filter(d=>d.type==="insurance"&&d.paymentMode==="installments").map(d=>{const s=installmentSummary(d);return `<button type="button" class="inline-entity-link profile-installment-link" onclick="openDocumentDialog('', '${d.id}')">${d.title}: оплачено ${money(s.paid)}, осталось ${money(s.left)}${s.next?`, следующая рата ${date(s.next.due)}`:""}</button>`}).join("")||"Нет страховых рат"}</div></div>`;
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,service,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
