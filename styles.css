@@ -8105,3 +8105,88 @@ html[data-theme="dark"] .repair-linked-finance-info{
   min-width:36px!important;
  }
 }
+
+
+/* FleetPilot V11.3.9.3 — route restore + photo badge + collapsible service queue */
+
+/* Desktop: task badge physically belongs to the photo container */
+.desktop-car-photo-wrap{
+ position:relative!important;
+}
+.desktop-photo-service-task-badge{
+ position:absolute;
+ top:10px;
+ left:10px;
+ z-index:8;
+ pointer-events:none;
+}
+.desktop-photo-service-task-badge:empty{display:none!important}
+.desktop-photo-service-task-badge .photo-task-indicator{
+ pointer-events:auto;
+}
+
+/* On desktop the checkbox remains independent; badge no longer floats at row bottom-left */
+.desktop-fleet-row>.car-service-alert-icon,
+.desktop-fleet-row>.desktop-inline-service-alert{
+ display:none!important;
+}
+
+/* Mobile/legacy hero: badge remains attached to the image hero */
+.no-photo-hero .photo-service-task-badge{
+ position:absolute!important;
+ top:12px!important;
+ left:12px!important;
+ right:auto!important;
+ bottom:auto!important;
+ z-index:8!important;
+}
+
+/* One consistent neutral glass design */
+.desktop-photo-service-task-badge .car-service-alert-icon.photo-task-indicator,
+.no-photo-hero .car-service-alert-icon.photo-task-indicator{
+ width:38px!important;
+ height:38px!important;
+ min-width:38px!important;
+ border-radius:10px!important;
+ background:rgba(18,22,29,.46)!important;
+ border:1px solid rgba(255,255,255,.30)!important;
+ box-shadow:0 6px 18px rgba(0,0,0,.18)!important;
+ backdrop-filter:blur(10px)!important;
+ -webkit-backdrop-filter:blur(10px)!important;
+}
+
+/* Collapsible task list in Service CRM */
+.service-car-collapse-button{
+ display:grid;
+ place-items:center;
+ width:30px;
+ height:30px;
+ min-width:30px;
+ padding:0;
+ border:1px solid var(--line,#dfe3ea);
+ border-radius:8px;
+ background:var(--card,#fff);
+ color:var(--text,#202633);
+ cursor:pointer;
+ transition:background .15s ease,border-color .15s ease;
+}
+.service-car-collapse-button:hover{
+ background:#f6f7f9;
+ border-color:#cfd5df;
+}
+.service-car-collapse-button span{
+ display:block;
+ font-size:17px;
+ line-height:1;
+ transform:rotate(0deg);
+ transition:transform .18s ease;
+}
+.service-car-collapse-button.collapsed span{
+ transform:rotate(-90deg);
+}
+.service-car-task-list[hidden]{
+ display:none!important;
+}
+.service-car-group:has(.service-car-task-list[hidden]) .service-car-group-head{
+ border-bottom:0;
+}

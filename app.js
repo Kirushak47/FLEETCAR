@@ -4757,11 +4757,11 @@ function renderFleet(){
 </div>
 </div><div class="actions"><button class="btn" onclick="openMileage('${c.id}')">+ Пробег</button><button class="btn primary" onclick="openCar('${c.id}')">Открыть</button></div></div></article></div>
 <div class="desktop-fleet-row health-${health.level}" data-command-car="${c.id}" data-fleet-car-id="${c.id}">
-${fleetServiceBadgeMarkup(c.id,true)}
 <label class="desktop-list-check" onclick="event.stopPropagation()"><input type="checkbox" class="desktop-command-checkbox" value="${c.id}" onchange="toggleDesktopSelection('${c.id}',this.checked)"><span></span></label>
   <span class="desktop-row-accent"></span>
   <div class="desktop-car-photo-wrap" onclick="openCar('${c.id}')">
     ${c.customPhoto?`<img class="desktop-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:`<div class="desktop-car-photo-placeholder">🚘</div>`}
+    <div class="desktop-photo-service-task-badge">${fleetServiceBadgeMarkup(c.id,true)}</div>
   </div>
   <div class="desktop-car-identity">
     <div class="desktop-car-title-line">
@@ -5072,8 +5072,25 @@ function renderServiceCrmSummary(){
   renderRepairs()
  })
 }
+
+const SERVICE_COLLAPSED_CARS_KEY="fleetpilot.service.collapsed.v1";
+let serviceCollapsedCars=(()=>{
+ try{return new Set(JSON.parse(localStorage.getItem(SERVICE_COLLAPSED_CARS_KEY)||"[]").map(String))}
+ catch{return new Set()}
+})();
+
+function toggleServiceCarTasks(carId){
+ const id=String(carId);
+ if(serviceCollapsedCars.has(id))serviceCollapsedCars.delete(id);
+ else serviceCollapsedCars.add(id);
+ try{localStorage.setItem(SERVICE_COLLAPSED_CARS_KEY,JSON.stringify([...serviceCollapsedCars]))}catch{}
+ renderRepairs()
+}
+window.toggleServiceCarTasks=toggleServiceCarTasks;
+
 function renderServiceCarTasks(row){
  const {c,m,repairs,requests,plannedExpenses,visibleRepairs}=row;
+ const collapsed=serviceCollapsedCars.has(String(c.id));
  const filter=$("#serviceStatusFilter")?.value||"all";
  const repairsToShow=filter==="requests"?[]:visibleRepairs;
  const expenseTasks=(filter==="done"||filter==="requests")?[]:plannedExpenses;
@@ -5094,11 +5111,14 @@ function renderServiceCarTasks(row){
     <strong>${total}</strong><small>${total===1?"задача":"задач"}</small>
    </div>
    <div class="service-car-group-actions">
-    <button class="btn" onclick="openCar('${c.id}')">Автомобиль</button>
+    <button type="button" class="service-car-collapse-button ${collapsed?"collapsed":""}" onclick="toggleServiceCarTasks('${c.id}')" title="${collapsed?"Показать задачи":"Скрыть задачи"}" aria-expanded="${!collapsed}">
+     <span>⌄</span>
+    </button>
+    <button class="btn" onclick="openCar('${c.id}','service')">Автомобиль</button>
     <button class="btn primary" onclick="openRepairDialog('${c.id}')">+ Задача</button>
    </div>
   </header>
-  <div class="service-car-task-list">
+  <div class="service-car-task-list" ${collapsed?"hidden":""}>
    ${requests.map(req=>`<div class="service-task-row request" data-service-request-task="${req.id}">
      <span class="service-task-icon">!</span>
      <div class="service-task-copy"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span>${req.description||"Без описания"}</span><small>${req.driver_email||"Водитель"} · ${km(req.mileage)}</small></div>
@@ -6489,7 +6509,7 @@ $("#eraseAllData").onclick=()=>{
  showPage("fleetPage");
  toast("Все данные удалены")
 };
-initializeFleetPilotDeepLinks();
+fleetPilotRouteReady=true;
 
 
 /* FleetPilot V7.5.4 — final DOM boot guard */
@@ -6499,6 +6519,12 @@ initializeFleetPilotDeepLinks();
    if(typeof renderAll==="function")renderAll();
    else if(typeof renderFleet==="function")renderFleet();
    if(window.innerWidth>=1100&&typeof initializeDesktopCommandCenter==="function")initializeDesktopCommandCenter();
+
+   // Route is always the final authority after all render/init code.
+   requestAnimationFrame(()=>{
+    try{fleetPilotApplyRoute({replaceInvalid:false})}
+    catch(error){console.error("FleetPilot route restore error",error)}
+   })
   }catch(error){console.error("FleetPilot final boot error",error)}
  }
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",finalBoot,{once:true});
