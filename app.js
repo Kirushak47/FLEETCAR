@@ -7803,7 +7803,7 @@ function renderDocuments(){
   ["Скоро истекают",soon,"В течение 30 дней"],
   ["Просрочены",expired,"Требуют внимания"],
   ["Ожидают оплаты",unpaidInstallments,"Страховые раты"]
- ].map(([label,value,note])=>`<article class="professional-kpi-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+ ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
  const query=String($("#documentSearch")?.value||"").trim().toLocaleLowerCase("ru-RU"),type=$("#documentTypeFilter")?.value||"all",status=$("#documentStatusFilter")?.value||"all",carFilter=$("#documentCarFilter")?.value||"all";
  let rows=all.filter(row=>{
   const st=fpDocumentState(row),carLabel=fpDocumentCarLabel(row),hay=[row.title,row.number,row.note,row.file,documentTypeText(row.type),carLabel].join(" ").toLocaleLowerCase("ru-RU");
@@ -7816,13 +7816,12 @@ function renderDocuments(){
  root.innerHTML=rows.map(row=>{
   const st=fpDocumentState(row),install=row.type==="insurance"&&row.paymentMode==="installments"?installmentSummary(row):null;
   const paidPct=install&&Number(row.cost||0)>0?Math.min(100,Math.round(install.paid/Number(row.cost||0)*100)):0;
-  const fileButtons=row.fileId?`<button type="button" class="btn document-file-action" title="Открыть файл" onclick="openDocumentAttachment('${row.fileId}','${String(row.title||"Документ").replaceAll("'","&#39;")}')">↗</button><button type="button" class="btn document-file-action" title="Скачать файл" onclick="downloadDocumentAttachment('${row.fileId}')">↓</button>`:"";
   return `<article class="document-register-row" data-document-id="${row.id}">
    <div class="document-register-main"><div class="document-register-icon">${fpDocumentIcon(row.type)}</div><div><strong>${row.title||documentTypeText(row.type)||"Документ"}</strong><small>${documentTypeText(row.type)} · ${fpDocumentCarLabel(row)}</small>${install?`<div class="document-installment-progress"><i><b style="width:${paidPct}%"></b></i><em>${money(install.paid)} / ${money(row.cost||0)}</em></div>`:""}</div></div>
    <div class="document-register-cell document-number-cell"><span>Номер</span><strong>${row.number||"—"}</strong><small>${row.fileId?"Файл прикреплён":"Без вложения"}</small></div>
    <div class="document-register-cell"><span>Срок</span><strong>${row.expiry?date(row.expiry):"Не указан"}</strong><small>${st.detail}</small></div>
    <div class="document-register-cell"><span>Статус</span><span class="document-status-badge ${st.key}"><i class="document-status-dot"></i>${st.label}</span>${Number(row.cost||0)?`<small>Стоимость ${money(row.cost)}</small>`:""}</div>
-   <div class="document-register-actions">${fileButtons}<button type="button" class="btn" onclick="openDocumentDialog('', '${row.id}')">Открыть</button><button type="button" class="btn" title="Удалить" onclick="deleteDocument('${row.id}')">⋮</button></div>
+   <div class="document-register-actions"><button type="button" class="btn" onclick="openDocumentDialog('', '${row.id}')">Открыть</button><button type="button" class="btn" title="Удалить" onclick="deleteDocument('${row.id}')">⋮</button></div>
   </article>`
  }).join("")||'<div class="document-empty-professional">По выбранным фильтрам документов нет.</div>';
  ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})

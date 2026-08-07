@@ -9079,3 +9079,16 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 .profile-documents-card .section-head{align-items:center}
 .profile-documents-card .professional-empty{display:grid;gap:8px;justify-items:start}
 .profile-documents-card .professional-empty span{color:var(--muted,#64748b);font-size:13px}
+
+/* FleetPilot V14.2.6 — Documents UI polish */
+.document-kpi-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;margin-bottom:10px!important}
+.document-kpi-grid .professional-kpi{min-height:68px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
+.document-kpi-grid .professional-kpi span{font-size:9px!important;font-weight:500!important}
+.document-kpi-grid .professional-kpi strong{margin-top:5px!important;font-size:18px!important;line-height:1!important}
+.document-kpi-grid .professional-kpi small{margin-top:3px!important;font-size:8px!important;font-weight:400!important}
+.documents-toolbar{margin-bottom:10px!important}
+.document-register-row{padding:11px 13px!important;border-radius:12px!important;gap:10px!important}
+.document-register-icon{flex-basis:34px!important;height:34px!important;border-radius:10px!important;font-size:15px!important}
+.document-register-actions .btn{min-height:32px!important;padding:6px 10px!important}
+@media(max-width:1180px){.document-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:760px){.document-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
