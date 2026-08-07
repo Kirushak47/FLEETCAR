@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V11.3.5.1 Service Save Fix Cloud Beta",
+  "name": "FleetPilot V11.3.7 Service CRM Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113510",
+  "start_url": "./?v=113700",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

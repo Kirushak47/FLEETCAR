@@ -1036,10 +1036,13 @@ function repairAlertLevel(rows){
 }
 
 function fleetServiceBadgeMarkup(carId,desktop=false){
- const rows=repairAlertsForCar(carId);
- if(!rows.length)return"";
- const level=repairAlertLevel(rows);
- return `<button type="button" class="car-service-alert-icon ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Активных заявок: ${rows.length}"><span>🔧</span><b>${rows.length}</b></button>`
+ const requestRows=repairAlertsForCar(carId);
+ const repairRows=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&!["done","cancelled"].includes(String(r.status||"")));
+ const total=requestRows.length+repairRows.length;
+ if(!total)return"";
+ const level=requestRows.some(row=>row.urgency==="critical")||repairRows.some(r=>r.status==="repair")?"critical":
+  requestRows.length||repairRows.some(r=>["service","parts"].includes(r.status))?"service":"normal";
+ return `<button type="button" class="car-service-alert-icon task-indicator ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Открытых сервисных задач: ${total}" aria-label="Открыть сервисные задачи"><span>🔔</span><b>${total}</b></button>`
 }
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
@@ -1096,14 +1099,21 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  }
 }
 function openFleetServiceAlert(carId){
- const rows=repairAlertsForCar(carId).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  selectedWorkspaceRepairCarId=String(carId);
+ const search=$("#serviceSearch");if(search)search.value="";
+ const city=$("#serviceCityFilter");if(city)city.value="all";
+ const status=$("#serviceStatusFilter");if(status)status.value="all";
  showPage("repairsPage");
  setTimeout(async()=>{
-  await renderWorkspaceRepairRequests();
-  if(rows[0])highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(rows[0].id))}"]`);
-  else document.querySelector("#workspaceRepairRequestsList")?.scrollIntoView({behavior:"smooth",block:"start"})
- },50)
+  try{await renderWorkspaceRepairRequests()}catch{}
+  renderRepairs();
+  const target=document.querySelector(`[data-service-car="${CSS.escape(String(carId))}"]`);
+  if(target){
+   target.scrollIntoView({behavior:"smooth",block:"center"});
+   target.classList.add("smart-entity-highlight");
+   setTimeout(()=>target.classList.remove("smart-entity-highlight"),2800)
+  }
+ },80)
 }
 function openAllFleetServiceAlerts(){
  selectedWorkspaceRepairCarId=null;
@@ -1113,10 +1123,80 @@ function openAllFleetServiceAlerts(){
 window.openFleetServiceAlert=openFleetServiceAlert;
 function clearWorkspaceRepairCarFilter(){
  selectedWorkspaceRepairCarId=null;
- renderWorkspaceRepairRequests()
+ renderWorkspaceRepairRequests();
+ renderRepairs()
 }
 window.openAllFleetServiceAlerts=openAllFleetServiceAlerts;
 window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
+
+
+function archivedDriverRepairRequests(){
+ return (workspaceRepairAlerts||[])
+  .filter(row=>String(row.status||"")==="rejected")
+  .sort((a,b)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")))
+}
+
+function renderServiceRequestArchive(){
+ const panel=$("#serviceRequestArchivePanel");
+ const root=$("#serviceRequestArchiveList");
+ if(!panel||!root)return;
+
+ const rows=archivedDriverRepairRequests();
+ const count=$("#serviceArchivedRequestCount");
+ if(count)count.textContent=String(rows.length);
+
+ root.innerHTML=rows.map(row=>{
+  const localCar=car(row.car_id);
+  const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
+  const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
+  const when=row.updated_at||row.created_at;
+  return `<article class="workspace-request-row service-archive-request" data-archived-request-id="${row.id}">
+   <div>
+    <div class="service-inbox-request-heading">
+     <strong>${category} · ${carName}</strong>
+     <span class="service-inbox-request-badge rejected">Отклонена</span>
+    </div>
+    <span>${row.description||"Без описания"}</span>
+    <small>${row.driver_email||"Водитель"} · ${when?new Date(when).toLocaleString("ru-RU"):"—"} · ${km(row.mileage)}</small>
+   </div>
+   <div class="service-archive-actions">
+    <button type="button" class="btn primary" data-restore-request="${row.id}">Вернуть в работу</button>
+   </div>
+  </article>`
+ }).join("")||'<div class="driver-empty-state service-inbox-empty">Архив заявок пуст.</div>';
+
+ $$("[data-restore-request]").forEach(button=>button.onclick=async()=>{
+  const requestId=button.dataset.restoreRequest;
+  const request=workspaceRepairAlerts.find(row=>String(row.id)===String(requestId));
+  button.disabled=true;
+  const oldText=button.textContent;
+  button.textContent="Возвращаю…";
+  try{
+   await window.FleetPilotCloud.updateDriverRepairRequest(requestId,"accepted","Возвращено из архива");
+   if(request)request.status="accepted";
+   toast("Заявка возвращена в работу");
+   renderServiceRequestArchive();
+   renderFleetDriverRequestsPanel();
+   await renderWorkspaceRepairRequests();
+  }catch(error){
+   toast(error.message||"Не удалось вернуть заявку")
+  }finally{
+   button.disabled=false;
+   button.textContent=oldText
+  }
+ })
+}
+
+function setServiceRequestArchiveVisible(visible){
+ const panel=$("#serviceRequestArchivePanel");
+ if(!panel)return;
+ panel.hidden=!visible;
+ if(visible){
+  renderServiceRequestArchive();
+  requestAnimationFrame(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}))
+ }
+}
+window.setServiceRequestArchiveVisible=setServiceRequestArchiveVisible;
 
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
@@ -1130,6 +1210,9 @@ async function renderWorkspaceRepairRequests(){
   renderFleetDriverRequestsPanel();
 
   const pending=activeDriverRepairRequests();
+  const activeCounter=$("#serviceActiveRequestCount");
+  if(activeCounter)activeCounter.textContent=String(pending.length);
+  renderServiceRequestArchive();
   const rows=selectedWorkspaceRepairCarId
    ?pending.filter(row=>String(row.car_id)===String(selectedWorkspaceRepairCarId))
    :pending;
@@ -1567,6 +1650,31 @@ const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;
 const refreshDriverRepairRequests=$("#refreshDriverRepairRequests");
 if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverRepairRequests;
+
+
+const serviceSearch=$("#serviceSearch");
+if(serviceSearch)serviceSearch.oninput=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const serviceStatusFilter=$("#serviceStatusFilter");
+if(serviceStatusFilter)serviceStatusFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const serviceCityFilter=$("#serviceCityFilter");
+if(serviceCityFilter)serviceCityFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const serviceSort=$("#serviceSort");
+if(serviceSort)serviceSort.onchange=renderRepairs;
+const clearServiceFilters=$("#clearServiceFilters");
+if(clearServiceFilters)clearServiceFilters.onclick=()=>{
+ if(serviceSearch)serviceSearch.value="";
+ if(serviceStatusFilter)serviceStatusFilter.value="all";
+ if(serviceCityFilter)serviceCityFilter.value="all";
+ if(serviceSort)serviceSort.value="priority";
+ selectedWorkspaceRepairCarId=null;
+ renderRepairs()
+};
+
+const toggleServiceRequestArchive=$("#toggleServiceRequestArchive");
+if(toggleServiceRequestArchive)toggleServiceRequestArchive.onclick=()=>setServiceRequestArchiveVisible(true);
+const closeServiceRequestArchive=$("#closeServiceRequestArchive");
+if(closeServiceRequestArchive)closeServiceRequestArchive.onclick=()=>setServiceRequestArchiveVisible(false);
+
 const fleetDriverRequestsOpenService=$("#fleetDriverRequestsOpenService");
 if(fleetDriverRequestsOpenService)fleetDriverRequestsOpenService.onclick=()=>{
  selectedWorkspaceRepairCarId=null;
@@ -4579,9 +4687,8 @@ function renderFleet(){
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
+  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span>${fleetServiceBadgeMarkup(c.id)}</div>
   <div class="hero-card-controls">
-   ${fleetServiceBadgeMarkup(c.id)}
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
     const gps=gpsStatusForCar(c);
@@ -4815,7 +4922,161 @@ ${fleetServiceBadgeMarkup(c.id,true)}
  requestAnimationFrame(()=>{animateDashboard();animateProgressBars($("#fleetPage"))})
  requestAnimationFrame(updateGpsBadgesOnly);
 }
-function renderRepairs(){const list=[...db.repairs].sort((a,b)=>a.date.localeCompare(b.date));const planned=list.filter(x=>x.status!=="done").reduce((s,x)=>s+Number(x.planned||0),0),actual=list.filter(x=>x.status==="done").reduce((s,x)=>s+Number(x.actual||0),0);$("#repairSummary").innerHTML=[["Запланировано",list.filter(x=>x.status==="planned").length],["В процессе",list.filter(x=>["parts","service","repair"].includes(x.status)).length],["Плановая сумма",money(planned)],["Факт",money(actual)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");$("#repairList").innerHTML=list.map(r=>{const c=car(r.carId);return `<article class="list-item" data-repair-id="${r.id}"><div class="top"><div><h3>${r.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate} · ${date(r.date)}</p></div><strong>${money(r.status==="done"?r.actual:r.planned)}</strong></div><p>${r.service||""} ${r.note||""}</p><span class="badge ${r.status==="done"?"done":""}">${repairStatusText(r.status)}</span><div class="item-actions"><button class="btn" onclick="editRepair('${r.id}')">Редактировать</button><button class="btn danger" onclick="deleteRepair('${r.id}')">Удалить</button></div></article>`}).join("")||`<div class="card">Ремонтов нет</div>`}
+
+function activeServiceRepairs(){
+ return (db.repairs||[]).filter(r=>!["done","cancelled"].includes(String(r.status||"planned")))
+}
+function serviceCarTasks(carId){
+ const repairs=activeServiceRepairs().filter(r=>String(r.carId)===String(carId));
+ const requests=activeDriverRepairRequests().filter(r=>String(r.car_id)===String(carId));
+ return{repairs,requests,total:repairs.length+requests.length}
+}
+function serviceTaskPriority(carId){
+ const {repairs,requests}=serviceCarTasks(carId);
+ if(requests.some(x=>String(x.urgency)==="critical"))return 100;
+ if(repairs.some(x=>String(x.status)==="repair"))return 80;
+ if(repairs.some(x=>String(x.status)==="service"))return 60;
+ if(repairs.some(x=>String(x.status)==="parts"))return 50;
+ if(requests.length)return 40;
+ if(repairs.length)return 20;
+ return 0
+}
+function serviceStatusClass(status){
+ return {repair:"danger",service:"service",parts:"parts",planned:"planned",done:"done",cancelled:"cancelled"}[status]||"planned"
+}
+function serviceFilterMatchesRepair(repair,filter){
+ if(filter==="all")return repair.status!=="done"&&repair.status!=="cancelled";
+ if(filter==="done")return repair.status==="done";
+ if(filter==="requests")return false;
+ return repair.status===filter
+}
+function serviceCarsForCurrentView(){
+ const search=String($("#serviceSearch")?.value||"").trim().toLowerCase();
+ const statusFilter=$("#serviceStatusFilter")?.value||"all";
+ const cityFilter=$("#serviceCityFilter")?.value||"all";
+ const sort=$("#serviceSort")?.value||"priority";
+
+ const rows=fleetCars().map(c=>{
+  const m=model(c);
+  const repairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id));
+  const requests=activeDriverRepairRequests().filter(r=>String(r.car_id)===String(c.id));
+  const visibleRepairs=repairs.filter(r=>serviceFilterMatchesRepair(r,statusFilter));
+  const statusMatch=statusFilter==="requests"?requests.length>0:
+   statusFilter==="all"?(visibleRepairs.length>0||requests.length>0):
+   statusFilter==="done"?visibleRepairs.length>0:visibleRepairs.length>0;
+  const hay=[
+   m.brand,m.model,c.plate,c.tenant,c.city,
+   ...repairs.flatMap(r=>[r.title,r.service,r.note,repairStatusText(r.status)]),
+   ...requests.flatMap(r=>[r.driver_email,r.description,DRIVER_REPAIR_CATEGORY_LABELS[r.category]||r.category])
+  ].join(" ").toLowerCase();
+  return{c,m,repairs,requests,visibleRepairs,statusMatch,hay,priority:serviceTaskPriority(c.id)}
+ }).filter(row=>
+  row.statusMatch&&
+  (cityFilter==="all"||String(row.c.city||"")===cityFilter)&&
+  (!search||row.hay.includes(search))
+ );
+
+ rows.sort((a,b)=>{
+  if(sort==="plate")return String(a.c.plate||"").localeCompare(String(b.c.plate||""),"pl");
+  if(sort==="newest"){
+   const newest=x=>Math.max(0,...x.repairs.map(r=>new Date((r.date||"1970-01-01")+"T12:00:00").getTime()),...x.requests.map(r=>new Date(r.created_at||0).getTime()));
+   return newest(b)-newest(a)
+  }
+  return b.priority-a.priority||String(a.c.plate||"").localeCompare(String(b.c.plate||""),"pl")
+ });
+ return rows
+}
+function populateServiceCityFilter(){
+ const select=$("#serviceCityFilter");if(!select)return;
+ const current=select.value||"all";
+ const cities=[...new Set(fleetCars().map(c=>String(c.city||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pl"));
+ select.innerHTML='<option value="all">Все города</option>'+cities.map(city=>`<option value="${city.replaceAll('"',"&quot;")}">${city}</option>`).join("");
+ select.value=cities.includes(current)?current:"all"
+}
+function renderServiceCrmSummary(){
+ const active=activeServiceRepairs();
+ const activeCars=new Set(active.map(r=>String(r.carId)));
+ const driverRequests=activeDriverRepairRequests();
+ const cards=[
+  ["В сервисе",activeCars.size,"all","Автомобилей с активными задачами"],
+  ["В ремонте",new Set(active.filter(r=>r.status==="repair").map(r=>r.carId)).size,"repair","Работы выполняются"],
+  ["Ждут сервис",new Set(active.filter(r=>r.status==="service").map(r=>r.carId)).size,"service","Есть запись в сервис"],
+  ["Ждут детали",new Set(active.filter(r=>r.status==="parts").map(r=>r.carId)).size,"parts","Ожидание запчастей"],
+  ["Новые заявки",driverRequests.length,"requests","Требуют решения"],
+  ["Готово",db.repairs.filter(r=>r.status==="done").length,"done","История завершённых"]
+ ];
+ const root=$("#serviceCrmSummary");if(!root)return;
+ root.innerHTML=cards.map(([label,value,filter,note])=>`
+  <button type="button" class="professional-kpi service-kpi-filter ${($("#serviceStatusFilter")?.value||"all")===filter?"active":""}" data-service-kpi="${filter}">
+   <span>${label}</span><strong>${value}</strong><small>${note}</small>
+  </button>`).join("");
+ $$("[data-service-kpi]").forEach(button=>button.onclick=()=>{
+  const select=$("#serviceStatusFilter");if(select)select.value=button.dataset.serviceKpi;
+  renderRepairs()
+ })
+}
+function renderServiceCarTasks(row){
+ const {c,m,repairs,requests,visibleRepairs}=row;
+ const filter=$("#serviceStatusFilter")?.value||"all";
+ const repairsToShow=filter==="requests"?[]:visibleRepairs;
+ const total=(filter==="done"?repairsToShow.length:repairsToShow.length+requests.length);
+ const activeState=repairs.find(r=>r.status==="repair")?"repair":
+  repairs.find(r=>r.status==="service")?"service":
+  repairs.find(r=>r.status==="parts")?"parts":
+  requests.length?"request":"planned";
+
+ return `<article class="service-car-group status-${activeState}" data-service-car="${c.id}">
+  <header class="service-car-group-head">
+   <div class="service-car-avatar">🚘</div>
+   <div class="service-car-identity">
+    <div><h4>${m.brand} ${m.model}</h4><span class="service-car-state ${activeState}">${activeState==="repair"?"В ремонте":activeState==="service"?"Записан в сервис":activeState==="parts"?"Ждёт детали":activeState==="request"?"Есть новая заявка":"Запланировано"}</span></div>
+    <p>${c.plate||"Без номера"} · ${c.city||"Город не указан"} · ${c.tenant||"Без водителя"}</p>
+   </div>
+   <div class="service-car-group-meta">
+    <strong>${total}</strong><small>${total===1?"задача":"задач"}</small>
+   </div>
+   <div class="service-car-group-actions">
+    <button class="btn" onclick="openCar('${c.id}')">Автомобиль</button>
+    <button class="btn primary" onclick="openRepairDialog('${c.id}')">+ Задача</button>
+   </div>
+  </header>
+  <div class="service-car-task-list">
+   ${requests.map(req=>`<div class="service-task-row request" data-service-request-task="${req.id}">
+     <span class="service-task-icon">!</span>
+     <div class="service-task-copy"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span>${req.description||"Без описания"}</span><small>${req.driver_email||"Водитель"} · ${km(req.mileage)}</small></div>
+     <span class="service-task-status request">${req.status==="accepted"?"Принята":"Новая"}</span>
+     <button class="btn" onclick="openRepairFromFleetRequest('${req.id}')">Открыть</button>
+    </div>`).join("")}
+   ${repairsToShow.map(r=>`<div class="service-task-row ${serviceStatusClass(r.status)}" data-repair-id="${r.id}">
+     <span class="service-task-icon">🔧</span>
+     <div class="service-task-copy"><strong>${r.title}</strong><span>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)}</small></div>
+     <span class="service-task-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span>
+     <button class="btn" onclick="editRepair('${r.id}')">Открыть</button>
+    </div>`).join("")}
+  </div>
+ </article>`
+}
+function renderRepairs(){
+ populateServiceCityFilter();
+ renderServiceCrmSummary();
+ const rows=serviceCarsForCurrentView();
+ const counter=$("#serviceVisibleCarsCount");if(counter)counter.textContent=String(rows.length);
+
+ const root=$("#repairList");if(!root)return;
+ root.innerHTML=rows.map(renderServiceCarTasks).join("")||
+  `<div class="professional-empty service-crm-empty"><strong>Ничего не найдено</strong><span>Измените поиск или фильтры.</span></div>`;
+
+ if(selectedWorkspaceRepairCarId){
+  const target=document.querySelector(`[data-service-car="${CSS.escape(String(selectedWorkspaceRepairCarId))}"]`);
+  if(target){
+   requestAnimationFrame(()=>{
+    target.scrollIntoView({behavior:"smooth",block:"center"});
+    target.classList.add("smart-entity-highlight");
+    setTimeout(()=>target.classList.remove("smart-entity-highlight"),2800)
+   })
+  }
+ }
+}
 
 function taxSettings(){
  db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:0,deductVatCosts:true};

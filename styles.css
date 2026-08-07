@@ -7634,3 +7634,223 @@ html[data-theme="dark"] .repair-linked-finance-info{
   grid-template-columns:1fr 1fr;
  }
 }
+
+
+/* FleetPilot V11.3.6 — service request archive */
+.service-request-head-actions{
+ display:flex;
+ align-items:center;
+ gap:8px;
+}
+.service-request-archive-panel{
+ margin:14px 0;
+}
+.service-request-archive-panel[hidden]{
+ display:none!important;
+}
+.service-archive-request{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) auto!important;
+ gap:14px!important;
+ align-items:center!important;
+ opacity:.92;
+}
+.service-inbox-request-badge.rejected{
+ background:#fff0f0;
+ color:#c43b3b!important;
+}
+.service-archive-actions{
+ display:flex;
+ align-items:center;
+}
+.service-archive-actions .btn{
+ min-width:145px;
+}
+@media(max-width:1099px){
+ .service-request-head-actions{
+  flex-wrap:wrap;
+  justify-content:flex-end;
+ }
+ .service-archive-request{
+  grid-template-columns:1fr!important;
+ }
+ .service-archive-actions .btn{
+  width:100%;
+ }
+}
+
+
+/* =========================================================
+   FleetPilot V11.3.7 — Service CRM
+   ========================================================= */
+.service-crm-head{margin-bottom:14px}
+.service-crm-toolbar{
+ display:grid;
+ grid-template-columns:minmax(280px,1fr) 180px 160px 170px auto;
+ gap:8px;
+ align-items:center;
+ margin-bottom:14px;
+ padding:10px;
+ border:1px solid var(--line,#e7eaf0);
+ border-radius:14px;
+ background:var(--card,#fff);
+ box-shadow:0 6px 20px rgba(22,31,52,.035);
+}
+.service-crm-search{
+ display:grid;
+ grid-template-columns:30px minmax(0,1fr);
+ align-items:center;
+ min-height:38px;
+ padding:0 8px;
+ border:1px solid var(--line,#dfe3eb);
+ border-radius:10px;
+ background:var(--card,#fff);
+}
+.service-crm-search span{color:var(--muted,#8c95a5);font-size:17px;text-align:center}
+.service-crm-search input{
+ min-width:0!important;
+ border:0!important;
+ outline:0!important;
+ box-shadow:none!important;
+ background:transparent!important;
+}
+.service-crm-summary{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.service-kpi-filter{
+ width:100%;
+ border:1px solid var(--line,#e7eaf0)!important;
+ text-align:left;
+ cursor:pointer;
+ color:inherit;
+}
+.service-kpi-filter:hover,.service-kpi-filter.active{
+ border-color:rgba(91,77,245,.35)!important;
+ box-shadow:0 9px 24px rgba(91,77,245,.08)!important;
+ transform:translateY(-1px);
+}
+.service-kpi-filter.active{background:color-mix(in srgb,var(--card,#fff) 92%,#ece9ff)!important}
+.service-fleet-panel{margin-top:14px}
+.service-car-worklist{display:grid;gap:10px}
+.service-car-group{
+ border:1px solid var(--line,#e7eaf0);
+ border-radius:14px;
+ background:var(--card,#fff);
+ overflow:hidden;
+ transition:.16s ease;
+}
+.service-car-group:hover{border-color:#d7dce6;box-shadow:0 8px 20px rgba(22,31,52,.035)}
+.service-car-group.status-repair{border-left:3px solid #ef4444}
+.service-car-group.status-service{border-left:3px solid #5b4df5}
+.service-car-group.status-parts{border-left:3px solid #f59e0b}
+.service-car-group.status-request{border-left:3px solid #f97316}
+.service-car-group-head{
+ display:grid;
+ grid-template-columns:42px minmax(0,1fr) 74px auto;
+ gap:11px;
+ align-items:center;
+ padding:13px 14px;
+ background:color-mix(in srgb,var(--card,#fff) 97%,#f6f7fa);
+}
+.service-car-avatar{
+ display:grid;place-items:center;
+ width:40px;height:40px;
+ border-radius:11px;
+ background:rgba(91,77,245,.09);
+ font-size:17px;
+}
+.service-car-identity>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.service-car-identity h4{margin:0;font-size:13px}
+.service-car-identity p{margin:4px 0 0;color:var(--muted,#748094);font-size:9px}
+.service-car-state{
+ display:inline-flex;padding:4px 7px;border-radius:999px;
+ font-size:7px;font-weight:900;
+ background:#f0f2f6;color:#667085;
+}
+.service-car-state.repair{background:#fff0f0;color:#c83f3f}
+.service-car-state.service{background:#efedff;color:#5848d8}
+.service-car-state.parts{background:#fff5df;color:#ad7100}
+.service-car-state.request{background:#fff0e8;color:#c35319}
+.service-car-group-meta{text-align:center}
+.service-car-group-meta strong{display:block;font-size:19px}
+.service-car-group-meta small{display:block;color:var(--muted,#929aa9);font-size:7px}
+.service-car-group-actions{display:flex;gap:6px}
+.service-car-group-actions .btn{min-height:32px;font-size:8px}
+.service-car-task-list{display:grid}
+.service-task-row{
+ display:grid;
+ grid-template-columns:34px minmax(0,1fr) 120px 76px;
+ gap:10px;
+ align-items:center;
+ padding:10px 14px;
+ border-top:1px solid var(--line,#eef0f4);
+}
+.service-task-row:hover{background:color-mix(in srgb,var(--card,#fff) 96%,#f4f6fa)}
+.service-task-icon{
+ display:grid;place-items:center;
+ width:30px;height:30px;border-radius:9px;
+ background:#f0f2f6;font-size:12px;font-weight:900;
+}
+.service-task-row.request .service-task-icon{background:#fff0e8;color:#d85c18}
+.service-task-copy strong,.service-task-copy span,.service-task-copy small{display:block}
+.service-task-copy strong{font-size:10px}
+.service-task-copy span{margin-top:2px;color:var(--muted,#6c778a);font-size:8px}
+.service-task-copy small{margin-top:3px;color:var(--muted,#9aa1ae);font-size:7px}
+.service-task-status{
+ display:inline-flex;
+ justify-content:center;
+ padding:5px 7px;border-radius:999px;
+ font-size:7px;font-weight:900;
+ background:#f0f2f6;color:#687185;
+}
+.service-task-status.danger{background:#fff0f0;color:#c43b3b}
+.service-task-status.service{background:#efedff;color:#5547d7}
+.service-task-status.parts{background:#fff5df;color:#ad7100}
+.service-task-status.request{background:#fff0e8;color:#c35319}
+.service-task-status.done{background:#eaf8ef;color:#16824a}
+.service-crm-empty{display:grid!important;gap:4px;min-height:120px;place-items:center}
+.service-crm-empty span{font-size:9px;color:var(--muted,#8992a3)}
+.hero-status-row{display:flex!important;align-items:center!important;gap:7px!important}
+.car-service-alert-icon.task-indicator{
+ position:static!important;
+ inset:auto!important;
+ display:inline-flex!important;
+ align-items:center!important;
+ gap:4px!important;
+ width:auto!important;
+ min-width:34px!important;
+ height:25px!important;
+ padding:0 7px!important;
+ border:1px solid rgba(255,255,255,.25)!important;
+ border-radius:999px!important;
+ background:rgba(20,25,36,.58)!important;
+ color:#fff!important;
+ box-shadow:none!important;
+ backdrop-filter:blur(8px);
+ transform:none!important;
+}
+.car-service-alert-icon.task-indicator span{font-size:11px!important;line-height:1!important}
+.car-service-alert-icon.task-indicator b{
+ position:static!important;
+ display:inline!important;
+ min-width:auto!important;
+ padding:0!important;
+ background:none!important;
+ color:#fff!important;
+ font-size:8px!important;
+}
+.car-service-alert-icon.task-indicator.critical{background:rgba(185,28,28,.82)!important}
+.car-service-alert-icon.task-indicator.service{background:rgba(180,83,9,.82)!important}
+
+@media(max-width:1250px){
+ .service-crm-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .service-crm-toolbar{grid-template-columns:minmax(240px,1fr) repeat(2,150px)}
+ .service-crm-toolbar #serviceSort,.service-crm-toolbar #clearServiceFilters{grid-row:2}
+}
+@media(max-width:1099px){
+ .service-crm-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .service-crm-toolbar{grid-template-columns:1fr 1fr}
+ .service-crm-search{grid-column:1/-1}
+ .service-car-group-head{grid-template-columns:40px minmax(0,1fr) 56px}
+ .service-car-group-actions{grid-column:2/-1}
+ .service-task-row{grid-template-columns:32px minmax(0,1fr)}
+ .service-task-status,.service-task-row>.btn{grid-column:2}
+}

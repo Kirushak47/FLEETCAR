@@ -1,11 +1,17 @@
-# FleetPilot V11.3.5.1 — Service Save Fix
+# FleetPilot V11.3.7 — Service CRM
 
-Fixes:
-- explicit repair submit button;
-- visible "Сохраняю…" state;
-- validation errors are shown instead of silent failure;
-- cloud mileage update has a timeout and no longer blocks local repair save;
-- linked driver request disappears from Service inbox immediately after local save;
-- cloud linking/notifications continue in the background;
-- deep links and Fleet rendering remain unchanged;
+Built on V11.3.6.
+
+New Service CRM:
+- one vehicle = one service card;
+- all active repairs and driver requests are grouped inside that vehicle;
+- search by vehicle, plate, driver, repair title, note or service;
+- filters by repair status and city;
+- priority/newest/plate sorting;
+- clickable KPI filters;
+- archive of rejected driver requests remains available and restorable;
+- Fleet service indicator moved next to vehicle status;
+- indicator is now a task notification with total unresolved service task count;
+- clicking it opens Service directly on that vehicle and highlights its task group;
+- no Supabase schema changes;
 - no SQL required.
