@@ -1,0 +1,5 @@
+
+Replace only these files in repository root:
+- fp-roles-company.js
+- fp-mobile-v16.css
+- index.html

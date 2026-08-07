@@ -3,6 +3,14 @@
    Existing roles, permissions, workspace/company administration and access checks.
    Source order: original app.js lines 514-969
    ========================================================= */
+
+// Build marker for fast verification after GitHub deploy.
+window.FLEETPILOT_BUILD="16.1";
+window.addEventListener("DOMContentLoaded",()=>{
+ document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V16.1"));
+ document.documentElement.dataset.fleetpilotBuild="16.1";
+});
+
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
 
 const ENTERPRISE_ROLE_LABELS={
@@ -298,7 +306,8 @@ function closeMobileMoreNavigation(){
  const sheet=document.getElementById("mobileMoreNavSheet");
  if(!sheet)return;
  sheet.hidden=true;
- document.body.classList.remove("mobile-more-nav-open")
+ document.body.classList.remove("mobile-more-nav-open");
+ document.querySelector(".mobile-header-menu-button")?.setAttribute("aria-expanded","false")
 }
 function openMobileMoreNavigation(){
  const sheet=ensureMobileMoreNavigation();
@@ -331,10 +340,31 @@ function renderMobileMoreNavigation(buttons){
   showPage(button.dataset.mobileMorePage)
  }))
 }
+function ensureMobileHeaderMenuButton(){
+ const topbar=document.querySelector(".topbar");
+ if(!topbar)return null;
+ let button=topbar.querySelector(".mobile-header-menu-button");
+ if(button)return button;
+ button=document.createElement("button");
+ button.type="button";
+ button.className="mobile-header-menu-button";
+ button.setAttribute("aria-label","Открыть меню FleetPilot");
+ button.setAttribute("aria-expanded","false");
+ button.innerHTML=`<span class="mobile-header-menu-icon" aria-hidden="true">☰</span>`;
+ button.addEventListener("click",()=>{
+  const nav=document.querySelector(".bottom-nav");
+  if(!nav)return;
+  const allowed=[...nav.querySelectorAll("button[data-page]")].filter(item=>item.dataset.roleAllowed==="1");
+  renderMobileMoreNavigation(allowed);
+  openMobileMoreNavigation();
+  button.setAttribute("aria-expanded","true")
+ });
+ topbar.insertBefore(button,topbar.firstChild);
+ return button
+}
 function applyMobileRoleNavigation(){
  const nav=document.querySelector(".bottom-nav");if(!nav)return;
  const role=enterpriseCurrentRole();
- if(role==="driver")return;
  const allButtons=[...nav.querySelectorAll("button[data-page]")];
  allButtons.forEach(button=>{
   const page=button.dataset.page;
@@ -345,28 +375,29 @@ function applyMobileRoleNavigation(){
    button.dataset.mobileNavBound="1"
   }
  });
- if(!window.matchMedia?.("(max-width: 1099px)").matches){
-  allButtons.forEach(button=>button.hidden=button.dataset.roleAllowed!=="1");
-  nav.querySelector(".mobile-menu-launcher")?.remove();
+ const isMobile=window.matchMedia?.("(max-width: 1099px)").matches;
+ if(role==="driver"){
+  nav.hidden=true;
+  document.querySelector(".mobile-header-menu-button")?.remove();
   closeMobileMoreNavigation();
   return
  }
- const allowedButtons=allButtons.filter(button=>button.dataset.roleAllowed==="1");
- allButtons.forEach(button=>button.hidden=true);
- let launcher=nav.querySelector(".mobile-menu-launcher");
- if(!launcher){
-  launcher=document.createElement("button");
-  launcher.type="button";
-  launcher.className="mobile-menu-launcher";
-  launcher.innerHTML=`<span class="mobile-menu-launcher-icon">☰</span><span class="mobile-menu-launcher-copy"><strong>Меню</strong><small>Разделы FleetPilot</small></span><span class="mobile-menu-launcher-arrow">⌃</span>`;
-  launcher.addEventListener("click",()=>{
-   const currentAllowed=[...nav.querySelectorAll("button[data-page]")].filter(button=>button.dataset.roleAllowed==="1");
-   renderMobileMoreNavigation(currentAllowed);
-   openMobileMoreNavigation()
-  });
-  nav.appendChild(launcher)
+ if(!isMobile){
+  nav.hidden=false;
+  allButtons.forEach(button=>button.hidden=button.dataset.roleAllowed!=="1");
+  nav.querySelector(".mobile-menu-launcher")?.remove();
+  document.querySelector(".mobile-header-menu-button")?.remove();
+  closeMobileMoreNavigation();
+  return
  }
- launcher.hidden=false;
+ // Mobile CRM navigation: the old bottom bar is intentionally disabled.
+ // A single header button opens the complete role-aware navigation drawer.
+ nav.hidden=true;
+ allButtons.forEach(button=>button.hidden=true);
+ nav.querySelector(".mobile-menu-launcher")?.remove();
+ const headerButton=ensureMobileHeaderMenuButton();
+ if(headerButton)headerButton.hidden=false;
+ const allowedButtons=allButtons.filter(button=>button.dataset.roleAllowed==="1");
  renderMobileMoreNavigation(allowedButtons);
  closeMobileMoreNavigation()
 }
