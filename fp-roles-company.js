@@ -549,6 +549,9 @@ async function renderEnterprisePage(){
    try{
     await window.FleetPilotCloud.assignDriverVehicle(select.dataset.driverAssignment,select.value||null);
     workspaceDriverAssignments[select.dataset.driverAssignment]=select.value||null;
+    await loadWorkspaceDriverAssignments?.();
+    renderFleet?.();
+    if(selectedCarId&&$("#carPage")?.classList.contains("active"))openCar(selectedCarId);
     toast(select.value?"Автомобиль назначен":"Назначение снято")
    }catch(error){toast(error.message||String(error))}
   });

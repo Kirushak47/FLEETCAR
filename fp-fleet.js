@@ -479,7 +479,7 @@ function renderFleet(){
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
  <div class="hero-title">
   <h3>${m.brand} ${m.model}</h3>
-  <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
+  <p>${c.plate} · ${(window.fleetDriverLabel?.(c)||c.tenant||"Без водителя")}</p><div class="fleet-driver-assignment"><span>👤</span><div><strong>${window.fleetDriverLabel?.(c)||c.tenant||"Без водителя"}</strong><small>${window.fleetDriverMeta?.(c)||"Не назначен"}</small></div></div>
  </div>
  <div class="hero-business-metrics">
   <button type="button" class="hero-business-metric mileage" onclick="event.stopPropagation();openMileage('${c.id}')">
@@ -533,7 +533,7 @@ function renderFleet(){
   </div>
   <div class="desktop-car-identity">
     <div class="desktop-car-title-line">
-      <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
+      <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${(window.fleetDriverLabel?.(c)||c.tenant)?` · ${window.fleetDriverLabel?.(c)||c.tenant}`:""}</p><small class="desktop-driver-meta">${window.fleetDriverMeta?.(c)||"Не назначен"}</small></div>
       <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span>
     </div>
     ${(()=>{

@@ -25,7 +25,7 @@ window.deleteRepair=id=>{if(!requireEnterprisePermission("service.edit"))return;
  toast(removeExpense?"Ремонт и расход удалены":"Техническая запись удалена")
 };window.deletePayment=id=>{if(!requireEnterprisePermission("finance.payments"))return;if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(!requireEnterprisePermission("finance.expenses"))return;if(confirm("Удалить плановый расход?")){const old=db.expenses.find(x=>x.id===id);db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses();renderRepairs();if(old&&selectedCarId===old.carId&&$("#carPage")?.classList.contains("active"))openCar(old.carId,"service")}};window.deleteDocument=async id=>{if(!requireEnterprisePermission("documents.delete"))return;if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(!requireEnterprisePermission("cars.delete"))return;if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
 $("#carModelKey").onchange=toggleCustomModelFields;
-$("#carForm").onsubmit=e=>{
+$("#carForm").onsubmit=async e=>{
  e.preventDefault();
 
  const submitButton=$("#carSubmitButton");
@@ -75,6 +75,19 @@ $("#carForm").onsubmit=e=>{
   }
 
   const previousMileage=Number(old?.mileage||0);
+  const typedDriver=$("#carTenant").value.trim();
+  const selectedDriver=workspaceDriverMemberByEmail?.(typedDriver)||null;
+  const selectedDriverUserId=$("#carDriverUserId")?.value||selectedDriver?.user_id||"";
+  const previousDriverUserId=old?.driverUserId||"";
+
+  if(selectedDriverUserId){
+   const occupiedCarId=workspaceDriverAssignments?.[selectedDriverUserId];
+   if(occupiedCarId&&String(occupiedCarId)!==String(id)){
+    const occupied=car(occupiedCarId);
+    const label=occupied?`${model(occupied).brand} ${model(occupied).model} · ${occupied.plate}`:"другой автомобиль";
+    if(!confirm(`Этот водитель уже назначен на ${label}. Переназначить его на текущий автомобиль?`))return
+   }
+  }
 
   const obj={
    id,
@@ -87,7 +100,12 @@ $("#carForm").onsubmit=e=>{
    year:Number($("#carYear").value),
    plate:$("#carPlate").value.trim(),
    vin:$("#carVin").value.trim(),
-   tenant:$("#carTenant").value.trim(),
+   tenant:selectedDriver?(workspaceDriverName?.(selectedDriver)||workspaceDriverEmail?.(selectedDriver)||typedDriver):typedDriver,
+   driverUserId:selectedDriverUserId,
+   driverEmail:selectedDriver?workspaceDriverEmail?.(selectedDriver)||typedDriver:"",
+   driverName:selectedDriver?workspaceDriverName?.(selectedDriver)||"":"",
+   driverAssignmentSource:selectedDriverUserId?"account":(typedDriver?"manual":""),
+   driverAcceptedAt:selectedDriverUserId===previousDriverUserId?(old?.driverAcceptedAt||""):"",
    status:$("#carStatus").value,
    mileage,
    oilInterval,
@@ -124,6 +142,22 @@ $("#carForm").onsubmit=e=>{
    toast("Не удалось сохранить автомобиль");
    return
   }
+
+  try{
+   if(previousDriverUserId&&previousDriverUserId!==selectedDriverUserId){
+    await window.FleetPilotCloud?.assignDriverVehicle?.(previousDriverUserId,null);
+    delete workspaceDriverAssignments[previousDriverUserId]
+   }
+   if(selectedDriverUserId&&previousDriverUserId!==selectedDriverUserId){
+    await window.FleetPilotCloud?.assignDriverVehicle?.(selectedDriverUserId,id);
+    workspaceDriverAssignments[selectedDriverUserId]=id
+   }
+   await loadWorkspaceDriverAssignments?.();
+  }catch(error){
+   console.error("Driver assignment sync failed",error);
+   toast(`Автомобиль сохранён, но назначение водителя не синхронизировано: ${error?.message||error}`)
+  }
+  save();
 
   $("#carDialog").close();
   renderFleet();

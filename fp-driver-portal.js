@@ -16,6 +16,72 @@ const DRIVER_REPAIR_STATUS_LABELS={
 };
 let driverPortalContext=null;
 let workspaceDriverAssignments={};
+let workspaceDriverAssignmentRows=[];
+let workspaceDriverDirectory=[];
+
+function normalizeDriverIdentity(value){return String(value||"").trim().toLowerCase()}
+function workspaceDriverEmail(member){return member?.profiles?.email||member?.email||member?.driver_email||""}
+function workspaceDriverName(member){return member?.display_name||member?.name||member?.full_name||""}
+function workspaceDriverMemberByEmail(email){
+ const q=normalizeDriverIdentity(email);if(!q)return null;
+ return workspaceDriverDirectory.find(member=>normalizeDriverIdentity(workspaceDriverEmail(member))===q)||null
+}
+function workspaceDriverAssignmentForCar(carId){
+ const id=String(carId||"");
+ return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&String(row.status||"")!=="returned")||null
+}
+function workspaceDriverForCar(c){
+ if(!c)return null;
+ const row=workspaceDriverAssignmentForCar(c.id);
+ const userId=String(c.driverUserId||row?.driver_user_id||"");
+ const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
+ const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
+ const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
+ const accepted=Boolean(row?.active_handover_id||row?.handover_id||row?.issue_at||c.driverAcceptedAt);
+ if(userId||email)return{userId,email,name:name||email,source:"account",accepted};
+ if(c.tenant)return{userId:"",email:c.driverEmail||"",name:c.tenant,source:"manual",accepted:false};
+ return null
+}
+function fleetDriverLabel(c){
+ const d=workspaceDriverForCar(c);if(!d)return"Без водителя";
+ return d.name||d.email||c.tenant||"Водитель"
+}
+function fleetDriverMeta(c){
+ const d=workspaceDriverForCar(c);if(!d)return"Не назначен";
+ if(d.source==="manual")return"Введён вручную";
+ return d.accepted?"Автомобиль принят":"Ожидает подтверждения"
+}
+async function loadWorkspaceDriverDirectory(){
+ try{
+  const result=await window.FleetPilotCloud?.enterpriseList?.();
+  workspaceDriverDirectory=(result?.members||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
+ }catch(error){console.warn("Driver directory",error);workspaceDriverDirectory=[]}
+ return workspaceDriverDirectory
+}
+function renderCarDriverPicker(c=null){
+ const list=$("#carDriverOptions"),input=$("#carTenant"),hidden=$("#carDriverUserId"),hint=$("#carDriverHint");
+ if(!list||!input||!hidden)return;
+ list.innerHTML=workspaceDriverDirectory.map(member=>{const email=workspaceDriverEmail(member);return email?`<option value="${email}"></option>`:""}).join("");
+ const current=workspaceDriverForCar(c);
+ if(current?.source==="account"){
+  input.value=current.email||current.name||"";
+  hidden.value=current.userId||"";
+ }else{
+  input.value=c?.tenant||"";
+  hidden.value="";
+ }
+ const sync=()=>{
+  const member=workspaceDriverMemberByEmail(input.value);
+  hidden.value=member?.user_id||"";
+  if(hint)hint.textContent=member?`Пользователь FleetPilot · ${workspaceDriverEmail(member)}`:(input.value.trim()?"Водитель будет сохранён вручную — без подтверждения в кабинете.":"Можно выбрать пользователя с ролью «Водитель» или вписать данные вручную.")
+ };
+ input.oninput=sync;input.onchange=sync;sync()
+}
+async function prepareCarDriverPicker(c=null){await loadWorkspaceDriverDirectory();renderCarDriverPicker(c)}
+window.prepareCarDriverPicker=prepareCarDriverPicker;
+window.workspaceDriverForCar=workspaceDriverForCar;
+window.fleetDriverLabel=fleetDriverLabel;
+window.fleetDriverMeta=fleetDriverMeta;
 
 function driverPortalMessage(text,type=""){
  const el=$("#driverPortalMessage");if(!el)return;
@@ -81,8 +147,9 @@ async function loadDriverHandoverState(){
   const actions=$("#driverHandoverActions");
   if(!actions)return;
   actions.hidden=!driverPortalContext?.car_id;
-  $("#startVehicleIssue").hidden=Boolean(driverHandoverState?.active_handover_id);
-  $("#startVehicleReturn").hidden=!driverHandoverState?.active_handover_id
+  const issued=Boolean(driverHandoverState?.active_handover_id||driverHandoverState?.handover_id||driverHandoverState?.issue_at&&!driverHandoverState?.return_at||driverHandoverState?.status==="issued"||driverHandoverState?.status==="active");
+  $("#startVehicleIssue").hidden=issued;
+  $("#startVehicleReturn").hidden=!issued
  }catch(error){
   console.warn("Handover state",error)
  }
@@ -179,7 +246,7 @@ function renderDriverVehicleCard(){
   </div>
   <div class="driver-vehicle-stats">
    <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
-   <div><small>${driverHandoverState?.active_handover_id?"Выдан":"Назначен"}</small><strong>${driverHandoverState?.issue_at?new Date(driverHandoverState.issue_at).toLocaleDateString("ru-RU"):assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
+   <div><small>${(driverHandoverState?.active_handover_id||driverHandoverState?.issue_at&&!driverHandoverState?.return_at)?"Принят":"Назначен"}</small><strong>${driverHandoverState?.issue_at?new Date(driverHandoverState.issue_at).toLocaleDateString("ru-RU"):assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
    <div><small>Следующее ТО</small><strong>${assignedCar?km(Math.max(0,oil(assignedCar))):"—"}</strong></div>
    <div><small>Город</small><strong>${displayCar.city||window.FleetPilotCloud?.membership?.city||"—"}</strong></div>
   </div>`
@@ -625,14 +692,26 @@ async function renderWorkspaceRepairRequests(){
 }
 async function loadWorkspaceDriverAssignments(){
  try{
-  const rows=await window.FleetPilotCloud.getDriverAssignments();
+  const [rows]=await Promise.all([window.FleetPilotCloud.getDriverAssignments(),loadWorkspaceDriverDirectory()]);
+  workspaceDriverAssignmentRows=rows||[];
   workspaceDriverAssignments=Object.fromEntries(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[row.driver_user_id,row.car_id]));
   const activeByCar=new Map(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[String(row.car_id),row]));
   fleetCars().forEach(c=>{
    const assignment=activeByCar.get(String(c.id));
-   if(!assignment&&c.driverUserId){c.driverUserId="";c.tenant="";if(c.status==="active")c.status="free"}
+   if(assignment){
+    const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===String(assignment.driver_user_id||""));
+    c.driverUserId=assignment.driver_user_id||c.driverUserId||"";
+    c.driverEmail=assignment.driver_email||workspaceDriverEmail(member)||c.driverEmail||"";
+    c.driverName=assignment.driver_name||workspaceDriverName(member)||c.driverName||"";
+    c.driverAssignmentSource="account";
+    c.tenant=c.driverName||c.driverEmail||c.tenant||"";
+    if(assignment.active_handover_id||assignment.handover_id||assignment.issue_at)c.driverAcceptedAt=assignment.issue_at||c.driverAcceptedAt||new Date().toISOString();
+   }else if(c.driverUserId){
+    c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";
+    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource="";if(c.status==="active")c.status="free"}
+   }
   })
- }catch{workspaceDriverAssignments={}}
+ }catch(error){console.warn("Driver assignments",error);workspaceDriverAssignments={};workspaceDriverAssignmentRows=[]}
 }
 function driverAssignmentControl(member){
  if(member.role!=="driver")return"";

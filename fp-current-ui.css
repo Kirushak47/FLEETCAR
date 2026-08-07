@@ -726,3 +726,7 @@ body[hidden]{display:none}
   html[data-theme="dark"] .mobile-more-nav-item.active{background:rgba(99,102,241,.18);color:#a5b4fc}
   @keyframes mobileMoreNavIn{from{transform:translateY(18px);opacity:.4}to{transform:none;opacity:1}}
 }
+
+
+/* V17.2 — driver assignment */
+.car-driver-picker-field{position:relative}.car-driver-hint{display:block;margin-top:6px;color:var(--muted);font-size:12px}.fleet-driver-assignment{display:flex;align-items:center;gap:9px;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 88%,transparent)}.fleet-driver-assignment>span{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:var(--panel-2)}.fleet-driver-assignment strong,.fleet-driver-assignment small{display:block}.fleet-driver-assignment strong{font-size:12px}.fleet-driver-assignment small,.desktop-driver-meta{font-size:11px;color:var(--muted)}
