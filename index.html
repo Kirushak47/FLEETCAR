@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V14.1.2 Vehicle Finance</title>
-  <link rel="manifest" href="manifest.webmanifest?v=141200">
-  <link rel="stylesheet" href="styles.css?v=141200">
+  <title>FleetPilot V14.1.3 Vehicle Finance</title>
+  <link rel="manifest" href="manifest.webmanifest?v=141300">
+  <link rel="stylesheet" href="styles.css?v=141300">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -691,6 +691,7 @@
           </select>
         </div>
         <div id="profitSummary" class="summary-grid compact"></div>
+        <div class="tax-report-actions"><button type="button" id="openTaxBreakdown" class="btn primary">Подробный расчёт</button></div>
         <div class="tax-settings">
           <label id="taxVatField">VAT
             <select id="taxVat">
@@ -1541,6 +1542,18 @@
     <iframe id="vehicleReportFrame" class="vehicle-report-frame" title="Отчёт по автомобилю"></iframe>
   </div>
 </dialog>
+<dialog id="taxBreakdownDialog" class="tax-breakdown-dialog">
+  <div class="tax-breakdown-shell">
+    <div class="tax-breakdown-toolbar">
+      <div><small>FleetPilot · Аналитика</small><h2 id="taxBreakdownTitle">Подробный расчёт</h2></div>
+      <div class="tax-breakdown-toolbar-actions">
+        <button type="button" id="printTaxBreakdown" class="btn primary">Печать / Сохранить PDF</button>
+        <button type="button" id="closeTaxBreakdown" class="btn">Закрыть</button>
+      </div>
+    </div>
+    <div id="taxBreakdownBody" class="tax-breakdown-body"></div>
+  </div>
+</dialog>
 <dialog id="cloudDialog" class="profile-dialog">
   <div class="profile-dialog-shell">
     <button type="button" id="closeCloudDialog" class="dialog-close profile-dialog-close">×</button>
@@ -1771,7 +1784,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=141200"></script>
-<script src="cloud.js?v=141200"></script>
-<script src="app.js?v=141200"></script>
+<script src="cloud-config.js?v=141300"></script>
+<script src="cloud.js?v=141300"></script>
+<script src="app.js?v=141300"></script>
 </body></html>

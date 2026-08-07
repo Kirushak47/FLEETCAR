@@ -8973,3 +8973,33 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 #carPage .car-finance-column .detail-stat-grid{margin-top:10px}
 #carPage .car-finance-column .professional-empty{min-height:84px;display:grid;place-items:center;padding:18px}
 @media(max-width:980px){#carPage .car-finance-masonry{grid-template-columns:1fr}#carPage .car-finance-column{gap:10px}}
+
+/* FleetPilot V14.1.3 — analytics detailed calculation */
+.tax-report-actions{display:flex;justify-content:flex-end;margin:10px 0 2px}
+.tax-breakdown-dialog{width:min(1040px,calc(100vw - 32px));max-width:none;border:0;padding:0;border-radius:20px;background:transparent;box-shadow:none}
+.tax-breakdown-dialog::backdrop{background:rgba(15,23,42,.48);backdrop-filter:blur(3px)}
+.tax-breakdown-shell{background:var(--card,#fff);color:var(--text,#172033);border:1px solid var(--line,#e5e7eb);border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.2)}
+.tax-breakdown-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid var(--line,#e5e7eb)}
+.tax-breakdown-toolbar small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.tax-breakdown-toolbar h2{margin:0;font-size:20px;font-weight:600}
+.tax-breakdown-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.tax-breakdown-body{padding:18px 20px 22px;max-height:min(76vh,820px);overflow:auto}
+.tax-breakdown-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.tax-breakdown-kpi{border:1px solid var(--line,#e5e7eb);border-radius:14px;padding:13px;background:var(--soft,#f8fafc);min-width:0}
+.tax-breakdown-kpi span{display:block;color:var(--muted,#64748b);font-size:12px;margin-bottom:6px}
+.tax-breakdown-kpi strong{font-size:20px;font-weight:600;white-space:nowrap}
+.tax-breakdown-kpi.good strong{color:#168447}.tax-breakdown-kpi.danger strong{color:#d13b3b}
+.tax-breakdown-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.tax-breakdown-card{border:1px solid var(--line,#e5e7eb);border-radius:16px;padding:15px;background:var(--card,#fff);min-width:0}
+.tax-breakdown-card.wide{grid-column:1/-1}
+.tax-breakdown-card h3{margin:0 0 10px;font-size:15px;font-weight:600}
+.tax-breakdown-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line,#edf0f4)}
+.tax-breakdown-row:last-child{border-bottom:0}
+.tax-breakdown-row span{min-width:0;color:var(--text,#172033)}
+.tax-breakdown-row small{display:block;color:var(--muted,#64748b);margin-top:2px;white-space:normal}
+.tax-breakdown-row strong{font-weight:600;white-space:nowrap;text-align:right}
+.tax-breakdown-total{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding-top:12px;margin-top:5px;border-top:2px solid var(--line,#e5e7eb);font-size:15px}
+.tax-breakdown-total strong{font-size:17px;font-weight:650;white-space:nowrap}
+.tax-breakdown-note{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--soft,#f8fafc);color:var(--muted,#64748b);font-size:12px;line-height:1.5}
+@media(max-width:800px){.tax-breakdown-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tax-breakdown-grid{grid-template-columns:1fr}.tax-breakdown-card.wide{grid-column:auto}.tax-breakdown-toolbar{align-items:flex-start;flex-direction:column}.tax-breakdown-toolbar-actions{width:100%;justify-content:flex-start}}
+@media(max-width:480px){.tax-breakdown-kpis{grid-template-columns:1fr}.tax-breakdown-body{padding:14px}.tax-breakdown-dialog{width:calc(100vw - 16px)}}

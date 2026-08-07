@@ -2133,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"14.1.2",
+  appVersion:"14.1.3",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -5599,6 +5599,91 @@ function syncTaxMethodFields(){
   $("#taxDeductVatCosts").checked=false;
  }
 }
+function taxReportPeriodLabel(period){
+ if(period==="month")return new Date().toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+ if(period==="year")return `Текущий ${new Date().getFullYear()} год`;
+ return "За всё время"
+}
+function taxMethodReportLabel(tax){
+ if(tax.method==="none")return "Налоги отключены";
+ if(tax.method==="ryczalt")return `Ryczałt ${Number(tax.ryczaltRate||0).toLocaleString("ru-RU")}%`;
+ if(tax.method==="linear")return "PIT liniowy 19%";
+ if(tax.method==="scale")return "PIT — zasady ogólne";
+ return "PIT"
+}
+function taxBreakdownExpenseGroups(bounds){
+ const {paidExpenses,legacyRepairs}=financialExpenseRows(bounds,null);
+ const groups=new Map();
+ const add=(key,label,value)=>{const amount=Number(value||0);if(!amount)return;const row=groups.get(key)||{label,total:0,count:0};row.total+=amount;row.count+=1;groups.set(key,row)};
+ paidExpenses.forEach(x=>add(x.category||"other",expenseCategoryText(x.category||"other"),x.amount));
+ legacyRepairs.forEach(r=>add("repair","Сервис и ремонты",r.actual||r.planned));
+ return [...groups.values()].sort((a,b)=>b.total-a.total)
+}
+function taxBreakdownRevenueRows(bounds){
+ return db.payments.map(p=>({p,amount:allocatedPaymentAmount(p,bounds,"received")})).filter(x=>x.amount>0).sort((a,b)=>String(b.p.date||b.p.to||"").localeCompare(String(a.p.date||a.p.to||"")))
+}
+function buildTaxBreakdownModel(){
+ const period=$("#profitPeriod")?.value||"month";
+ const bounds=periodBounds(period),tax=taxSettings(),data=financialData(period);
+ const taxTotal=data.vatDue+data.pit+data.contributions;
+ return{period,bounds,tax,data,taxTotal,expenseGroups:taxBreakdownExpenseGroups(bounds),revenueRows:taxBreakdownRevenueRows(bounds)}
+}
+function taxBreakdownHtml(report){
+ const {period,tax,data,taxTotal,expenseGroups,revenueRows}=report;
+ const vatActive=tax.method!=="none"&&tax.vat==="yes";
+ const pitActive=tax.method!=="none";
+ const methodLabel=taxMethodReportLabel(tax);
+ const revenueDetails=revenueRows.length?revenueRows.slice(0,80).map(({p,amount})=>{const c=car(p.carId);return `<div class="tax-breakdown-row"><span>${c?`${model(c).brand} ${model(c).model} · ${c.plate}`:(p.tenant||"Оплата аренды")}<small>${p.tenant||""}${p.date?` · ${date(p.date)}`:""}</small></span><strong>+ ${money(amount)}</strong></div>`}).join(""):`<div class="tax-breakdown-row"><span>Полученных платежей за период нет</span><strong>${money(0)}</strong></div>`;
+ const expenseDetails=expenseGroups.length?expenseGroups.map(x=>`<div class="tax-breakdown-row"><span>${x.label}<small>Операций: ${x.count}</small></span><strong>− ${money(x.total)}</strong></div>`).join(""):`<div class="tax-breakdown-row"><span>Фактических расходов за период нет</span><strong>${money(0)}</strong></div>`;
+ const taxRows=[];
+ if(vatActive){
+  const outputVat=Math.max(0,data.grossRevenue-data.netRevenue),inputVat=Math.max(0,data.grossCosts-data.netCosts);
+  taxRows.push(`<div class="tax-breakdown-row"><span>Начисленный VAT<small>VAT с полученного дохода</small></span><strong>${money(outputVat)}</strong></div>`);
+  if(tax.deductVatCosts)taxRows.push(`<div class="tax-breakdown-row"><span>Входящий VAT к вычету<small>VAT из фактических расходов, учтённых системой</small></span><strong>− ${money(inputVat)}</strong></div>`);
+  taxRows.push(`<div class="tax-breakdown-row"><span>VAT к оплате<small>Начисленный VAT минус входящий VAT</small></span><strong>− ${money(data.vatDue)}</strong></div>`)
+ }
+ if(pitActive&&tax.method!=="none")taxRows.push(`<div class="tax-breakdown-row"><span>${methodLabel}<small>${tax.method==="ryczalt"?`База ${money(data.netRevenue)} × ${Number(tax.ryczaltRate||0).toLocaleString("ru-RU")}%`:`База расчёта ${money(Math.max(0,data.profitBeforePit))}`}</small></span><strong>− ${money(data.pit)}</strong></div>`);
+ if(pitActive)taxRows.push(`<div class="tax-breakdown-row"><span>ZUS / взносы<small>Согласно настройкам налогового профиля</small></span><strong>− ${money(data.contributions)}</strong></div>`);
+ if(!taxRows.length)taxRows.push(`<div class="tax-breakdown-row"><span>Налоги для текущего профиля отключены</span><strong>${money(0)}</strong></div>`);
+ return `<div class="tax-breakdown-kpis">
+   <div class="tax-breakdown-kpi"><span>Заработано / получено</span><strong>${money(data.grossRevenue)}</strong></div>
+   <div class="tax-breakdown-kpi"><span>Фактические расходы</span><strong>${money(data.grossCosts)}</strong></div>
+   <div class="tax-breakdown-kpi danger"><span>Всего обязательных платежей</span><strong>${money(taxTotal)}</strong></div>
+   <div class="tax-breakdown-kpi ${data.finalProfit>=0?"good":"danger"}"><span>Останется после расходов и налогов</span><strong>${money(data.finalProfit)}</strong></div>
+  </div>
+  <div class="tax-breakdown-grid">
+   <section class="tax-breakdown-card"><h3>Заработки за период</h3>${revenueDetails}<div class="tax-breakdown-total"><span>Всего получено</span><strong>${money(data.grossRevenue)}</strong></div></section>
+   <section class="tax-breakdown-card"><h3>Фактические расходы</h3>${expenseDetails}<div class="tax-breakdown-total"><span>Всего расходов</span><strong>${money(data.grossCosts)}</strong></div></section>
+   <section class="tax-breakdown-card"><h3>Что нужно заплатить</h3>${taxRows.join("")}<div class="tax-breakdown-total"><span>Всего налогов и взносов</span><strong>${money(taxTotal)}</strong></div></section>
+   <section class="tax-breakdown-card"><h3>Итог</h3>
+    <div class="tax-breakdown-row"><span>Получено</span><strong>+ ${money(data.grossRevenue)}</strong></div>
+    <div class="tax-breakdown-row"><span>Расходы</span><strong>− ${money(data.grossCosts)}</strong></div>
+    <div class="tax-breakdown-row"><span>Налоги и взносы</span><strong>− ${money(taxTotal)}</strong></div>
+    <div class="tax-breakdown-total"><span>Останется</span><strong class="${data.finalProfit<0?"negative":""}">${money(data.finalProfit)}</strong></div>
+   </section>
+  </div>
+  <div class="tax-breakdown-note">Период: ${taxReportPeriodLabel(period)} · Налоговый профиль: ${methodLabel}${vatActive?" · VATowiec 23%":""}. Расчёт строится из текущих данных FleetPilot и предназначен для внутреннего контроля; итоговую налоговую декларацию следует сверять с бухгалтерией.</div>`
+}
+function openTaxBreakdown(){
+ const dialog=$("#taxBreakdownDialog"),body=$("#taxBreakdownBody");if(!dialog||!body)return toast("Окно подробного расчёта не найдено");
+ const model=buildTaxBreakdownModel();
+ $("#taxBreakdownTitle").textContent=`Подробный расчёт · ${taxReportPeriodLabel(model.period)}`;
+ body.innerHTML=taxBreakdownHtml(model);
+ dialog.showModal()
+}
+function buildTaxBreakdownPrintHtml(){
+ const model=buildTaxBreakdownModel(),body=taxBreakdownHtml(model);
+ return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>FleetPilot — финансовый расчёт</title><style>
+  *{box-sizing:border-box}body{margin:0;padding:28px;font-family:Arial,sans-serif;color:#172033;background:#fff;font-size:12px}h1{margin:0 0 4px;font-size:22px}header{margin-bottom:20px;border-bottom:1px solid #dfe4ea;padding-bottom:14px}header p{margin:4px 0;color:#64748b}.tax-breakdown-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.tax-breakdown-kpi,.tax-breakdown-card{border:1px solid #dfe4ea;border-radius:10px;padding:11px}.tax-breakdown-kpi span{display:block;color:#64748b;margin-bottom:5px}.tax-breakdown-kpi strong{font-size:16px}.tax-breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}.tax-breakdown-card h3{font-size:14px;margin:0 0 7px}.tax-breakdown-row,.tax-breakdown-total{display:grid;grid-template-columns:1fr auto;gap:12px;padding:7px 0;border-bottom:1px solid #edf0f4}.tax-breakdown-row small{display:block;color:#64748b;margin-top:2px}.tax-breakdown-row strong,.tax-breakdown-total strong{white-space:nowrap}.tax-breakdown-total{border-top:2px solid #dfe4ea;border-bottom:0;margin-top:4px;font-weight:700}.tax-breakdown-note{margin-top:12px;color:#64748b;line-height:1.45}.good strong{color:#168447}.danger strong,.negative{color:#c93636}@media print{body{padding:10mm}.tax-breakdown-card{break-inside:avoid}}</style></head><body><header><h1>FleetPilot — финансовый расчёт</h1><p>${taxReportPeriodLabel(model.period)}</p></header>${body}</body></html>`
+}
+function printTaxBreakdown(){
+ const frame=document.createElement("iframe");frame.style.position="fixed";frame.style.right="0";frame.style.bottom="0";frame.style.width="0";frame.style.height="0";frame.style.border="0";document.body.appendChild(frame);
+ frame.onload=()=>{setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}finally{setTimeout(()=>frame.remove(),1200)}},120)};
+ frame.srcdoc=buildTaxBreakdownPrintHtml()
+}
+window.openTaxBreakdown=openTaxBreakdown;
+window.printTaxBreakdown=printTaxBreakdown;
+
 function renderProfitability(){
  normalizeRepairExpenseLinks();
  const period=$("#profitPeriod")?.value||"month",tax=taxSettings(),data=financialData(period);
@@ -7523,4 +7608,15 @@ window.toggleServicePlanning=()=>setServicePlanningCollapsed(!$("#servicePlannin
   setServicePlanningCollapsed(servicePlanningPanelCollapsed());
  };
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+})();
+
+// FleetPilot V14.1.3 — detailed analytics calculation dialog
+(function initTaxBreakdownDialog(){
+ const bind=()=>{
+  $("#openTaxBreakdown")?.addEventListener("click",openTaxBreakdown);
+  $("#closeTaxBreakdown")?.addEventListener("click",()=>$("#taxBreakdownDialog")?.close());
+  $("#printTaxBreakdown")?.addEventListener("click",printTaxBreakdown);
+  $("#taxBreakdownDialog")?.addEventListener("click",event=>{if(event.target===$("#taxBreakdownDialog"))$("#taxBreakdownDialog").close()})
+ };
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind()
 })();
