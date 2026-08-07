@@ -9019,3 +9019,49 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 .expense-drilldown-filters{display:flex;gap:6px;overflow:auto;padding-bottom:8px;margin-bottom:4px}.expense-drilldown-filters button{white-space:nowrap;min-height:32px;padding:0 10px;border:1px solid var(--line,#e5e7eb);border-radius:9px;background:transparent;color:var(--muted,#64748b);font-size:11px;font-weight:600;cursor:pointer}.expense-drilldown-filters button span{opacity:.65}.expense-drilldown-filters button.active{background:var(--soft,#f8fafc);color:var(--text,#172033);border-color:rgba(79,70,229,.28)}
 .expense-drilldown-list{border-top:1px solid var(--line,#e5e7eb)}.expense-drilldown-row{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;align-items:center;gap:12px;width:100%;padding:12px 2px;border:0;border-bottom:1px solid var(--line,#edf0f4);background:transparent;color:inherit;text-align:left;cursor:pointer}.expense-drilldown-row:hover{background:var(--soft,#f8fafc)}.expense-drilldown-row-main{min-width:0}.expense-drilldown-row-main strong,.expense-drilldown-row-main small{display:block}.expense-drilldown-row-main strong{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.expense-drilldown-row-main small{margin-top:3px;color:var(--muted,#64748b);font-size:11px;white-space:normal}.expense-drilldown-row b{font-size:13px;font-weight:600;white-space:nowrap}.expense-drilldown-row svg{width:16px;height:16px;fill:currentColor;opacity:.5}
 @media(max-width:720px){.expense-drilldown-toolbar{align-items:flex-start;flex-direction:column}.expense-drilldown-toolbar-actions{width:100%;justify-content:flex-start}.expense-drilldown-kpis{grid-template-columns:1fr}.expense-drilldown-dialog{width:calc(100vw - 16px)}.expense-drilldown-body{padding:14px}}
+
+/* FleetPilot V14.2.0 — Smart Calendar */
+.smart-calendar-toolbar{display:grid!important;grid-template-columns:auto auto minmax(150px,190px) minmax(150px,190px);align-items:center;gap:8px!important}
+.calendar-view-switch,.calendar-period-nav{display:flex;align-items:center;padding:3px;border:1px solid var(--line,#dfe3ea);border-radius:11px;background:var(--card,#fff);min-height:40px}
+.calendar-view-switch button,.calendar-period-nav button{height:32px;border:0;background:transparent;color:var(--muted,#687286);border-radius:8px;padding:0 11px;font:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap}
+.calendar-view-switch button.active{background:rgba(86,103,232,.11);color:#5667e8;font-weight:600}
+.calendar-period-nav button:first-child,.calendar-period-nav button:last-child{width:32px;padding:0;font-size:19px}.calendar-period-nav button#calendarTodayTop{color:var(--text,#202633);font-weight:600}
+.calendar-day-group{display:grid;gap:7px}.calendar-day-group+h4{margin-top:10px}.calendar-day-group h4{display:flex;align-items:center;justify-content:space-between;margin:12px 0 2px;text-transform:capitalize;font-size:11px;font-weight:600;color:var(--fp-text-title,var(--text,#202633))}.calendar-day-group h4 b{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:var(--soft,#f4f5f8);color:var(--muted,#758094);font-size:9px}
+.calendar-event-title-line{display:flex;align-items:center;gap:7px;min-width:0}.calendar-event-title-line strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.calendar-event-title-line em{flex:none;font-style:normal;font-size:8px;font-weight:600;padding:3px 6px;border-radius:999px;background:var(--soft,#f4f5f8);color:var(--muted,#6f7887)}
+.calendar-day em{position:absolute;left:4px;bottom:4px;display:flex;gap:2px}.calendar-event-dot{display:block;width:4px;height:4px;border-radius:50%;background:#7b8798}.calendar-event-dot.type-repair{background:#7c6cf2}.calendar-event-dot.type-insurance{background:#f59e0b}.calendar-event-dot.type-inspection{background:#10b981}.calendar-event-dot.type-expense{background:#ef4444}.calendar-event-dot.type-installment{background:#0ea5e9}.calendar-event-dot.type-document{background:#64748b}
+.calendar-professional-icon.type-repair{color:#6d5ce8;background:rgba(109,92,232,.09)}.calendar-professional-icon.type-insurance{color:#d97706;background:rgba(245,158,11,.10)}.calendar-professional-icon.type-inspection{color:#059669;background:rgba(16,185,129,.10)}.calendar-professional-icon.type-expense{color:#dc2626;background:rgba(239,68,68,.08)}.calendar-professional-icon.type-installment{color:#0284c7;background:rgba(14,165,233,.09)}
+@media(max-width:1180px){.smart-calendar-toolbar{grid-template-columns:1fr 1fr}.smart-calendar-toolbar input,.smart-calendar-toolbar select{width:100%}}
+@media(max-width:700px){.smart-calendar-toolbar{grid-template-columns:1fr!important}.calendar-view-switch,.calendar-period-nav{width:100%;justify-content:space-between}.calendar-view-switch button{flex:1}.calendar-professional-layout{display:block!important}.calendar-side-panel{margin-top:12px}.calendar-event-title-line em{display:none}}
+
+/* FleetPilot V14.2.1 — Documents workspace */
+#documentsPage{display:none}
+#documentsPage.active{display:block}
+.documents-page-head{align-items:flex-start}
+.documents-page-head p{max-width:680px}
+.document-kpi-grid{margin-bottom:14px}
+.documents-toolbar{grid-template-columns:minmax(260px,1.6fr) repeat(3,minmax(150px,.7fr));margin-bottom:14px}
+.documents-register-panel{overflow:hidden}
+.documents-register-panel .professional-panel-head p{margin:4px 0 0;color:var(--muted,#758095);font-size:12px;font-weight:500}
+.documents-professional-list{display:grid;gap:8px;padding:0}
+.document-register-row{display:grid;grid-template-columns:minmax(260px,1.6fr) minmax(180px,.9fr) minmax(150px,.75fr) minmax(150px,.72fr) auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--border,#e5e9f0);border-radius:14px;background:var(--card,#fff);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.document-register-row:hover{border-color:#cfd6e3;box-shadow:0 8px 22px rgba(15,23,42,.06);transform:translateY(-1px)}
+.document-register-main{display:flex;align-items:center;gap:12px;min-width:0}
+.document-register-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:12px;background:#f2f5fb;color:#54627a;font-size:18px}
+.document-register-main>div{min-width:0}
+.document-register-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text,#172033);font-size:14px;font-weight:650}
+.document-register-main small,.document-register-cell small{display:block;margin-top:4px;color:var(--muted,#7b8798);font-size:11px;font-weight:500;line-height:1.35}
+.document-register-cell{min-width:0}
+.document-register-cell>span{display:block;color:var(--muted,#7b8798);font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.045em}
+.document-register-cell>strong{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text,#172033);font-size:13px;font-weight:600}
+.document-status-badge{display:inline-flex!important;align-items:center;gap:6px;width:max-content;max-width:100%;padding:6px 9px;border-radius:999px;font-size:11px!important;font-weight:650!important;text-transform:none!important;letter-spacing:0!important}
+.document-status-badge.valid{background:#ecf8f1;color:#28724a}.document-status-badge.soon{background:#fff6df;color:#956611}.document-status-badge.expired{background:#fff0f0;color:#b54141}.document-status-badge.nodate{background:#f1f4f8;color:#657085}
+.document-status-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.document-register-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px;white-space:nowrap}
+.document-register-actions .btn{min-height:36px;padding:7px 11px;font-size:11px}
+.document-file-action{width:36px!important;min-width:36px!important;padding:0!important}
+.document-installment-progress{display:flex;align-items:center;gap:7px;margin-top:5px}
+.document-installment-progress i{display:block;flex:1;height:5px;overflow:hidden;border-radius:99px;background:#edf0f5}.document-installment-progress i b{display:block;height:100%;border-radius:inherit;background:#6d70e8}.document-installment-progress em{font-style:normal;color:var(--muted,#7b8798);font-size:10px;font-weight:600}
+.document-empty-professional{padding:42px 20px;text-align:center;color:var(--muted,#7b8798);font-size:13px}
+@media(max-width:1180px){.documents-toolbar{grid-template-columns:1fr 1fr}.document-register-row{grid-template-columns:minmax(230px,1.5fr) minmax(160px,1fr) minmax(145px,.8fr) auto}.document-register-cell.document-number-cell{display:none}}
+@media(max-width:820px){.documents-toolbar{grid-template-columns:1fr}.document-register-row{grid-template-columns:1fr auto;gap:10px}.document-register-cell{grid-column:1}.document-register-actions{grid-column:2;grid-row:1 / span 3;align-self:center;flex-direction:column}.document-register-cell.document-number-cell{display:block}}
+[data-theme="dark"] .document-register-row{background:var(--card,#151a24);border-color:#2b3342}.document-register-icon{background:rgba(255,255,255,.055)}

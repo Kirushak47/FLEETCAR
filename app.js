@@ -2133,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"14.1.4",
+  appVersion:"14.2.0",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -5970,14 +5970,51 @@ function fpUiIcon(name){
 }
 function eventIcon(type){return fpUiIcon({insurance:"insurance",inspection:"inspection",repair:"repair",expense:"expense",installment:"installment",payment:"installment",document:"document"}[type]||"calendar") }
 let calendarViewMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+let calendarViewMode="month";
+let calendarAnchorDate=today();
 function calendarIsoLocal(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-function selectCalendarDay(value){
+function calendarDate(value){return new Date((value||today())+"T12:00:00")}
+function startOfCalendarWeek(value){const d=calendarDate(value),shift=(d.getDay()+6)%7;d.setDate(d.getDate()-shift);return d}
+function setCalendarView(mode){
+ if(!["month","week","day"].includes(mode))mode="month";
+ calendarViewMode=mode;
+ $$("[data-calendar-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.calendarView===mode));
+ if(mode==="day"&&!$("#calendarSelectedDate")?.value){const input=$("#calendarSelectedDate");if(input)input.value=calendarAnchorDate}
+ renderCalendar()
+}
+window.setCalendarView=setCalendarView;
+function selectCalendarDay(value,switchToDay=false){
  const input=$("#calendarSelectedDate");if(input)input.value=value||"";
- if(value){const d=new Date(value+"T12:00:00");calendarViewMonth=new Date(d.getFullYear(),d.getMonth(),1)}
+ if(value){calendarAnchorDate=value;const d=calendarDate(value);calendarViewMonth=new Date(d.getFullYear(),d.getMonth(),1)}
+ if(switchToDay&&value)calendarViewMode="day";
+ $$("[data-calendar-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.calendarView===calendarViewMode));
  renderCalendar()
 }
 window.selectCalendarDay=selectCalendarDay;
-function moveCalendarMonth(delta){calendarViewMonth=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth()+delta,1);renderCalendar()}
+function openCalendarDay(value){selectCalendarDay(value,true)}
+window.openCalendarDay=openCalendarDay;
+function moveCalendarMonth(delta){calendarViewMonth=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth()+delta,1);calendarAnchorDate=calendarIsoLocal(calendarViewMonth);renderCalendar()}
+function moveCalendarPeriod(delta){
+ const d=calendarDate(calendarAnchorDate||today());
+ if(calendarViewMode==="month"){d.setDate(1);d.setMonth(d.getMonth()+delta);calendarViewMonth=new Date(d.getFullYear(),d.getMonth(),1)}
+ else if(calendarViewMode==="week")d.setDate(d.getDate()+delta*7);
+ else d.setDate(d.getDate()+delta);
+ calendarAnchorDate=calendarIsoLocal(d);
+ const input=$("#calendarSelectedDate");if(input)input.value=calendarViewMode==="day"?calendarAnchorDate:"";
+ if(calendarViewMode!=="month")calendarViewMonth=new Date(d.getFullYear(),d.getMonth(),1);
+ renderCalendar()
+}
+window.moveCalendarPeriod=moveCalendarPeriod;
+function calendarViewBounds(){
+ const anchor=calendarDate(calendarAnchorDate||today());
+ if(calendarViewMode==="day")return{from:anchor,to:anchor,label:anchor.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
+ if(calendarViewMode==="week"){
+  const from=startOfCalendarWeek(calendarAnchorDate),to=new Date(from);to.setDate(to.getDate()+6);
+  return{from,to,label:`${from.toLocaleDateString("ru-RU",{day:"numeric",month:"short"})} — ${to.toLocaleDateString("ru-RU",{day:"numeric",month:"short",year:"numeric"})}`}
+ }
+ const from=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth(),1),to=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth()+1,0);
+ return{from,to,label:from.toLocaleDateString("ru-RU",{month:"long",year:"numeric"})}
+}
 function renderCalendarMonthGrid(all){
  const root=$("#calendarMonthGrid"),title=$("#calendarMonthTitle");if(!root)return;
  const year=calendarViewMonth.getFullYear(),month=calendarViewMonth.getMonth();
@@ -5988,74 +6025,38 @@ function renderCalendarMonthGrid(all){
  ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].forEach(x=>cells.push(`<span class="calendar-weekday">${x}</span>`));
  for(let i=0;i<offset;i++)cells.push('<span class="calendar-day empty"></span>');
  for(let day=1;day<=daysInMonth;day++){
-  const d=new Date(year,month,day),iso=calendarIsoLocal(d),count=all.filter(x=>x.date===iso).length;
-  const isToday=iso===today(),isSelected=iso===selected;
-  cells.push(`<button type="button" class="calendar-day ${isToday?"today":""} ${isSelected?"selected":""} ${count?"has-events":""}" onclick="selectCalendarDay('${iso}')"><strong>${day}</strong>${count?`<span>${count}</span>`:""}</button>`)
+  const d=new Date(year,month,day),iso=calendarIsoLocal(d),dayEvents=all.filter(x=>x.date===iso),count=dayEvents.length;
+  const isToday=iso===today(),isSelected=iso===selected||iso===calendarAnchorDate;
+  const dots=[...new Set(dayEvents.map(x=>x.type))].slice(0,3).map(type=>`<i class="calendar-event-dot type-${type}"></i>`).join("");
+  cells.push(`<button type="button" class="calendar-day ${isToday?"today":""} ${isSelected?"selected":""} ${count?"has-events":""}" onclick="openCalendarDay('${iso}')"><strong>${day}</strong>${count?`<span>${count}</span><em>${dots}</em>`:""}</button>`)
  }
  root.innerHTML=cells.join("")
 }
+function calendarEventTypeLabel(type){return{insurance:"Страховка",inspection:"ТО",repair:"Сервис",expense:"Расход",installment:"Платёж",document:"Документ"}[type]||"Событие"}
 function renderCalendar(){
- const range=Number($("#calendarRange")?.value||30);
  const typeFilter=$("#calendarTypeFilter")?.value||"all";
- const selectedDate=$("#calendarSelectedDate")?.value||"";
  const all=allEvents().filter(x=>typeFilter==="all"||x.type===typeFilter);
- const periodEvents=all.filter(x=>x.days>=0&&x.days<=range).sort((a,b)=>a.date.localeCompare(b.date));
- const events=(selectedDate?all.filter(x=>x.date===selectedDate):periodEvents).sort((a,b)=>a.date.localeCompare(b.date));
+ const bounds=calendarViewBounds(),fromIso=calendarIsoLocal(bounds.from),toIso=calendarIsoLocal(bounds.to);
+ const events=all.filter(x=>x.date>=fromIso&&x.date<=toIso).sort((a,b)=>a.date.localeCompare(b.date));
  const overdue=all.filter(x=>x.days<0).length;
-
+ $$("[data-calendar-view]").forEach(btn=>btn.classList.toggle("active",btn.dataset.calendarView===calendarViewMode));
+ const periodLabel=$("#calendarSelectedDayLabel");if(periodLabel)periodLabel.textContent=bounds.label;
+ const agendaTitle=$("#calendarAgendaTitle");if(agendaTitle)agendaTitle.textContent=calendarViewMode==="month"?"События месяца":calendarViewMode==="week"?"События недели":"События дня";
  $("#calendarSummary").innerHTML=[
   ["Сегодня",all.filter(x=>x.days===0).length,"События на сегодня"],
+  ["В периоде",events.length,bounds.label],
   ["7 дней",all.filter(x=>x.days>=0&&x.days<=7).length,"Ближайшая неделя"],
-  ["30 дней",all.filter(x=>x.days>=0&&x.days<=30).length,"Ближайший месяц"],
   ["Просрочено",overdue,"Требует внимания"]
  ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
-
  const counter=$("#calendarVisibleCount");if(counter)counter.textContent=String(events.length);
- const dayLabel=$("#calendarSelectedDayLabel");if(dayLabel)dayLabel.textContent=selectedDate?new Date(selectedDate+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}):`Ближайшие ${range} дней`;
- const listTitle=$("#calendarList")?.closest(".professional-panel")?.querySelector("h3");if(listTitle)listTitle.textContent=selectedDate?"События выбранного дня":"Ближайшие события";
- const grouped=new Map();
- events.forEach(event=>{const key=selectedDate?event.date:(event.date||"").slice(0,7);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event)});
-
+ const grouped=new Map();events.forEach(event=>{const key=event.date;if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event)});
  $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([group,items])=>{
-  const groupLabel=selectedDate?new Date(group+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}):new Date(group+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
-  return `<section class="calendar-month-group"><h4>${groupLabel}</h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon fp-standard-icon">${eventIcon(e.type)}</div><div class="calendar-professional-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b class="fp-row-chevron">${fpUiIcon("arrow")}</b></article>`).join("")}</section>`
- }).join(""):`<div class="professional-empty">${selectedDate?"На выбранный день событий нет.":"На выбранный период событий нет."}</div>`;
-
+  const groupDate=calendarDate(group),groupLabel=groupDate.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});
+  return `<section class="calendar-day-group"><h4><span>${groupLabel}</span><b>${items.length}</b></h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${groupDate.getDate()}</strong><span>${groupDate.toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon fp-standard-icon type-${e.type}">${eventIcon(e.type)}</div><div class="calendar-professional-main"><div class="calendar-event-title-line"><strong>${e.title}</strong><em>${calendarEventTypeLabel(e.type)}</em></div><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b class="fp-row-chevron">${fpUiIcon("arrow")}</b></article>`).join("")}</section>`
+ }).join(""):`<div class="professional-empty">В выбранном ${calendarViewMode==="day"?"дне":calendarViewMode==="week"?"периоде недели":"месяце"} событий нет.</div>`;
  renderCalendarMonthGrid(all);
  const overview=$("#calendarMonthOverview");
- if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);const key=calendarIsoLocal(d).slice(0,7);const count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card ${calendarViewMonth.getFullYear()===d.getFullYear()&&calendarViewMonth.getMonth()===d.getMonth()?"selected":""}" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}
-}
-
-function renderDocuments(){
- const expired=db.documents.filter(x=>x.expiry&&days(x.expiry)<0).length,soon=db.documents.filter(x=>x.expiry&&days(x.expiry)>=0&&days(x.expiry)<=30).length;
- $("#documentSummary").innerHTML=[["Всего",db.documents.length],["Истекают ≤30 дней",soon],["Просрочены",expired],["Без срока",db.documents.filter(x=>!x.expiry).length]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
- $("#documentList").innerHTML=db.documents.map(d=>{
-  const c=car(d.carId),left=d.expiry?days(d.expiry):null,s=installmentSummary(d);
-  const installmentBlock=d.type==="insurance"&&d.paymentMode==="installments"?`<div class="insurance-summary"><span>Оплачено ${money(s.paid)}</span><span>Осталось ${money(s.left)}</span><span>${s.next?`Следующая: ${date(s.next.due)}`:"Все раты оплачены"}</span></div>${Math.abs(s.difference)>.01?`<div class="insurance-card-warning">Сумма рат отличается от стоимости на ${money(Math.abs(s.difference))}</div>`:""}<div class="installment-list">${(d.installments||[]).map(x=>`<button class="installment ${x.paid?"paid":""}" onclick="toggleInsuranceInstallment('${d.id}','${x.id}')"><span>Рата ${x.number}</span><strong>${money(x.amount)}</strong><small>${date(x.due)} · ${x.paid?`Оплачено ${money(x.paidAmount||x.amount)}`:"Ожидает"}</small></button>`).join("")}</div>`:"";
-  return `<article class="doc-card" data-document-id="${d.id}"><h3>${d.title}</h3><p>${model(c).brand} ${model(c).model} · ${c.plate}</p><div class="doc-row"><span>Тип</span><strong>${documentTypeText(d.type)}</strong></div><div class="doc-row"><span>Номер</span><strong>${d.number||"—"}</strong></div><div class="doc-row"><span>До</span><strong>${d.expiry?date(d.expiry)+" · "+left+" дн.":"Без срока"}</strong></div><div class="doc-row"><span>Стоимость</span><strong>${money(d.cost)}</strong></div>${installmentBlock}<div class="item-actions"><button class="btn" onclick="editDocument('${d.id}')">Редактировать</button><button class="btn danger" onclick="deleteDocument('${d.id}')">Удалить</button></div></article>`
- }).join("")||`<div class="card">Документов нет</div>`
-}
-function carTabButton(carId,key,label,activeTab){
- if(!simpleModeCarTab(key))return"";
- return `<button class="${activeTab===key?"active":""}" onclick="openCar('${carId}','${key}')">${label}</button>`
-}
-
-function openCar(id,activeTab="info"){
- if(fleetPilotRouteReady&&!fleetPilotApplyingRoute){
-  fleetPilotSetRoute(fleetPilotCarRoute(id,activeTab))
- }
- const run=()=>{
-  renderCarProfile(id,activeTab);
-  requestAnimationFrame(()=>{
-   $("#carDetail")?.classList.remove("profile-enter");
-   void $("#carDetail")?.offsetWidth;
-   $("#carDetail")?.classList.add("profile-enter");
-   animateProgressBars($("#carPage"))
-  })
- };
- if(document.startViewTransition){
-  document.startViewTransition(run)
- }else run()
+ if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const base=calendarDate(calendarAnchorDate||today()),d=new Date(base.getFullYear(),base.getMonth()+offset,1),key=calendarIsoLocal(d).slice(0,7),count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card ${calendarViewMonth.getFullYear()===d.getFullYear()&&calendarViewMonth.getMonth()===d.getMonth()?"selected":""}" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);calendarAnchorDate='${calendarIsoLocal(d)}';calendarViewMode='month';renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}
 }
 
 function tireSeasonText(value){return{summer:"Летние",winter:"Зимние",allseason:"Всесезонные"}[value]||"Не указано"}
@@ -7094,8 +7095,11 @@ $("#paymentTo").onchange=recalculateExpectedPayment;
 $("#paymentAutoExpected").onchange=recalculateExpectedPayment;
 $("#openAttention").onclick=()=>showPage("attentionPage");
 $("#backFromAttention").onclick=()=>showPage("fleetPage");
-$("#calendarRange").onchange=renderCalendar;
 const calendarTypeFilter=$("#calendarTypeFilter");if(calendarTypeFilter)calendarTypeFilter.onchange=renderCalendar;
+$$("[data-calendar-view]").forEach(btn=>btn.onclick=()=>setCalendarView(btn.dataset.calendarView));
+const calendarPrevPeriod=$("#calendarPrevPeriod");if(calendarPrevPeriod)calendarPrevPeriod.onclick=()=>moveCalendarPeriod(-1);
+const calendarNextPeriod=$("#calendarNextPeriod");if(calendarNextPeriod)calendarNextPeriod.onclick=()=>moveCalendarPeriod(1);
+const calendarTodayTop=$("#calendarTodayTop");if(calendarTodayTop)calendarTodayTop.onclick=()=>{calendarAnchorDate=today();calendarViewMonth=new Date();calendarViewMonth=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth(),1);const input=$("#calendarSelectedDate");if(input)input.value=calendarViewMode==="day"?today():"";renderCalendar()};
 const calendarSelectedDate=$("#calendarSelectedDate");if(calendarSelectedDate)calendarSelectedDate.onchange=()=>selectCalendarDay(calendarSelectedDate.value);
 const calendarPrevMonth=$("#calendarPrevMonth");if(calendarPrevMonth)calendarPrevMonth.onclick=()=>moveCalendarMonth(-1);
 const calendarNextMonth=$("#calendarNextMonth");if(calendarNextMonth)calendarNextMonth.onclick=()=>moveCalendarMonth(1);
@@ -7695,7 +7699,7 @@ window.toggleServicePlanning=()=>setServicePlanningCollapsed(!$("#servicePlannin
 })();
 
 
-// FleetPilot V14.1.4 — expense drilldown
+// FleetPilot V14.2.1 — smart calendar
 (function initExpenseDrilldownDialog(){
  const bind=()=>{
   $("#closeExpenseDrilldown")?.addEventListener("click",()=>$("#expenseDrilldownDialog")?.close());
@@ -7705,3 +7709,69 @@ window.toggleServicePlanning=()=>setServicePlanningCollapsed(!$("#servicePlannin
  };
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind()
 })();
+
+
+// FleetPilot V14.2.1 — professional documents register
+function fpDocumentDaysLeft(expiry){
+ if(!expiry)return null;
+ const end=new Date(String(expiry)+"T12:00:00"),now=new Date(today()+"T12:00:00");
+ if(Number.isNaN(end.getTime()))return null;
+ return Math.ceil((end-now)/86400000)
+}
+function fpDocumentState(row){
+ const days=fpDocumentDaysLeft(row?.expiry);
+ if(days===null)return{key:"nodate",label:"Без срока",detail:"Срок действия не указан"};
+ if(days<0)return{key:"expired",label:"Просрочен",detail:`Просрочено ${Math.abs(days)} дн.`};
+ if(days<=30)return{key:"soon",label:"Скоро истекает",detail:days===0?"Истекает сегодня":`Осталось ${days} дн.`};
+ return{key:"valid",label:"Действует",detail:`Осталось ${days} дн.`}
+}
+function fpDocumentIcon(type){return{insurance:"🛡",inspection:"✓",registration:"▣",leasing:"₽",other:"▤"}[type]||"▤"}
+function fpDocumentCarLabel(row){
+ const c=car(row?.carId);if(!c)return "Без автомобиля";
+ const m=model(c);return `${m?.brand||""} ${m?.model||""} · ${c.plate||"—"}`.trim()
+}
+function fpPopulateDocumentCarFilter(){
+ const select=$("#documentCarFilter");if(!select)return;
+ const current=select.value||"all";
+ const rows=[...fleetCars()].sort((a,b)=>(a.plate||"").localeCompare(b.plate||"","ru"));
+ select.innerHTML='<option value="all">Все автомобили</option>'+rows.map(c=>`<option value="${c.id}">${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("");
+ select.value=[...select.options].some(o=>o.value===current)?current:"all"
+}
+function renderDocuments(){
+ const summary=$("#documentSummary"),root=$("#documentList");if(!summary||!root)return;
+ fpPopulateDocumentCarFilter();
+ const all=[...(db.documents||[])];
+ const states=all.map(row=>fpDocumentState(row));
+ const expired=states.filter(x=>x.key==="expired").length,soon=states.filter(x=>x.key==="soon").length,valid=states.filter(x=>x.key==="valid").length;
+ const unpaidInstallments=all.flatMap(d=>(d.installments||[]).filter(x=>!x.paid)).length;
+ summary.innerHTML=[
+  ["Всего документов",all.length,"Все записи"],
+  ["Действуют",valid,"Срок более 30 дней"],
+  ["Скоро истекают",soon,"В течение 30 дней"],
+  ["Просрочены",expired,"Требуют внимания"],
+  ["Ожидают оплаты",unpaidInstallments,"Страховые раты"]
+ ].map(([label,value,note])=>`<article class="professional-kpi-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+ const query=String($("#documentSearch")?.value||"").trim().toLocaleLowerCase("ru-RU"),type=$("#documentTypeFilter")?.value||"all",status=$("#documentStatusFilter")?.value||"all",carFilter=$("#documentCarFilter")?.value||"all";
+ let rows=all.filter(row=>{
+  const st=fpDocumentState(row),carLabel=fpDocumentCarLabel(row),hay=[row.title,row.number,row.note,row.file,documentTypeText(row.type),carLabel].join(" ").toLocaleLowerCase("ru-RU");
+  return(!query||query.split(/\s+/).filter(Boolean).every(token=>hay.includes(token)))&&(type==="all"||row.type===type)&&(status==="all"||st.key===status)&&(carFilter==="all"||String(row.carId)===String(carFilter))
+ }).sort((a,b)=>{
+  const order={expired:0,soon:1,valid:2,nodate:3};const sa=fpDocumentState(a),sb=fpDocumentState(b);return(order[sa.key]-order[sb.key])||String(a.expiry||"9999").localeCompare(String(b.expiry||"9999"))
+ });
+ const count=$("#documentVisibleCount");if(count)count.textContent=String(rows.length);
+ const hint=$("#documentRegisterHint");if(hint)hint.textContent=`Показано ${rows.length} из ${all.length} · сначала документы, требующие внимания.`;
+ root.innerHTML=rows.map(row=>{
+  const st=fpDocumentState(row),install=row.type==="insurance"&&row.paymentMode==="installments"?installmentSummary(row):null;
+  const paidPct=install&&Number(row.cost||0)>0?Math.min(100,Math.round(install.paid/Number(row.cost||0)*100)):0;
+  const fileButtons=row.fileId?`<button type="button" class="btn document-file-action" title="Открыть файл" onclick="openDocumentAttachment('${row.fileId}','${String(row.title||"Документ").replaceAll("'","&#39;")}')">↗</button><button type="button" class="btn document-file-action" title="Скачать файл" onclick="downloadDocumentAttachment('${row.fileId}')">↓</button>`:"";
+  return `<article class="document-register-row" data-document-id="${row.id}">
+   <div class="document-register-main"><div class="document-register-icon">${fpDocumentIcon(row.type)}</div><div><strong>${row.title||documentTypeText(row.type)||"Документ"}</strong><small>${documentTypeText(row.type)} · ${fpDocumentCarLabel(row)}</small>${install?`<div class="document-installment-progress"><i><b style="width:${paidPct}%"></b></i><em>${money(install.paid)} / ${money(row.cost||0)}</em></div>`:""}</div></div>
+   <div class="document-register-cell document-number-cell"><span>Номер</span><strong>${row.number||"—"}</strong><small>${row.fileId?"Файл прикреплён":"Без вложения"}</small></div>
+   <div class="document-register-cell"><span>Срок</span><strong>${row.expiry?date(row.expiry):"Не указан"}</strong><small>${st.detail}</small></div>
+   <div class="document-register-cell"><span>Статус</span><span class="document-status-badge ${st.key}"><i class="document-status-dot"></i>${st.label}</span>${Number(row.cost||0)?`<small>Стоимость ${money(row.cost)}</small>`:""}</div>
+   <div class="document-register-actions">${fileButtons}<button type="button" class="btn" onclick="openDocumentDialog('', '${row.id}')">Открыть</button><button type="button" class="btn" title="Удалить" onclick="deleteDocument('${row.id}')">⋮</button></div>
+  </article>`
+ }).join("")||'<div class="document-empty-professional">По выбранным фильтрам документов нет.</div>';
+ ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})
+}
+window.renderDocuments=renderDocuments;

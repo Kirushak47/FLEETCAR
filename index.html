@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V14.1.4 Vehicle Finance</title>
+  <title>FleetPilot V14.2.1 Smart Calendar</title>
   <link rel="manifest" href="manifest.webmanifest?v=141300">
   <link rel="stylesheet" href="styles.css?v=141300">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -616,41 +616,74 @@
     </section>
 
     <section id="documentsPage" class="page">
-      <div class="section-head"><div><span class="eyebrow">Сроки и файлы</span><h2>Документы</h2></div><button id="addDocument" class="btn primary">+ Документ</button></div>
-      <div id="documentSummary" class="summary-grid compact"></div>
-      <div id="documentList" class="document-grid"></div>
+      <div class="section-head professional-page-head documents-page-head">
+        <div><span class="eyebrow">Документооборот автопарка</span><h2>Документы</h2><p>Страховки, техосмотры, регистрации, договоры и файлы в одном понятном журнале.</p></div>
+        <button id="addDocument" class="btn primary">+ Добавить документ</button>
+      </div>
+      <div id="documentSummary" class="professional-kpi-grid document-kpi-grid"></div>
+      <div class="professional-toolbar documents-toolbar">
+        <input id="documentSearch" type="search" placeholder="Поиск по документу, номеру или автомобилю">
+        <select id="documentTypeFilter">
+          <option value="all">Все типы</option>
+          <option value="insurance">Страховка</option>
+          <option value="inspection">Техосмотр</option>
+          <option value="registration">Регистрация</option>
+          <option value="leasing">Лизинг</option>
+          <option value="other">Другое</option>
+        </select>
+        <select id="documentStatusFilter">
+          <option value="all">Все статусы</option>
+          <option value="valid">Действует</option>
+          <option value="soon">Скоро истекает</option>
+          <option value="expired">Просрочен</option>
+          <option value="nodate">Без срока</option>
+        </select>
+        <select id="documentCarFilter"><option value="all">Все автомобили</option></select>
+      </div>
+      <section class="professional-panel documents-register-panel">
+        <div class="professional-panel-head">
+          <div><span class="eyebrow">Реестр</span><h3>Документы автопарка</h3><p id="documentRegisterHint">Актуальные документы и контроль сроков.</p></div>
+          <span id="documentVisibleCount" class="professional-counter">0</span>
+        </div>
+        <div id="documentList" class="documents-professional-list"></div>
+      </section>
     </section>
 
     
     <section id="calendarPage" class="page" data-advanced-page="true">
       <div class="section-head professional-page-head">
         <div><span class="eyebrow">Планирование</span><h2>Календарь автопарка</h2><p>Страховки, техосмотры, сервисы, платежи и другие сроки.</p></div>
-        <div class="calendar-professional-toolbar">
+        <div class="calendar-professional-toolbar smart-calendar-toolbar">
+          <div class="calendar-view-switch" aria-label="Режим календаря">
+            <button type="button" data-calendar-view="month" class="active">Месяц</button>
+            <button type="button" data-calendar-view="week">Неделя</button>
+            <button type="button" data-calendar-view="day">День</button>
+          </div>
+          <div class="calendar-period-nav">
+            <button type="button" id="calendarPrevPeriod" aria-label="Предыдущий период">‹</button>
+            <button type="button" id="calendarTodayTop">Сегодня</button>
+            <button type="button" id="calendarNextPeriod" aria-label="Следующий период">›</button>
+          </div>
           <input id="calendarSelectedDate" type="date" aria-label="Выбрать день">
-          <select id="calendarRange">
-            <option value="14">14 дней</option>
-            <option value="30" selected>30 дней</option>
-            <option value="90">90 дней</option>
-            <option value="365">Год</option>
-          </select>
           <select id="calendarTypeFilter">
             <option value="all">Все события</option>
             <option value="insurance">Страховка</option>
             <option value="inspection">Техосмотр</option>
             <option value="repair">Сервис</option>
             <option value="expense">Расходы</option>
-            <option value="payment">Платежи</option>
+            <option value="installment">Платежи</option>
+            <option value="document">Документы</option>
           </select>
         </div>
       </div>
       <div id="calendarSummary" class="professional-kpi-grid"></div>
       <div class="professional-split-layout calendar-professional-layout">
         <section class="professional-panel">
-          <div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3>Ближайшие события</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div>
+          <div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3 id="calendarAgendaTitle">События месяца</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div>
           <div id="calendarList" class="calendar-professional-list"></div>
         </section>
         <aside class="professional-panel professional-side-panel calendar-side-panel">
-          <div class="professional-panel-head calendar-month-head"><div><span class="eyebrow">Месяц</span><h3 id="calendarMonthTitle">Календарь</h3></div><div class="calendar-month-actions"><button type="button" id="calendarPrevMonth" aria-label="Предыдущий месяц">‹</button><button type="button" id="calendarToday">Сегодня</button><button type="button" id="calendarNextMonth" aria-label="Следующий месяц">›</button></div></div>
+          <div class="professional-panel-head calendar-month-head"><div><span class="eyebrow">Навигация</span><h3 id="calendarMonthTitle">Календарь</h3></div><div class="calendar-month-actions"><button type="button" id="calendarPrevMonth" aria-label="Предыдущий месяц">‹</button><button type="button" id="calendarToday">Сегодня</button><button type="button" id="calendarNextMonth" aria-label="Следующий месяц">›</button></div></div>
           <div id="calendarMonthGrid" class="calendar-month-grid"></div>
           <div class="calendar-selected-day"><span>Выбранный день</span><strong id="calendarSelectedDayLabel">Не выбран</strong><button type="button" id="calendarClearDay">Показать период</button></div>
           <div class="professional-panel-head calendar-upcoming-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div>
