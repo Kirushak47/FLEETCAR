@@ -1040,9 +1040,7 @@ function fleetServiceBadgeMarkup(carId,desktop=false){
  const repairRows=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&!["done","cancelled"].includes(String(r.status||"")));
  const total=requestRows.length+repairRows.length;
  if(!total)return"";
- const level=requestRows.some(row=>row.urgency==="critical")||repairRows.some(r=>r.status==="repair")?"critical":
-  requestRows.length||repairRows.some(r=>["service","parts"].includes(r.status))?"service":"normal";
- return `<button type="button" class="car-service-alert-icon task-indicator-square ${level} ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span>🔧</span><b>${total}</b></button>`
+ return `<button type="button" class="car-service-alert-icon photo-task-indicator ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span>🔧</span><b>${total}</b></button>`
 }
 function renderFleetServiceAlertIndicators(){
  document.querySelectorAll("[data-car-service-alert].dynamic-service-alert").forEach(node=>node.remove())
@@ -4686,6 +4684,7 @@ function renderFleet(){
 <div class="no-photo-hero ${c.status} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
+ <div class="photo-service-task-badge">${fleetServiceBadgeMarkup(c.id)}</div>
  <div class="hero-top">
   <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
   <div class="hero-card-controls">
@@ -4710,12 +4709,9 @@ function renderFleet(){
   </div>
  </div>
  ${c.customPhoto?"":`<div class="vehicle-symbol">🚘</div>`}
- <div class="hero-title hero-title-with-task">
-  <div class="hero-title-copy">
-   <h3>${m.brand} ${m.model}</h3>
-   <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
-  </div>
-  <div class="hero-title-task-slot">${fleetServiceBadgeMarkup(c.id)}</div>
+ <div class="hero-title">
+  <h3>${m.brand} ${m.model}</h3>
+  <p>${c.plate} · ${c.tenant||"Без арендатора"}</p>
  </div>
  <div class="hero-business-metrics">
   <button type="button" class="hero-business-metric mileage" onclick="event.stopPropagation();openMileage('${c.id}')">
