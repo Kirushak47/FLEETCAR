@@ -1,4 +1,4 @@
-# FleetPilot V14.2.1 — Smart Calendar
+# FleetPilot V14.2.2 — Service Wrench Fix
 
 - Финансы конкретного автомобиля разделены на факт, план, доход и чистый результат.
 - Добавлены периоды: месяц / квартал / год.
@@ -33,3 +33,9 @@
 - События группируются по дням и открывают связанный объект.
 - Типы событий визуально различаются, а календарь показывает количество и типы событий по дням.
 - Старый длинный диапазон заменён реальным календарным периодом.
+
+
+## V14.2.2 Service Wrench Fix
+- Fleet wrench appears only when the vehicle has a real active repair or a new/accepted driver request.
+- Requests already transferred to service (cloud status `repair`) no longer light the wrench by themselves.
+- Done/cancelled/rejected/archived/closed repairs are excluded from the fleet service indicator.

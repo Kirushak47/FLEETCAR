@@ -1193,7 +1193,9 @@ let selectedWorkspaceRepairCarId=null;
 window.selectedWorkspaceRepairCarId=selectedWorkspaceRepairCarId;
 
 function activeWorkspaceRepairAlerts(){
- return workspaceRepairAlerts.filter(row=>!["done","rejected"].includes(row.status))
+ // Only requests that are still actionable in the incoming queue may light the fleet wrench.
+ // Cloud-linked requests use statuses like "repair"/"done" after transfer and must not be counted twice.
+ return workspaceRepairAlerts.filter(row=>["new","accepted"].includes(String(row?.status||"new")))
 }
 function repairAlertsForCar(carId){
  return activeWorkspaceRepairAlerts().filter(row=>String(row.car_id)===String(carId))
@@ -1206,7 +1208,11 @@ function repairAlertLevel(rows){
 
 function fleetServiceBadgeMarkup(carId,desktop=false){
  const requestRows=repairAlertsForCar(carId);
- const repairRows=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&!["done","cancelled"].includes(String(r.status||"")));
+ const terminalRepairStatuses=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
+ const repairRows=(db.repairs||[]).filter(r=>
+  String(r.carId)===String(carId)&&
+  !terminalRepairStatuses.has(String(r.status||"").toLowerCase())
+ );
  const total=requestRows.length+repairRows.length;
  if(!total)return"";
  return `<button type="button" class="car-service-alert-icon photo-task-indicator ${desktop?"desktop-inline-service-alert":""}" data-car-service-alert="${carId}" onclick="event.stopPropagation();openFleetServiceAlert('${carId}')" title="Сервисные задачи: ${total}" aria-label="Открыть сервисные задачи"><span class="service-wrench-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a5 5 0 0 0-6.4 6.4L3 18l3 3 5.3-5.3a5 5 0 0 0 6.4-6.4l-3 3-3-3 3-3Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>${total}</b></button>`
