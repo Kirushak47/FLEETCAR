@@ -1,8 +1,12 @@
-FleetPilot V11.8 — Linked Profile / Calendar / Expenses + UI consistency
+FleetPilot V12.0 — Professional Polish
 
-- Unified text, control, icon, and gap sizing across Service, Vehicle Profile, Calendar, and Expenses.
-- Standardized SVG icons replace mixed emoji/symbol sizing in Calendar and Expenses.
-- Overflow protection added for long titles, statuses, metadata, and action groups.
-- Vehicle finance profile now shows clickable linked expense rows that open the exact expense.
-- Calendar month overview highlights the active month and keeps day/event controls within bounds.
-- Service/profile chevrons use the same SVG dimensions as other action icons.
+UI polish release based on V11.9.
+
+Changes:
+- calmer typography hierarchy (400/500/600 instead of widespread 800/900+)
+- softer text contrast in light and dark themes
+- unified control heights, icon/button spacing and card overflow protection
+- reduced glow, heavy shadows and excessive emphasis
+- normalized Service workspace text/button sizing
+- consistent calendar, vehicle profile and expenses typography
+- updated cache/version identifiers to 12.0

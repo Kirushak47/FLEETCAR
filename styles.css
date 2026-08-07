@@ -8386,3 +8386,153 @@ html[data-theme="dark"] .repair-linked-finance-info{
 }
 .workspace-request-row.selected{background:color-mix(in srgb,var(--card,#fff) 88%,#ebe8ff)!important;box-shadow:inset 3px 0 0 #5b4df5}
 .service-task-icon svg,.planned-service-expense-icon svg,.service-car-avatar svg{width:16px!important;height:16px!important;display:block;fill:currentColor}
+
+/* FleetPilot V12.0 — Professional Polish / calm typography system */
+:root{
+  --fp-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --fp-text-main:#1f2937;
+  --fp-text-title:#111827;
+  --fp-text-muted:#6b7280;
+  --fp-text-soft:#8a94a6;
+  --fp-accent:#5363d9;
+  --fp-accent-soft:rgba(83,99,217,.10);
+  --fp-shadow-soft:0 8px 24px rgba(15,23,42,.055);
+  --fp-shadow-hover:0 12px 28px rgba(15,23,42,.075);
+  --fp-radius-card:16px;
+  --fp-radius-control:10px;
+  --fp-space-1:6px;
+  --fp-space-2:8px;
+  --fp-space-3:12px;
+  --fp-space-4:16px;
+  --fp-control-height:36px;
+}
+:root[data-theme="dark"]{
+  --fp-text-main:#d6dbe5;
+  --fp-text-title:#e8ebf1;
+  --fp-text-muted:#9aa3b2;
+  --fp-text-soft:#7f8999;
+  --fp-accent:#7f8be7;
+  --fp-accent-soft:rgba(127,139,231,.12);
+  --v5-text:#d6dbe5;
+  --text:#d6dbe5;
+  --v5-muted:#9aa3b2;
+  --muted:#9aa3b2;
+  --v5-shadow:0 10px 32px rgba(0,0,0,.22);
+}
+html,body,button,input,select,textarea{font-family:var(--fp-font-family)!important}
+body{font-size:14px;line-height:1.45;color:var(--fp-text-main)!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+/* typography hierarchy */
+h1,.topbar h1{font-size:28px!important;line-height:1.15!important;font-weight:600!important;letter-spacing:-.025em!important;color:var(--fp-text-title)!important}
+h2,.section-head h2,.modal-head h2,.detail-title h2{font-size:20px!important;line-height:1.25!important;font-weight:600!important;letter-spacing:-.015em!important}
+h3,.list-item h3,.car-caption h3{font-size:15px!important;line-height:1.3!important;font-weight:600!important;letter-spacing:-.005em!important}
+p{line-height:1.5}
+small,.muted{color:var(--fp-text-muted)}
+.eyebrow{font-size:10px!important;font-weight:600!important;letter-spacing:.08em!important;color:var(--fp-text-muted)!important}
+strong,b{font-weight:600}
+
+/* calm cards */
+.card,.summary-card,.list-item,.doc-card,.kpi-card,.toolbar,.more-card,.professional-kpi,.calendar-month-card,.service-car-group,.workspace-request-row,.service-task-row{
+  box-shadow:var(--fp-shadow-soft)!important;
+}
+.card:hover,.summary-card:hover,.list-item:hover,.doc-card:hover,.professional-kpi:hover,.workspace-request-row:hover,.service-task-row:hover{
+  box-shadow:var(--fp-shadow-hover)!important;
+}
+
+/* controls */
+.btn,.professional-action-button,.profile-mini-button,.profile-admin-open,.service-order-button,.calendar-month-actions button,.car-detail-tabs button,
+button[data-action],.bottom-nav button{
+  font-weight:500!important;
+  letter-spacing:0!important;
+}
+.btn{
+  min-height:var(--fp-control-height)!important;
+  padding:0 12px!important;
+  border-radius:var(--fp-radius-control)!important;
+  font-size:12px!important;
+  line-height:1!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.btn.primary{background:var(--fp-accent)!important;box-shadow:none!important}
+.btn:not(.primary):not(.danger){background:var(--fp-accent-soft)!important;color:var(--fp-accent)!important}
+.btn.danger{font-weight:500!important}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid color-mix(in srgb,var(--fp-accent) 65%,transparent);outline-offset:2px}
+
+/* chips and badges */
+.badge,.status,.car-service-entry-status,.service-task-status,.city-chip,.cloud-role-badge{
+  font-weight:600!important;
+  letter-spacing:0!important;
+  box-shadow:none!important;
+}
+.badge{font-size:10px!important;padding:5px 8px!important}
+.status{font-size:10px!important;padding:5px 8px!important}
+
+/* stats: still clear, no billboard effect */
+.summary-card strong,.professional-kpi strong,.health-tile strong,.detail-stat-grid strong,.service-crm-summary .professional-kpi strong{
+  font-weight:600!important;
+  letter-spacing:-.02em!important;
+  color:var(--fp-text-title);
+}
+.summary-card strong{font-size:20px!important}
+.professional-kpi strong{font-size:19px!important}
+.service-crm-summary .professional-kpi strong{font-size:20px!important}
+.summary-card span,.professional-kpi span,.health-tile span{font-weight:500!important;color:var(--fp-text-muted)!important}
+
+/* Service workspace spacing and containment */
+.service-crm-summary{gap:12px!important}
+.service-crm-summary .professional-kpi{padding:14px!important;border-radius:14px!important}
+.service-crm-summary .professional-kpi span{font-size:10px!important;font-weight:500!important}
+.service-crm-summary .professional-kpi small{font-size:9px!important;font-weight:400!important;color:var(--fp-text-muted)!important}
+.service-task-row{gap:10px!important;padding:11px 12px!important;border-radius:13px!important;align-items:center!important}
+.service-task-copy strong{font-size:12px!important;font-weight:600!important}
+.service-task-copy span{font-size:11px!important;font-weight:400!important;color:var(--fp-text-main)!important}
+.service-task-copy small{font-size:9px!important;font-weight:400!important;color:var(--fp-text-muted)!important}
+.service-task-actions{gap:8px!important}
+.service-task-actions .btn{height:32px!important;min-height:32px!important;min-width:72px!important;max-width:116px!important;padding:0 10px!important;font-size:10px!important;font-weight:500!important}
+.service-task-inline-controls select,.service-task-inline-controls input{height:32px!important;min-height:32px!important;font-size:10px!important;font-weight:400!important}
+.service-order-button{width:32px!important;height:32px!important;min-width:32px!important;font-size:13px!important;font-weight:500!important}
+.service-task-status{height:24px!important;font-size:9px!important;font-weight:600!important}
+.service-inbox-request-actions .btn,.service-inbox-request-actions select{font-size:10px!important;font-weight:500!important}
+
+/* calendar/profile/expenses consistency */
+#calendarPage .btn,#expensesPage .btn,#carPage .btn,#repairsPage .btn{font-size:11px!important;font-weight:500!important}
+.professional-row-main strong,.calendar-professional-main strong,.car-service-entry-title strong,.car-expense-preview-row strong{font-weight:600!important;color:var(--fp-text-title)!important}
+.professional-row-main span,.professional-row-main small,.calendar-professional-main span,.calendar-professional-main small,.car-expense-preview-row small{font-weight:400!important;color:var(--fp-text-muted)!important}
+.calendar-month-card strong{font-weight:600!important}
+.calendar-day strong{font-weight:500!important}
+
+/* navigation */
+.desktop-sidebar-nav button,.desktop-sidebar-footer button{font-weight:500!important;letter-spacing:0!important}
+.desktop-brand strong{font-weight:600!important}
+.bottom-nav button{font-size:12px!important;font-weight:500!important}
+.bottom-nav span{font-size:9px!important;font-weight:500!important}
+.bottom-nav button.active{box-shadow:none!important}
+
+/* tone down glow / gradients */
+.today-hero,.no-photo-hero{box-shadow:0 10px 30px rgba(37,55,120,.12)!important}
+.quick-action-button{box-shadow:0 10px 26px rgba(79,70,229,.20)!important}
+.attention-button{box-shadow:none!important}
+.health-icon.danger{animation:none!important}
+@keyframes pulseWarning{50%{box-shadow:none}}
+
+/* universal containment */
+.card,.list-item,.summary-card,.professional-row,.calendar-professional-row,.service-task-row,.workspace-request-row,.service-car-group,.doc-card,.metric,.professional-kpi{min-width:0!important;overflow:hidden}
+.card *,.list-item *,.summary-card *,.professional-row *,.calendar-professional-row *,.service-task-row *,.workspace-request-row *,.service-car-group *,.doc-card *,.metric *,.professional-kpi *{min-width:0}
+button,select,input,textarea{max-width:100%}
+
+/* preserve mobile density while keeping hierarchy */
+@media(max-width:760px){
+  body{font-size:13px}
+  h1,.topbar h1{font-size:23px!important}
+  h2,.section-head h2,.modal-head h2{font-size:18px!important}
+  h3,.list-item h3{font-size:14px!important}
+  .btn{min-height:34px!important;font-size:11px!important;padding:0 10px!important}
+  .service-task-actions .btn{font-size:10px!important}
+}
