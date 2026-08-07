@@ -8206,3 +8206,12 @@ html[data-theme="dark"] .repair-linked-finance-info{
 
 .card-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.card-title-row h3{margin-top:2px}.car-operation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.car-operation-grid>div{padding:11px;border-radius:10px;background:var(--soft,#f6f7f9);display:grid;gap:4px}.car-operation-grid small,.car-operation-note span,.car-operation-alert span{color:var(--muted,#78808d);font-size:11px}.car-operation-grid strong{font-size:14px}.car-operation-alert{width:100%;margin-top:10px;padding:11px;border:1px solid rgba(99,102,241,.16);border-radius:10px;background:rgba(99,102,241,.055);text-align:left;color:inherit;display:grid;gap:3px;cursor:pointer}.car-operation-alert b{color:#5667e8}.car-operation-note{margin-top:10px;padding:10px 0;display:grid;gap:3px}.inline-entity-link{border:0;background:transparent;padding:0;color:inherit;text-align:left;cursor:pointer}.inline-entity-link:hover{color:#5667e8;text-decoration:underline}
 @media(max-width:900px){.calendar-side-panel{position:static}.calendar-professional-toolbar{display:grid!important;grid-template-columns:1fr 1fr}.calendar-professional-toolbar input[type="date"]{grid-column:1/-1}.car-operation-grid{grid-template-columns:1fr 1fr}}
+
+/* FleetPilot V11.4.2 — unified service workflow */
+.service-task-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.service-task-actions .btn{white-space:nowrap}
+.service-car-collapse-button .service-collapse-chevron{display:grid;place-items:center;transition:transform .18s ease}
+.service-car-collapse-button.collapsed .service-collapse-chevron{transform:rotate(-90deg)}
+.service-car-collapse-button:not(.collapsed) .service-collapse-chevron{transform:rotate(0deg)}
+.service-task-row.smart-target-highlight,.service-task-row.smart-entity-highlight{outline:2px solid currentColor;outline-offset:2px}
+@media(max-width:900px){.service-task-actions{grid-column:1/-1;justify-content:flex-start}.service-task-actions .btn{flex:1 1 auto}}

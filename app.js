@@ -1201,6 +1201,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
 }
 function openFleetServiceAlert(carId){
  selectedWorkspaceRepairCarId=String(carId);
+ if(serviceCollapsedCars.has(String(carId))){serviceCollapsedCars.delete(String(carId));try{localStorage.setItem(SERVICE_COLLAPSED_CARS_KEY,JSON.stringify([...serviceCollapsedCars]))}catch{}}
  const search=$("#serviceSearch");if(search)search.value="";
  const city=$("#serviceCityFilter");if(city)city.value="all";
  const status=$("#serviceStatusFilter");if(status)status.value="all";
@@ -5193,6 +5194,45 @@ function toggleServiceCarTasks(carId){
 }
 window.toggleServiceCarTasks=toggleServiceCarTasks;
 
+function serviceNextStatus(status){
+ return {planned:"service",service:"repair",parts:"repair",repair:"done"}[status]||""
+}
+function serviceNextStatusLabel(status){
+ return {planned:"Записать в сервис",service:"Начать ремонт",parts:"Детали получены",repair:"Завершить"}[status]||""
+}
+function serviceRepairCostMeta(repair){
+ const planned=Number(repair.planned||0),actual=Number(repair.actual||0);
+ if(repair.status==="done")return actual?`Факт ${money(actual)}`:`План ${money(planned)}`;
+ return planned?`План ${money(planned)}`:"Стоимость не указана"
+}
+function serviceLinkedExpense(repair){
+ return repair?.linkedExpenseId?db.expenses.find(x=>String(x.id)===String(repair.linkedExpenseId)):db.expenses.find(x=>String(x.linkedRepairId)===String(repair?.id||""))
+}
+function syncCarServiceStatus(carId){
+ const c=car(carId);if(!c)return;
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&!["done","cancelled"].includes(String(r.status||"")));
+ c.status=active.some(r=>["repair","parts","service"].includes(r.status))?"repair":(c.tenant?"active":"free")
+}
+function advanceServiceRepair(id){
+ const repair=db.repairs.find(r=>String(r.id)===String(id));if(!repair)return toast("Задача не найдена");
+ const next=serviceNextStatus(repair.status);if(!next)return editRepair(repair.id);
+ if(next==="done"&&Number(repair.actual||0)<=0&&repair.paymentStatus!=="warranty"){
+  editRepair(repair.id);
+  setTimeout(()=>toast("Для завершения укажите фактическую сумму или гарантию"),80);
+  return
+ }
+ repair.status=next;
+ if(next==="done")repair.completedDate=repair.completedDate||today();
+ syncLinkedExpenseFromRepair(repair);
+ syncCarServiceStatus(repair.carId);
+ addTimeline(repair.carId,"repair",repair.title,-Number(repair.actual||repair.planned||0),today(),repairStatusText(next));
+ logActivity("Изменён статус ремонта","Сервис",`${repair.title} → ${repairStatusText(next)}`,repair.carId);
+ save();renderRepairs();renderExpenses();renderFleet();
+ if(selectedCarId===repair.carId&&$("#carPage")?.classList.contains("active"))renderCarProfile(repair.carId,"service");
+ toast(repairStatusText(next))
+}
+window.advanceServiceRepair=advanceServiceRepair;
+
 function renderServiceCarTasks(row){
  const {c,m,repairs,requests,plannedExpenses,visibleRepairs}=row;
  const collapsed=serviceCollapsedCars.has(String(c.id));
@@ -5236,12 +5276,12 @@ function renderServiceCarTasks(row){
      <span class="service-task-status planned">План. расход</span>
      <button class="btn" onclick="editExpense('${x.id}')">Открыть</button>
     </div>`).join("")}
-   ${repairsToShow.map(r=>`<div class="service-task-row ${serviceStatusClass(r.status)}" data-repair-id="${r.id}">
+   ${repairsToShow.map(r=>{const linkedExpense=serviceLinkedExpense(r),nextLabel=serviceNextStatusLabel(r.status);return `<div class="service-task-row ${serviceStatusClass(r.status)}" data-repair-id="${r.id}">
      <span class="service-task-icon">🔧</span>
-     <div class="service-task-copy"><strong>${r.title}</strong><span>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)}</small></div>
+     <div class="service-task-copy"><strong>${r.title}</strong><span>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}${linkedExpense?` · расход ${expenseStatusText(linkedExpense.status)}`:""}</small></div>
      <span class="service-task-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span>
-     <button class="btn" onclick="editRepair('${r.id}')">Открыть</button>
-    </div>`).join("")}
+     <div class="service-task-actions">${linkedExpense?`<button class="btn" onclick="openSmartEntity('expense','${linkedExpense.id}','${c.id}')">Расход</button>`:""}${nextLabel?`<button class="btn primary" onclick="advanceServiceRepair('${r.id}')">${nextLabel}</button>`:""}<button class="btn" onclick="editRepair('${r.id}')">Подробнее</button></div>
+    </div>`}).join("")}
   </div>
  </article>`
 }
@@ -5495,7 +5535,8 @@ function renderExpenses(){
 
  $("#expenseList").innerHTML=visible.map(x=>{
   const c=car(x.carId);
-  return `<article class="professional-row">
+  const linkedRepair=x.linkedRepairId?db.repairs.find(r=>String(r.id)===String(x.linkedRepairId)):null;
+  return `<article class="professional-row" data-expense-id="${x.id}">
    <div class="professional-row-icon">${x.category==="repair"?"🔧":x.category==="insurance"?"🛡":x.category==="inspection"?"▤":x.category==="tires"?"◉":"↘"}</div>
    <div class="professional-row-main">
     <strong>${x.title}</strong>
@@ -5507,6 +5548,7 @@ function renderExpenses(){
     <b>${money(x.amount)}</b>
    </div>
    <div class="professional-row-actions">
+    ${linkedRepair?`<button class="btn" onclick="openSmartEntity('repair','${linkedRepair.id}','${x.carId}')">В сервис</button>`:""}
     <button class="btn" onclick="editExpense('${x.id}')">Изменить</button>
     <button class="btn danger" onclick="deleteExpense('${x.id}')">Удалить</button>
    </div>
@@ -5608,6 +5650,10 @@ function openSmartEntity(type,entityId,carId=''){
   const status=$("#serviceStatusFilter");if(status)status.value="all";
   const city=$("#serviceCityFilter");if(city)city.value="all";
   selectedWorkspaceRepairCarId=row?.carId?String(row.carId):String(carId||"");
+  if(row?.carId&&serviceCollapsedCars?.has(String(row.carId))){
+   serviceCollapsedCars.delete(String(row.carId));
+   try{localStorage.setItem(SERVICE_COLLAPSED_CARS_KEY,JSON.stringify([...serviceCollapsedCars]))}catch{}
+  }
   showPage('repairsPage');
   setTimeout(()=>{
    renderRepairs();
@@ -5795,9 +5841,9 @@ function renderCarProfile(id,activeTab="info"){
       <div class="car-service-entry-main">
        <div class="car-service-entry-title"><strong>${r.title}</strong><span class="car-service-entry-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span></div>
        <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
-       <div class="car-service-entry-meta"><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${money(r.planned||0)}</span></div>
+       <div class="car-service-entry-meta"><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${serviceRepairCostMeta(r)}</span>${serviceLinkedExpense(r)?`<span>${expenseStatusText(serviceLinkedExpense(r).status)}</span>`:""}</div>
       </div>
-      <button class="car-service-open" onclick="editRepair('${r.id}')" title="Открыть ремонт">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">›</button>
      </article>`).join("")}
    </div>
   </section>`:""}
@@ -5832,7 +5878,7 @@ function renderCarProfile(id,activeTab="info"){
         ${r.warrantyUntil?`<span>Гарантия до ${date(r.warrantyUntil)}</span>`:""}
        </div>
       </div>
-      <button class="car-service-open" onclick="editRepair('${r.id}')" title="Подробнее">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">›</button>
      </article>`).join("")||`<div class="professional-empty">История ремонтов пока пустая.</div>`}
    </div>
   </section>
@@ -6409,8 +6455,7 @@ $("#repairForm").onsubmit=async e=>{
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
   if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
-  if(c&&["repair","parts","service"].includes(status))c.status="repair";
-  if(c&&status==="done"&&c.status==="repair")c.status="free";
+  syncCarServiceStatus(carId);
 
   syncLinkedExpenseFromRepair(obj);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
