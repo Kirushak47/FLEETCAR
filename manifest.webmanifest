@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V11.3.8 Car Service UI Cloud Beta",
+  "name": "FleetPilot V11.3.9 Planned Service Expenses Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113800",
+  "start_url": "./?v=113900",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

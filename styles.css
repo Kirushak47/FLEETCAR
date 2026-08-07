@@ -7966,3 +7966,49 @@ html[data-theme="dark"] .repair-linked-finance-info{
  .car-service-profile-head{display:grid}
  .service-task-row>.btn{grid-column:2!important;width:64px!important}
 }
+
+
+/* FleetPilot V11.3.9 — planned service expenses */
+.planned-service-expenses-panel{margin:14px 0}
+.planned-service-expense-list{display:grid;gap:8px}
+.planned-service-expense-row{
+ display:grid;grid-template-columns:38px minmax(0,1fr) 120px 30px;
+ gap:10px;align-items:center;padding:10px 12px;
+ border:1px solid var(--line,#e8ebf0);border-radius:11px;
+ background:color-mix(in srgb,var(--card,#fff) 97%,#f7f8fa)
+}
+.planned-service-expense-icon{
+ display:grid;place-items:center;width:34px;height:34px;border-radius:9px;
+ background:#fff5df;color:#a86b00;font-size:13px;font-weight:900
+}
+.planned-service-expense-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.planned-service-expense-title strong{font-size:9px}
+.planned-service-expense-title span{
+ display:inline-flex;padding:3px 6px;border-radius:999px;
+ background:#fff5df;color:#a86b00;font-size:7px;font-weight:900
+}
+.planned-service-expense-main p{margin:3px 0;color:var(--muted,#6e7889);font-size:8px}
+.planned-service-expense-main small{display:block;color:var(--muted,#979eab);font-size:7px}
+.planned-service-expense-value{text-align:right}
+.planned-service-expense-value strong{display:block;font-size:10px}
+.planned-service-expense-value span{display:block;margin-top:3px;color:#ad7100;font-size:7px;font-weight:800}
+.service-row-open-button{
+ display:grid;place-items:center;width:28px;height:28px;padding:0;
+ border:1px solid var(--line,#dfe3ea);border-radius:8px;
+ background:var(--card,#fff);color:inherit;font-size:16px;cursor:pointer
+}
+.service-task-row.planned-expense .service-task-icon{background:#fff5df;color:#a86b00}
+.service-task-status.planned{background:#fff5df;color:#a86b00}
+.car-service-entry.planned .car-service-dot{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.10)}
+.car-service-entry-status.planned{background:#fff5df;color:#a86b00}
+
+/* 7 KPI cards: responsive auto-fit instead of forcing six columns */
+.service-crm-summary{
+ grid-template-columns:repeat(auto-fit,minmax(125px,1fr))!important
+}
+
+@media(max-width:1099px){
+ .planned-service-expense-row{grid-template-columns:34px minmax(0,1fr) 28px}
+ .planned-service-expense-value{grid-column:2;text-align:left}
+ .service-row-open-button{grid-column:3;grid-row:1/3}
+}

@@ -1,12 +1,11 @@
-# FleetPilot V11.3.8 — Car Service UI
+# FleetPilot V11.3.9 — Planned Service Expenses
 
-Changes:
-- New "Сервис" tab in each vehicle profile.
-- No duplicate next-service/oil/insurance information in that tab.
-- Car Service tab shows active driver requests, active repairs, completed repair history, dates, mileage, cost, service, status and warranty.
-- Deep link supports #/car/<id>/service.
-- Service CRM "Открыть" buttons are compact and fitted to row height.
-- Fleet task indicator moved into the vehicle title area inside the photo.
-- Indicator is square, compact and shows total unresolved technical tasks.
-- Clicking it still opens Service CRM directly on that vehicle.
+New:
+- Planned expenses from Expenses automatically appear in Service when category is Repair, Tires or Inspection, or when linked to a repair.
+- Dedicated "Плановые сервисные расходы" panel in the global Service CRM.
+- Planned service expenses participate in Service search, city filter and Planned filter.
+- A KPI card shows their count.
+- They also appear inside the relevant vehicle's Service tab.
+- Opening a planned service expense opens the existing expense editor; no duplicate repair is created solely for display.
+- When the expense is no longer Planned, it disappears from the planned Service panel.
 - No Supabase schema changes and no SQL required.
