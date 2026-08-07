@@ -731,7 +731,7 @@ const ACTION_PERMISSION_SELECTORS={
  "documents.delete":["[onclick*=\"deleteDocument(\"]"],
  "company.invite":["#openInviteMember","#openInviteMemberSecondary"],
  "company.permissions":["[data-company-tab=\"permissions\"]"],
- "company.roles":["[data-enterprise-role]"]
+ "company.roles":["select[data-enterprise-role]"]
 };
 
 function enterprisePermissionConfigured(role=enterpriseCurrentRole()){
@@ -785,44 +785,46 @@ function applyActionPermissions(){
 function applyMobileRoleNavigation(){
  const nav=document.querySelector(".bottom-nav");if(!nav)return;
  const role=enterpriseCurrentRole();
- const labels={dashboardPage:["⌂","Сегодня"],fleetPage:["◫","Автопарк"],repairsPage:["🔧","Сервис"],paymentsPage:["💳","Аренда"],expensesPage:["↘","Расходы"],calendarPage:["□","Календарь"],documentsPage:["▤","Документы"],analyticsPage:["▥","Аналитика"],mobileMapPage:["⌖","Карта"],companyPage:["♟","Компания"],dataPage:["⤓","Данные"],searchPage:["⌕","Поиск"]};
- const orderByRole={
-  owner:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","analyticsPage","paymentsPage","expensesPage","mobileMapPage","companyPage","dataPage"],
-  coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","mobileMapPage","companyPage","paymentsPage","expensesPage","analyticsPage","dataPage"],
-  accountant:["dashboardPage","paymentsPage","expensesPage","documentsPage","analyticsPage","calendarPage","fleetPage","repairsPage"],
-  mechanic:["dashboardPage","repairsPage","fleetPage","documentsPage","calendarPage","mobileMapPage"],
-  user:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","paymentsPage","expensesPage","analyticsPage","mobileMapPage"]
- };
- const order=orderByRole[role]||orderByRole.user;
- const allowed=order.filter(page=>enterpriseCanOpen(page));
- const primary=allowed.length<=5?allowed:allowed.slice(0,4);
- let more=nav.querySelector('[data-page="morePage"]');
- if(!more){more=document.createElement("button");more.type="button";more.dataset.page="morePage";more.onclick=()=>showPage("morePage");nav.appendChild(more)}
- more.innerHTML='<span class="mobile-nav-icon">•••</span><small>Ещё</small>';
- nav.querySelectorAll("button[data-page]").forEach(button=>{
-  const page=button.dataset.page;
-  button.hidden=page==="morePage"?!(allowed.length>5):!primary.includes(page)
+ if(role==="driver")return;
+
+ // Mobile navigation mirrors the SAME permissions as desktop.
+ // Keep the proven old behaviour: all allowed sections stay in one horizontally
+ // scrollable bottom bar instead of being cut to 4/5 entries or moved into a
+ // separate mobile-only permission matrix.
+ const items=[
+  ["dashboardPage","⌂","Сегодня"],
+  ["fleetPage","◫","Автопарк"],
+  ["repairsPage","🔧","Сервис"],
+  ["paymentsPage","💳","Аренда"],
+  ["expensesPage","💸","Расходы"],
+  ["documentsPage","▤","Документы"],
+  ["calendarPage","🗓️","Календарь"],
+  ["analyticsPage","▥","Аналитика"],
+  ["mobileMapPage","⌖","Карта"],
+  ["companyPage","♟","Компания"],
+  ["dataPage","⤓","Данные"],
+  ["searchPage","⌕","Поиск"]
+ ];
+ const desired=new Set(items.map(x=>x[0]));
+ nav.querySelectorAll('button[data-page="morePage"]').forEach(button=>button.remove());
+ items.forEach(([page,icon,label])=>{
+  let button=nav.querySelector(`button[data-page="${page}"]`);
+  if(!button){
+   button=document.createElement("button");
+   button.type="button";
+   button.dataset.page=page;
+   nav.appendChild(button)
+  }
+  button.innerHTML=`<span class="mobile-nav-icon">${icon}</span><small>${label}</small>`;
+  button.hidden=!enterpriseCanOpen(page);
+  button.onclick=()=>showPage(page)
  });
- const morePage=$("#morePage");
- if(morePage){
-  let menu=$("#mobileRoleMenu");
-  if(!menu){menu=document.createElement("div");menu.id="mobileRoleMenu";menu.className="mobile-role-menu card";morePage.insertBefore(menu,morePage.children[1]||null)}
-  const extras=allowed.length>5?allowed.slice(4):[];
-  menu.hidden=!extras.length;
-  menu.innerHTML=extras.length?`<div class="mobile-role-menu-head"><span>Доступные разделы</span><strong>${ENTERPRISE_ROLE_LABELS[role]||"Пользователь"}</strong></div><div class="mobile-role-menu-grid">${extras.map(page=>{const item=labels[page]||["•",page];return `<button type="button" onclick="showPage('${page}')"><span>${item[0]}</span><b>${item[1]}</b></button>`}).join("")}</div>`:"";
- }
+ // Do not leave obsolete dynamically-created role navigation entries behind.
+ nav.querySelectorAll("button[data-page]").forEach(button=>{
+  if(!desired.has(button.dataset.page))button.hidden=true
+ });
+ const menu=$("#mobileRoleMenu");if(menu)menu.remove();
 }
-window.enterpriseCan=enterpriseCan;
-window.requireEnterprisePermission=requireEnterprisePermission;
-const fleetPilotPermissionObserver=new MutationObserver(()=>{
- if(fleetPilotEnterpriseAccessReady)applyActionPermissions()
-});
-window.addEventListener("DOMContentLoaded",()=>{
- const root=document.querySelector("main");
- if(root)fleetPilotPermissionObserver.observe(root,{childList:true,subtree:true})
-});
-
-
 function activateCompanyTab(tab){
  $$("[data-company-tab]").forEach(btn=>btn.classList.toggle("active",btn.dataset.companyTab===tab));
  $$("[data-company-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.companyPanel===tab));

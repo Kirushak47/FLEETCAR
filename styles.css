@@ -9260,3 +9260,242 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
  .document-register-row.document-register-clickable .document-register-cell>strong,.document-register-row.document-register-clickable .document-register-cell>.document-status-badge{margin:0!important;justify-self:start}
  .document-register-row.document-register-clickable .document-register-cell>small{grid-column:2;margin-top:1px!important}
 }
+
+/* FleetPilot V15.2 — unified responsive desktop system */
+:root{
+ --fp-page-gap:clamp(12px,1.15vw,22px);
+ --fp-card-gap:clamp(8px,.8vw,16px);
+ --fp-title-size:clamp(16px,1.15vw,21px);
+ --fp-kpi-size:clamp(15px,1.05vw,20px);
+}
+
+@media(min-width:1100px){
+ main{padding-left:clamp(16px,1.7vw,30px)!important;padding-right:clamp(16px,1.7vw,30px)!important}
+ #fleetPage{width:100%;max-width:none!important;min-width:0}
+ .fleet-grid{min-width:0!important}
+ .desktop-fleet-row{
+  width:100%;min-width:0!important;box-sizing:border-box;
+  gap:var(--fp-card-gap)!important;
+ }
+ .desktop-car-photo-wrap,.desktop-car-identity,.desktop-car-kpis,.desktop-today-card,.desktop-row-actions,.desktop-car-reminders{min-width:0!important}
+ .desktop-car-title-line{min-width:0;align-items:flex-start}
+ .desktop-car-title-line>div{min-width:0}
+ .desktop-car-title-line h3{font-size:var(--fp-title-size)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .desktop-car-title-line p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .desktop-kpi strong{font-size:var(--fp-kpi-size)!important;white-space:nowrap}
+ .desktop-kpi small{line-height:1.2}
+ .desktop-service-copy strong,.desktop-service-copy em{max-width:100%}
+ .desktop-today-card strong{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+ .desktop-open-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* Wide desktop: preserve the rich single-row layout but make every column fluid. */
+@media(min-width:1660px){
+ .desktop-fleet-row{
+  grid-template-columns:clamp(220px,13vw,260px) minmax(330px,1.35fr) minmax(250px,.82fr) minmax(230px,.85fr) minmax(205px,.72fr)!important;
+ }
+ .desktop-row-actions{grid-template-columns:64px minmax(132px,1fr) 42px!important;min-width:0!important}
+ .desktop-secondary-action{width:64px!important}
+}
+
+/* Normal desktop / smaller monitor: restructure instead of squeezing content. */
+@media(min-width:1100px) and (max-width:1659px){
+ .desktop-fleet-row{
+  grid-template-columns:clamp(176px,17vw,218px) minmax(310px,1fr) minmax(205px,.62fr) minmax(142px,.42fr)!important;
+  grid-template-rows:auto auto auto!important;
+  gap:10px 12px!important;
+  min-height:0!important;
+  padding:10px 12px 10px 10px!important;
+ }
+ .desktop-car-photo-wrap{grid-column:1;grid-row:1/4!important;min-height:190px}
+ .desktop-car-photo,.desktop-car-photo-placeholder{min-height:190px!important;height:100%!important}
+ .desktop-car-identity{grid-column:2;grid-row:1!important;padding:4px 0!important}
+ .desktop-car-kpis{grid-column:3;grid-row:1!important;justify-content:flex-start!important;gap:10px!important;padding:0!important}
+ .desktop-row-actions{grid-column:4;grid-row:1!important;display:grid!important;grid-template-columns:42px minmax(92px,1fr) 40px!important;gap:6px!important;min-width:0!important;align-self:center}
+ .desktop-secondary-action{width:42px!important;height:42px!important;border-radius:12px!important}
+ .desktop-secondary-action small{display:none!important}
+ .desktop-open-btn{min-height:42px!important;padding:0 10px!important;border-radius:12px!important;font-size:8.5px!important}
+ .desktop-open-btn b{display:none!important}
+ .desktop-more-btn{width:40px!important;height:42px!important;border-radius:12px!important}
+ .desktop-today-card{grid-column:2/4;grid-row:2!important;min-height:64px!important;padding:10px 12px!important;align-self:stretch!important;display:grid;align-content:center}
+ .desktop-today-card small{font-size:8px!important}.desktop-today-card strong{margin-top:4px!important;font-size:11px!important}.desktop-today-card span{margin-top:3px!important;font-size:8.5px!important}
+ .desktop-car-reminders{grid-column:2/5!important;grid-row:3!important;padding-top:7px!important;gap:6px!important}
+ .desktop-car-reminder{min-width:0!important;max-width:none!important;flex:1 1 175px;min-height:42px!important;padding:6px 8px!important}
+ .desktop-reminder-copy strong{font-size:8.5px!important}.desktop-reminder-copy small{font-size:7px!important}
+ .desktop-service-mini-grid{margin-top:9px!important;gap:5px!important}
+ .desktop-service-mini{grid-template-columns:30px minmax(0,1fr)!important;gap:6px!important;min-height:54px!important;padding:7px!important}
+ .desktop-service-symbol{width:30px!important;height:30px!important}.desktop-service-symbol svg{width:17px!important;height:17px!important}
+ .desktop-service-copy small{font-size:6.8px!important;margin-bottom:3px!important}.desktop-service-copy strong{font-size:12.5px!important}.desktop-service-copy em{font-size:6.7px!important}
+ .desktop-car-kpis .desktop-kpi-divider{height:38px!important}
+ .desktop-kpi strong{font-size:clamp(14px,1.05vw,17px)!important}.desktop-kpi small{font-size:8px!important;margin-top:5px!important}
+ .desktop-status{padding:6px 8px!important;font-size:8.5px!important}
+}
+
+/* Compact desktop (typical 1280/1366px displays with the sidebar visible). */
+@media(min-width:1100px) and (max-width:1399px){
+ .app{padding-left:clamp(198px,16.8vw,228px)!important}
+ .desktop-sidebar{width:clamp(198px,16.8vw,228px)!important;padding-left:12px!important;padding-right:12px!important}
+ .topbar{padding-left:18px!important;padding-right:18px!important}
+ main{padding:16px 16px 50px!important}
+ .desktop-fleet-page-head{margin-bottom:12px!important}.desktop-fleet-page-head h2{font-size:23px!important}
+ .desktop-fleet-row{
+  grid-template-columns:clamp(156px,16vw,190px) minmax(285px,1fr) minmax(178px,.56fr) minmax(116px,.36fr)!important;
+  gap:8px 10px!important;
+  border-radius:17px!important;
+ }
+ .desktop-car-photo-wrap{min-height:172px!important;border-radius:13px!important}.desktop-car-photo,.desktop-car-photo-placeholder{min-height:172px!important}
+ .desktop-car-title-line h3{font-size:17px!important}.desktop-car-title-line p{font-size:8.5px!important}
+ .desktop-service-mini-grid{border-radius:12px!important}
+ .desktop-car-kpis{gap:7px!important}
+ .desktop-kpi-divider{display:none!important}
+ .desktop-car-kpis{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center!important}
+ .desktop-kpi{min-width:0!important;text-align:left!important}
+ .desktop-kpi strong{font-size:13px!important;overflow:hidden;text-overflow:ellipsis}.desktop-kpi small{font-size:7px!important}
+ .desktop-today-card{grid-column:2/4!important}
+ .desktop-row-actions{grid-template-columns:38px minmax(68px,1fr) 36px!important}
+ .desktop-secondary-action{width:38px!important;height:38px!important}.desktop-secondary-action span{font-size:7.5px!important}
+ .desktop-open-btn{min-height:38px!important;padding:0 8px!important;font-size:0!important}
+ .desktop-open-btn span::after{content:"Открыть";font-size:8px!important}
+ .desktop-more-btn{width:36px!important;height:38px!important;font-size:18px!important}
+ .desktop-car-reminder{flex-basis:150px!important}
+ .desktop-gps-line{margin-top:4px!important}
+ .desktop-gps-status-card{min-height:34px!important;padding:5px 6px!important;border-radius:10px!important}
+ .desktop-gps-status-icon{width:25px!important;height:25px!important}.desktop-gps-status-copy small{font-size:6px!important}.desktop-gps-status-copy strong{font-size:7.5px!important}.desktop-gps-locate{min-height:24px!important;padding:0 7px!important;font-size:6.5px!important}
+}
+
+/* Very narrow desktop: keep the desktop shell but stack the vehicle content safely. */
+@media(min-width:1100px) and (max-width:1219px){
+ .app{padding-left:190px!important}.desktop-sidebar{width:190px!important}
+ .desktop-fleet-row{
+  grid-template-columns:150px minmax(0,1fr) 104px!important;
+  grid-template-rows:auto auto auto auto!important;
+ }
+ .desktop-car-photo-wrap{grid-column:1;grid-row:1/5!important}
+ .desktop-car-identity{grid-column:2;grid-row:1!important}
+ .desktop-car-kpis{grid-column:2;grid-row:2!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));padding:7px 0!important;border-top:1px solid var(--line)}
+ .desktop-today-card{grid-column:2;grid-row:3!important;min-height:56px!important}
+ .desktop-row-actions{grid-column:3;grid-row:1/4!important;align-self:start!important;grid-template-columns:1fr!important}
+ .desktop-secondary-action,.desktop-more-btn,.desktop-open-btn{width:100%!important;min-width:0!important}
+ .desktop-car-reminders{grid-column:2/4!important;grid-row:4!important}
+ .desktop-service-mini-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .desktop-service-mini{grid-template-columns:1fr!important;text-align:center!important}.desktop-service-symbol{margin:auto}.desktop-service-copy small,.desktop-service-copy em{display:none!important}
+}
+
+/* Shared responsive guards for the rest of the application. */
+@media(min-width:1100px) and (max-width:1500px){
+ .documents-toolbar,.toolbar{min-width:0!important}
+ .professional-kpi-grid,.summary-grid,.analytics-kpis,.car-finance-kpis{min-width:0!important}
+ .professional-panel,.card,.documents-register-panel{min-width:0!important}
+ .document-register-row{min-width:0!important}
+ .document-register-main strong,.document-register-cell strong{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+
+
+/* FleetPilot V15.3 — mobile role parity + Vehicle Core mobile cards */
+@media(max-width:1099px){
+  #carPage .vehicle-core-overview{
+    display:grid!important;
+    gap:10px!important;
+    margin:0 0 10px!important;
+    padding:12px!important;
+    border:1px solid rgba(148,163,184,.18)!important;
+    border-radius:16px!important;
+    background:var(--surface-main)!important;
+    box-shadow:0 4px 14px rgba(15,23,42,.035)!important;
+  }
+  #carPage .vehicle-core-main{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:start!important;
+    gap:10px!important;
+  }
+  #carPage .vehicle-core-main h3{margin:2px 0 4px!important;font-size:17px!important;line-height:1.15!important}
+  #carPage .vehicle-core-main p{margin:0!important;font-size:10px!important;line-height:1.35!important;color:var(--muted)!important}
+  #carPage .vehicle-health-score{
+    min-width:72px!important;
+    padding:8px 9px!important;
+    border:1px solid var(--line)!important;
+    border-radius:12px!important;
+    background:var(--surface-soft)!important;
+  }
+  #carPage .vehicle-health-score small{font-size:7px!important}
+  #carPage .vehicle-health-score strong{font-size:20px!important}
+  #carPage .vehicle-health-score span{font-size:9px!important}
+  #carPage .vehicle-core-kpis{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+    margin:0!important;
+  }
+  #carPage .vehicle-core-kpis>.vehicle-core-kpi{
+    display:block!important;
+    min-width:0!important;
+    min-height:64px!important;
+    padding:9px 10px!important;
+    border:1px solid var(--line)!important;
+    border-radius:13px!important;
+    background:var(--surface-soft)!important;
+  }
+  #carPage .vehicle-core-kpis>.vehicle-core-kpi.warning{border-color:rgba(245,158,11,.42)!important;background:rgba(245,158,11,.065)!important}
+  #carPage .vehicle-core-kpis>.vehicle-core-kpi.danger{border-color:rgba(239,68,68,.46)!important;background:rgba(239,68,68,.07)!important}
+  #carPage .vehicle-core-kpis small{display:block!important;font-size:8px!important;line-height:1.15!important;color:var(--muted)!important;white-space:normal!important}
+  #carPage .vehicle-core-kpis strong{display:block!important;margin-top:5px!important;font-size:14px!important;line-height:1.1!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}
+  #carPage .vehicle-core-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;padding-top:0!important}
+  #carPage .vehicle-core-actions .btn{width:100%!important;min-width:0!important;min-height:38px!important;padding:0 8px!important;font-size:10px!important;white-space:normal!important;line-height:1.15!important}
+  .bottom-nav{grid-template-columns:none!important}
+}
+@media(max-width:430px){
+  #carPage .vehicle-core-overview{padding:10px!important}
+  #carPage .vehicle-core-main{grid-template-columns:1fr auto!important}
+  #carPage .vehicle-core-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #carPage .vehicle-core-kpis>.vehicle-core-kpi{min-height:60px!important;padding:8px 9px!important}
+  #carPage .vehicle-core-kpis strong{font-size:13px!important}
+  #carPage .vehicle-core-actions{grid-template-columns:1fr 1fr!important}
+}
+
+
+/* FleetPilot V15.4 — restored mobile bottom navigation + auth visibility guard */
+body[hidden]{display:none}
+.auth-gate:not([hidden]){display:grid!important}
+@media(max-width:1099px){
+  .bottom-nav{
+    display:flex!important;
+    grid-template-columns:none!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    gap:3px!important;
+    left:8px!important;
+    right:8px!important;
+    width:auto!important;
+    max-width:none!important;
+    bottom:calc(7px + env(safe-area-inset-bottom))!important;
+    padding:6px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    overscroll-behavior-x:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  .bottom-nav::-webkit-scrollbar{display:none!important}
+  .bottom-nav button{
+    display:flex!important;
+    flex:0 0 68px!important;
+    width:68px!important;
+    min-width:68px!important;
+    min-height:48px!important;
+    padding:6px 3px!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:2px!important;
+    border-radius:14px!important;
+  }
+  .bottom-nav button[hidden]{display:none!important}
+  .bottom-nav .mobile-nav-icon{display:block!important;font-size:16px!important;line-height:1!important;margin:0!important}
+  .bottom-nav button small{display:block!important;max-width:62px!important;font-size:8px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  main{padding-bottom:88px!important}
+}
+@media(max-width:430px){
+  .bottom-nav button{flex-basis:64px!important;width:64px!important;min-width:64px!important}
+  .bottom-nav button small{max-width:58px!important;font-size:7.5px!important}
+}

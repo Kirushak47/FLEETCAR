@@ -727,12 +727,37 @@ async function signOut(){
  clearTimeout(pushTimer);
  pushTimer=null;
  stopRealtimeSync();
- if(client)await client.auth.signOut();
- session=null;profile=null;
+ try{if(client)await client.auth.signOut()}catch(error){console.warn("FleetPilot sign out",error)}
+ session=null;
+ profile=null;
+ workspace=null;
+ membership=null;
+ platformAdmin=false;
+ authResolved=true;
+ workspaceResolved=true;
  localStorage.removeItem(DEMO_KEY);
  localStorage.removeItem(STATUS_KEY);
  window.clearFleetPilotLocalDatabase?.();
- location.reload()
+
+ // Never let role UI rules hide the authentication screen.
+ if(document.body){
+  document.body.hidden=false;
+  document.body.removeAttribute("aria-hidden");
+  document.body.removeAttribute("data-enterprise-role");
+  document.body.classList.remove("driver-only-ui","workspace-owner","platform-admin")
+ }
+ const workspaceGate=$("#workspaceGate");if(workspaceGate)workspaceGate.hidden=true;
+ showAuth("login");
+ setGate();
+ render();
+
+ // Remove an authenticated deep-link without reloading into the protected shell.
+ try{
+  const clean=`${location.pathname}${location.search}`;
+  history.replaceState({},document.title,clean)
+ }catch{}
+ if($("#cloudPassword"))$("#cloudPassword").value="";
+ setTimeout(()=>$("#cloudEmail")?.focus(),50)
 }
 function startDemo(reset=false){
  localStorage.setItem(DEMO_KEY,"1");
