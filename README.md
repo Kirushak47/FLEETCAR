@@ -1,30 +1,11 @@
-# FleetPilot V11.3.5 — Deep Links
+# FleetPilot V11.3.5.1 — Service Save Fix
 
-Built on V11.3.4 Service Workflow.
-
-Deep links:
-- `#/dashboard`
-- `#/fleet`
-- `#/service`
-- `#/rent`
-- `#/expenses`
-- `#/calendar`
-- `#/documents`
-- `#/analytics`
-- `#/company`
-- `#/data`
-- `#/car/<car-id>`
-- `#/car/<car-id>/finance`
-- `#/car/<car-id>/history`
-- `#/car/<car-id>/documents`
-- `#/car/<car-id>/damages`
-
-Behavior:
-- Desktop URL changes as the user navigates.
-- Browser Back/Forward reopens the matching FleetPilot screen.
-- Refresh keeps the current deep-linked page/car.
-- Mobile UI remains unchanged, but an SMS deep link opens the requested page/car.
-- Car routes also accept an exact registration plate in place of the internal car id.
-- Car profile has a "Скопировать ссылку" button.
-- Hash routing requires no Cloudflare `_redirects` and does not change Supabase.
-- No SQL required.
+Fixes:
+- explicit repair submit button;
+- visible "Сохраняю…" state;
+- validation errors are shown instead of silent failure;
+- cloud mileage update has a timeout and no longer blocks local repair save;
+- linked driver request disappears from Service inbox immediately after local save;
+- cloud linking/notifications continue in the background;
+- deep links and Fleet rendering remain unchanged;
+- no SQL required.
