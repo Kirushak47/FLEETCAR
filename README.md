@@ -1,4 +1,4 @@
-# FleetPilot V15.2 — Responsive UI System
+# FleetPilot V15.3 — Responsive UI System
 
 ## Главное
 - Полный новый mobile-first слой интерфейса: компактная шапка, карточки, формы, модальные окна и нижняя навигация.
@@ -10,7 +10,7 @@
 - Владелец workspace сохраняет полный доступ.
 - Если матрица прав ещё не настроена, используется прежняя безопасная логика ролей.
 - Существующая бизнес-логика сервиса, документов, финансов и Vehicle Core сохранена.
-- Cache busting: 152000.
+- Cache busting: 153000.
 - Responsive fleet cards for wide, normal and compact desktop displays.
 - Fluid typography, KPI sizing and action controls.
 - Two/three-row fleet layout on smaller desktop monitors to prevent clipping and horizontal overflow.
