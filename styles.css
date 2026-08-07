@@ -8965,3 +8965,11 @@ html[data-theme="dark"] .car-finance-kpis article.expense strong,html[data-theme
 html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
 @media(max-width:980px){.car-finance-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.car-finance-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.car-finance-toolbar{align-items:stretch;flex-direction:column}.car-finance-periods{width:100%}.car-finance-periods button{flex:1}.car-finance-kpis{grid-template-columns:1fr 1fr}.car-finance-kpis strong{font-size:18px}}
+
+/* FleetPilot V14.1.2 — compact vehicle finance layout */
+#carPage .car-finance-masonry{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+#carPage .car-finance-column{display:flex;flex-direction:column;gap:12px;min-width:0}
+#carPage .car-finance-column>.card{margin:0;min-width:0}
+#carPage .car-finance-column .detail-stat-grid{margin-top:10px}
+#carPage .car-finance-column .professional-empty{min-height:84px;display:grid;place-items:center;padding:18px}
+@media(max-width:980px){#carPage .car-finance-masonry{grid-template-columns:1fr}#carPage .car-finance-column{gap:10px}}

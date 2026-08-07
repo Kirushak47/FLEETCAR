@@ -1,7 +1,7 @@
 {
   "name": "FleetPilot V14.1.0 Vehicle Core Alerts Cleanup",
   "short_name": "FleetPilot",
-  "start_url": "./?v=141000",
+  "start_url": "./?v=141200",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

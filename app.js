@@ -2133,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"14.1.1",
+  appVersion:"14.1.2",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -6125,7 +6125,8 @@ function renderCarProfile(id,activeTab="info"){
    <article class="planned"><small>План расходов</small><strong>${money(financePlan.total)}</strong><span>${financePlan.rows.length} будущих записей</span></article>
    <article class="result ${financeData.finalProfit<0?"negative":"positive"}"><small>Чистый результат</small><strong>${money(financeData.finalProfit)}</strong><span>операционно ${money(operatingResult)}</span></article>
   </div>
-  <div class="car-finance-grid">
+  <div class="car-finance-grid car-finance-masonry">
+   <div class="car-finance-column">
    <section class="card car-finance-breakdown">
     <div class="section-head"><div><span class="eyebrow">Факт</span><h3>Структура результата</h3></div><button class="btn primary" onclick="openPaymentDialog('${c.id}')">+ Оплата</button></div>
     <div class="car-finance-lines">
@@ -6138,15 +6139,18 @@ function renderCarProfile(id,activeTab="info"){
      <div class="total"><span>Чистый результат</span><strong>${money(financeData.finalProfit)}</strong></div>
     </div>
    </section>
+   <section class="card"><h3>Аренда</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div></div></section>
+   <section class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></section>
+   </div>
+   <div class="car-finance-column">
    <section class="card car-finance-plan">
     <div class="section-head"><div><span class="eyebrow">План</span><h3>Будущие расходы</h3></div><button class="btn" onclick="openExpenseDialog('${c.id}')">+ Запланировать</button></div>
     <div class="car-finance-plan-summary"><span>После текущего плана</span><strong class="${forecastAfterPlan<0?"negative":"positive"}">${money(forecastAfterPlan)}</strong></div>
     <div class="car-finance-plan-list">${financePlan.rows.slice(0,8).map(x=>`<button type="button" onclick="openSmartEntity('${x.kind}','${x.id}','${c.id}')"><span><strong>${x.title}</strong><small>${date(x.date)} · ${x.category}</small></span><b>${money(x.amount)}</b>${fpUiIcon("arrow")}</button>`).join("")||`<div class="professional-empty">На выбранный период плановых расходов нет.</div>`}</div>
    </section>
-   <section class="card"><h3>Аренда</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div></div></section>
    <section class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</section>
-   <section class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></section>
    <section class="card car-expense-preview"><div class="section-head"><h3>Фактические расходы периода</h3><button class="btn" onclick="showPage('expensesPage')">Все расходы</button></div>${paidRows.slice(0,8).map(x=>`<button type="button" class="car-expense-preview-row" onclick="openSmartEntity('expense','${x.id}','${c.id}')"><span class="fp-standard-icon">${fpUiIcon(x.category==="repair"?"repair":x.category==="insurance"?"insurance":x.category==="inspection"?"inspection":x.category==="tires"?"tires":"expense")}</span><span><strong>${x.title}</strong><small>${date(x.date)} · ${expenseCategoryText(x.category)}</small></span><b>${money(x.amount)}</b><i>${fpUiIcon("arrow")}</i></button>`).join("")||`<div class="professional-empty">Фактических расходов за период нет.</div>`}</section>
+   </div>
   </div>
  </div>`;
  const history=`<div class="detail-tab-grid">

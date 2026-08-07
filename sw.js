@@ -1,5 +1,5 @@
 const CACHE="fleetpilot-v14-1-1-vehicle-finance";
-const ASSETS=["./","./index.html","./styles.css?v=141000","./app.js?v=141000","./cloud-config.js?v=141000","./cloud.js?v=141000","./manifest.webmanifest?v=141000"];
+const ASSETS=["./","./index.html","./styles.css?v=141200","./app.js?v=141200","./cloud-config.js?v=141200","./cloud.js?v=141200","./manifest.webmanifest?v=141200"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",event=>{if(event.request.method!=="GET")return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request)))});
