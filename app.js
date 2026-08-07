@@ -1758,7 +1758,22 @@ if(refreshDriverRepairRequests)refreshDriverRepairRequests.onclick=renderDriverR
 
 
 const serviceSearch=$("#serviceSearch");
-if(serviceSearch)serviceSearch.oninput=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
+const serviceFind=$("#serviceFind");
+const serviceSearchReset=$("#serviceSearchReset");
+function applyGlobalServiceSearch(){
+ selectedWorkspaceRepairCarId=null;
+ renderRepairs();
+ renderWorkspaceRepairRequests();
+}
+function resetGlobalServiceSearch(){
+ if(serviceSearch)serviceSearch.value="";
+ selectedWorkspaceRepairCarId=null;
+ renderRepairs();
+ renderWorkspaceRepairRequests();
+}
+if(serviceFind)serviceFind.onclick=applyGlobalServiceSearch;
+if(serviceSearchReset)serviceSearchReset.onclick=resetGlobalServiceSearch;
+if(serviceSearch)serviceSearch.onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();applyGlobalServiceSearch()}};
 const serviceStatusFilter=$("#serviceStatusFilter");
 if(serviceStatusFilter)serviceStatusFilter.onchange=()=>{selectedWorkspaceRepairCarId=null;renderRepairs()};
 const serviceCityFilter=$("#serviceCityFilter");
@@ -1778,7 +1793,8 @@ if(clearServiceFilters)clearServiceFilters.onclick=()=>{
  if(serviceMechanicFilter)serviceMechanicFilter.value="all";
  if(serviceSort)serviceSort.value="priority";
  selectedWorkspaceRepairCarId=null;
- renderRepairs()
+ renderRepairs();
+ renderWorkspaceRepairRequests()
 };
 
 const toggleServiceRequestArchive=$("#toggleServiceRequestArchive");
@@ -7268,9 +7284,9 @@ $("#serviceRequestTransferButton")?.addEventListener("click",()=>{if(serviceRequ
 $("#addRepair")?.addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();const first=fleetCars()[0];if(!first)return toast("Сначала добавьте автомобиль");createServiceTaskForCar(first.id)},true);
 
 
-// FleetPilot V13.1.2 — Incoming driver requests search + collapsible panel
+// FleetPilot V13.1.5 — global service search + collapsible panels
 const SERVICE_INCOMING_COLLAPSED_KEY="fleetpilot.service.incoming.collapsed.v1";
-let serviceIncomingSearchQuery="";
+const SERVICE_PLANNING_COLLAPSED_KEY="fleetpilot.service.planning.collapsed.v1";
 function serviceIncomingPanelCollapsed(){try{return localStorage.getItem(SERVICE_INCOMING_COLLAPSED_KEY)==="1"}catch{return false}}
 function setServiceIncomingCollapsed(collapsed){
  const body=$("#serviceIncomingBody"),button=$("#toggleServiceIncoming");
@@ -7292,17 +7308,6 @@ function incomingRequestMatches(row,query){
  ].map(v=>String(v||"")).join(" ").toLocaleLowerCase("ru-RU");
  return query.split(/\s+/).filter(Boolean).every(token=>haystack.includes(token));
 }
-function applyServiceIncomingSearch(){
- serviceIncomingSearchQuery=normalizedIncomingSearch($("#serviceIncomingSearch")?.value);
- renderWorkspaceRepairRequests();
-}
-function resetServiceIncomingSearch(){
- serviceIncomingSearchQuery="";
- const input=$("#serviceIncomingSearch");if(input)input.value="";
- renderWorkspaceRepairRequests();
-}
-window.applyServiceIncomingSearch=applyServiceIncomingSearch;
-window.resetServiceIncomingSearch=resetServiceIncomingSearch;
 
 async function renderWorkspaceRepairRequests(){
  const root=$("#workspaceRepairRequestsList");if(!root)return;
@@ -7315,10 +7320,8 @@ async function renderWorkspaceRepairRequests(){
   const activeCounter=$("#serviceActiveRequestCount");if(activeCounter)activeCounter.textContent=String(pending.length);
   renderServiceRequestArchive();
   let rows=selectedWorkspaceRepairCarId?pending.filter(row=>String(row.car_id)===String(selectedWorkspaceRepairCarId)):pending;
-  const query=serviceIncomingSearchQuery;
+  const query=normalizedIncomingSearch($("#serviceSearch")?.value);
   rows=rows.filter(row=>incomingRequestMatches(row,query));
-  const result=$("#serviceIncomingSearchResult");
-  if(result)result.textContent=query?`Найдено: ${rows.length} из ${pending.length}`:`Всего: ${pending.length}`;
   const filterBar=selectedWorkspaceRepairCarId?`<div class="workspace-request-filter"><span>Показаны обращения выбранного автомобиля</span><button type="button" class="btn" onclick="clearWorkspaceRepairCarFilter()">Показать все</button></div>`:"";
   root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
@@ -7330,15 +7333,23 @@ async function renderWorkspaceRepairRequests(){
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
 
-(function initIncomingRequestControls(){
+function servicePlanningPanelCollapsed(){try{return localStorage.getItem(SERVICE_PLANNING_COLLAPSED_KEY)==="1"}catch{return false}}
+function setServicePlanningCollapsed(collapsed){
+ const body=$("#servicePlanningBody"),button=$("#toggleServicePlanning");
+ if(body)body.hidden=!!collapsed;
+ if(button){button.setAttribute("aria-expanded",String(!collapsed));button.textContent=collapsed?"Показать планирование":"Скрыть планирование"}
+ try{localStorage.setItem(SERVICE_PLANNING_COLLAPSED_KEY,collapsed?"1":"0")}catch{}
+}
+window.toggleServicePlanning=()=>setServicePlanningCollapsed(!$("#servicePlanningBody")?.hidden);
+
+(function initServiceSectionControls(){
  const bind=()=>{
-  const toggle=$("#toggleServiceIncoming"),find=$("#serviceIncomingFind"),reset=$("#serviceIncomingReset"),input=$("#serviceIncomingSearch");
-  if(toggle&&!toggle.dataset.bound){toggle.dataset.bound="1";toggle.addEventListener("click",()=>setServiceIncomingCollapsed(!$("#serviceIncomingBody")?.hidden));}
-  if(find&&!find.dataset.bound){find.dataset.bound="1";find.addEventListener("click",applyServiceIncomingSearch);}
-  if(reset&&!reset.dataset.bound){reset.dataset.bound="1";reset.addEventListener("click",resetServiceIncomingSearch);}
-  if(input&&!input.dataset.bound){input.dataset.bound="1";input.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();applyServiceIncomingSearch()}});}
+  const incomingToggle=$("#toggleServiceIncoming");
+  const planningToggle=$("#toggleServicePlanning");
+  if(incomingToggle&&!incomingToggle.dataset.bound){incomingToggle.dataset.bound="1";incomingToggle.addEventListener("click",()=>setServiceIncomingCollapsed(!$("#serviceIncomingBody")?.hidden));}
+  if(planningToggle&&!planningToggle.dataset.bound){planningToggle.dataset.bound="1";planningToggle.addEventListener("click",()=>setServicePlanningCollapsed(!$("#servicePlanningBody")?.hidden));}
   setServiceIncomingCollapsed(serviceIncomingPanelCollapsed());
-  const result=$("#serviceIncomingSearchResult");if(result&&!result.textContent)result.textContent="Всего: 0";
+  setServicePlanningCollapsed(servicePlanningPanelCollapsed());
  };
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
 })();

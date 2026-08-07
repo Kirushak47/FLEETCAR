@@ -8829,3 +8829,29 @@ button,select,input,textarea{max-width:100%}
  #repairsPage .service-incoming-search-result{grid-column:1/-1!important}
  #repairsPage .service-request-head-actions{flex-wrap:wrap!important;justify-content:flex-end!important}
 }
+
+/* FleetPilot V13.1.5 — global service search + planning collapse */
+#repairsPage .service-global-search{
+  display:grid!important;
+  grid-template-columns:auto minmax(220px,1fr) auto auto!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+#repairsPage .service-global-search .btn{
+  height:36px!important;
+  min-height:36px!important;
+  padding:0 14px!important;
+  white-space:nowrap!important;
+}
+#repairsPage #servicePlanningBody[hidden],
+#repairsPage #serviceIncomingBody[hidden]{display:none!important}
+#repairsPage #toggleServicePlanning,
+#repairsPage #toggleServiceIncoming{white-space:nowrap!important}
+@media(max-width:900px){
+  #repairsPage .service-global-search{grid-template-columns:auto minmax(0,1fr) auto!important}
+  #repairsPage .service-global-search #serviceSearchReset{grid-column:2/-1!important;width:max-content!important;justify-self:end!important}
+}
+@media(max-width:640px){
+  #repairsPage .service-global-search{grid-template-columns:auto minmax(0,1fr)!important}
+  #repairsPage .service-global-search .btn{grid-column:2!important;width:100%!important}
+}

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V13.1.4 Incoming Controls Merge</title>
-  <link rel="manifest" href="manifest.webmanifest?v=131400">
-  <link rel="stylesheet" href="styles.css?v=131400">
+  <title>FleetPilot V13.1.5 Global Service Search</title>
+  <link rel="manifest" href="manifest.webmanifest?v=131500">
+  <link rel="stylesheet" href="styles.css?v=131500">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -467,9 +467,11 @@
       <div id="serviceCrmSummary" class="professional-kpi-grid service-crm-summary"></div>
 
       <section class="service-crm-toolbar">
-        <div class="service-crm-search">
+        <div class="service-crm-search service-global-search">
           <span>⌕</span>
-          <input id="serviceSearch" type="search" placeholder="Автомобиль, номер, водитель, работа или сервис">
+          <input id="serviceSearch" type="search" placeholder="Поиск по всему сервису: авто, номер, водитель, работа или заявка">
+          <button type="button" id="serviceFind" class="btn primary">Найти</button>
+          <button type="button" id="serviceSearchReset" class="btn">Сбросить</button>
         </div>
         <select id="serviceStatusFilter">
           <option value="all">Все</option>
@@ -512,15 +514,6 @@
           </div>
         </div>
         <div id="serviceIncomingBody" class="service-incoming-body">
-          <div class="service-incoming-searchbar">
-            <div class="service-incoming-searchfield">
-              <span aria-hidden="true">⌕</span>
-              <input id="serviceIncomingSearch" type="search" placeholder="Авто, номер, водитель, описание или категория">
-            </div>
-            <button type="button" id="serviceIncomingFind" class="btn primary">Найти</button>
-            <button type="button" id="serviceIncomingReset" class="btn">Сбросить</button>
-            <span id="serviceIncomingSearchResult" class="service-incoming-search-result" aria-live="polite"></span>
-          </div>
           <div id="workspaceRepairRequestsList" class="workspace-request-list"></div>
         </div>
       </section>
@@ -536,15 +529,20 @@
         <div id="serviceRequestArchiveList" class="workspace-request-list"></div>
       </section>
 
-      <section class="professional-panel planned-service-expenses-panel">
+      <section class="professional-panel planned-service-expenses-panel" id="servicePlanningPanel">
         <div class="professional-panel-head">
           <div>
             <span class="eyebrow">Планирование</span>
             <h3>Плановые сервисные расходы</h3>
           </div>
-          <span id="plannedServiceExpenseCount" class="professional-counter">0</span>
+          <div class="service-request-head-actions">
+            <span id="plannedServiceExpenseCount" class="professional-counter">0</span>
+            <button type="button" id="toggleServicePlanning" class="btn" aria-expanded="true">Скрыть планирование</button>
+          </div>
         </div>
-        <div id="plannedServiceExpenseList" class="planned-service-expense-list"></div>
+        <div id="servicePlanningBody">
+          <div id="plannedServiceExpenseList" class="planned-service-expense-list"></div>
+        </div>
       </section>
 
       <section class="professional-panel service-fleet-panel">
@@ -1772,7 +1770,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=131400"></script>
-<script src="cloud.js?v=131400"></script>
-<script src="app.js?v=131400"></script>
+<script src="cloud-config.js?v=131500"></script>
+<script src="cloud.js?v=131500"></script>
+<script src="app.js?v=131500"></script>
 </body></html>
