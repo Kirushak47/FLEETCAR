@@ -8536,3 +8536,133 @@ button,select,input,textarea{max-width:100%}
   .btn{min-height:34px!important;font-size:11px!important;padding:0 10px!important}
   .service-task-actions .btn{font-size:10px!important}
 }
+
+/* FleetPilot V13.0 — Service CRM desktop redesign + action containment */
+@media (min-width: 900px){
+  #repairsPage{max-width:none!important;padding-right:18px!important}
+  #repairsPage .professional-page-head{padding-bottom:14px!important}
+  #repairsPage .service-crm-toolbar{
+    display:grid!important;
+    grid-template-columns:minmax(280px,1.7fr) repeat(5,minmax(118px,.72fr)) auto!important;
+    gap:10px!important;
+    align-items:center!important;
+  }
+  #repairsPage .service-crm-search{min-width:0!important}
+  #repairsPage .service-crm-summary{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+
+  #repairsPage .workspace-request-list{display:grid!important;gap:8px!important}
+  #repairsPage .service-inbox-request{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(330px,auto)!important;
+    gap:16px!important;
+    align-items:center!important;
+    padding:12px 14px!important;
+    overflow:visible!important;
+  }
+  #repairsPage .service-inbox-request-main{min-width:0!important}
+  #repairsPage .service-inbox-request-main>span,
+  #repairsPage .service-inbox-request-main>small,
+  #repairsPage .service-inbox-request-heading strong{
+    display:block!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  #repairsPage .service-inbox-request-actions{
+    width:auto!important;
+    min-width:0!important;
+    display:grid!important;
+    grid-template-columns:132px 86px 142px!important;
+    gap:8px!important;
+    justify-content:end!important;
+    align-items:center!important;
+  }
+  #repairsPage .service-inbox-request-actions select,
+  #repairsPage .service-inbox-request-actions .btn{
+    width:100%!important;
+    max-width:none!important;
+    height:34px!important;
+    min-height:34px!important;
+    font-size:10px!important;
+    padding:0 10px!important;
+  }
+
+  #repairsPage .service-car-group{overflow:visible!important}
+  #repairsPage .service-car-group-head{
+    display:grid!important;
+    grid-template-columns:36px minmax(0,1fr) 64px auto!important;
+    gap:10px!important;
+    align-items:center!important;
+    padding:10px 12px!important;
+  }
+  #repairsPage .service-car-group-actions{
+    width:auto!important;
+    min-width:0!important;
+    justify-self:end!important;
+    display:grid!important;
+    grid-template-columns:32px 94px 88px!important;
+    gap:7px!important;
+  }
+  #repairsPage .service-car-group-actions .btn,
+  #repairsPage .service-car-collapse-button{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:32px!important;
+    min-height:32px!important;
+    font-size:10px!important;
+    padding:0 9px!important;
+  }
+
+  #repairsPage .service-task-row{
+    display:grid!important;
+    grid-template-columns:30px minmax(0,1fr) 160px 76px minmax(150px,auto)!important;
+    gap:9px!important;
+    align-items:center!important;
+    overflow:visible!important;
+    padding:9px 12px!important;
+  }
+  #repairsPage .service-task-inline-controls{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
+  #repairsPage .service-task-actions{
+    justify-self:end!important;
+    display:flex!important;
+    gap:6px!important;
+    flex-wrap:nowrap!important;
+    min-width:0!important;
+  }
+  #repairsPage .service-task-actions .btn{
+    min-width:68px!important;
+    max-width:104px!important;
+    height:30px!important;
+    min-height:30px!important;
+    padding:0 9px!important;
+    font-size:9px!important;
+  }
+  #repairsPage .service-order-button{width:30px!important;height:30px!important;min-width:30px!important}
+  #repairsPage .service-drop-zones{display:none!important}
+}
+
+@media (max-width: 1280px) and (min-width: 900px){
+  #repairsPage .service-crm-toolbar{grid-template-columns:minmax(240px,1fr) repeat(3,minmax(112px,.7fr))!important}
+  #repairsPage #serviceMechanicFilter,#repairsPage #serviceSort,#repairsPage #clearServiceFilters{grid-row:2}
+  #repairsPage .service-inbox-request{grid-template-columns:minmax(0,1fr)!important}
+  #repairsPage .service-inbox-request-actions{justify-content:start!important}
+  #repairsPage .service-task-row{grid-template-columns:30px minmax(0,1fr) 145px!important}
+  #repairsPage .service-task-status,#repairsPage .service-task-actions{grid-column:2/-1!important;justify-self:start!important}
+}
+
+/* Request details dialog */
+.service-request-dialog{border:0;padding:0;background:transparent;width:min(620px,calc(100vw - 28px));max-width:620px}
+.service-request-dialog::backdrop{background:rgba(15,23,42,.42);backdrop-filter:blur(3px)}
+.service-request-dialog-shell{background:var(--card,#fff);color:var(--fp-text-main);border:1px solid var(--line,#e5e7eb);border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.22);overflow:hidden}
+.service-request-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px 20px 14px;border-bottom:1px solid var(--line,#e5e7eb)}
+.service-request-dialog-head h2{margin:3px 0 4px!important}
+.service-request-dialog-head p{margin:0;color:var(--fp-text-muted);font-size:12px}
+.service-request-dialog-body{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px 20px}
+.service-request-dialog-field{border:1px solid var(--line,#e5e7eb);border-radius:12px;padding:11px 12px;min-width:0}
+.service-request-dialog-field.wide{grid-column:1/-1}
+.service-request-dialog-field small{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--fp-text-muted);margin-bottom:5px}
+.service-request-dialog-field strong,.service-request-dialog-field span{display:block;overflow-wrap:anywhere}
+.service-request-dialog-field strong{font-size:12px;font-weight:600}.service-request-dialog-field span{font-size:12px;line-height:1.45}
+.service-request-dialog-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px 18px;border-top:1px solid var(--line,#e5e7eb)}
+@media(max-width:640px){.service-request-dialog-body{grid-template-columns:1fr}.service-request-dialog-field.wide{grid-column:auto}.service-request-dialog-actions{flex-wrap:wrap}.service-request-dialog-actions .btn{flex:1}}

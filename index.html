@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V12.0 Professional Polish</title>
-  <link rel="manifest" href="manifest.webmanifest?v=120000">
-  <link rel="stylesheet" href="styles.css?v=120000">
+  <title>FleetPilot V13.0 Service CRM</title>
+  <link rel="manifest" href="manifest.webmanifest?v=130000">
+  <link rel="stylesheet" href="styles.css?v=130000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -1716,6 +1716,24 @@
   </div>
 </div>
 
+
+<dialog id="serviceRequestDialog" class="service-request-dialog">
+  <div class="service-request-dialog-shell">
+    <div class="service-request-dialog-head">
+      <div>
+        <span class="eyebrow">Заявка водителя</span>
+        <h2 id="serviceRequestDialogTitle">Заявка</h2>
+        <p id="serviceRequestDialogSubtitle">—</p>
+      </div>
+      <button type="button" id="closeServiceRequestDialog" class="dialog-close" aria-label="Закрыть">×</button>
+    </div>
+    <div id="serviceRequestDialogBody" class="service-request-dialog-body"></div>
+    <div class="service-request-dialog-actions">
+      <button type="button" id="serviceRequestAcceptButton" class="btn">Принять</button>
+      <button type="button" id="serviceRequestTransferButton" class="btn primary">Передать в сервис</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="gpsSetupDialog" class="gps-setup-dialog">
 <form method="dialog" id="gpsSetupForm" class="gps-setup-shell">
 <div class="gps-setup-head"><div><span class="eyebrow">Подключение GPS</span><h2>Подключить GPS</h2><p>Введите данные системы, которой вы уже пользуетесь.</p></div><button type="button" id="closeGpsSetup" class="dialog-close">×</button></div>
@@ -1742,7 +1760,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=113940"></script>
-<script src="cloud.js?v=113940"></script>
-<script src="app.js?v=120000"></script>
+<script src="cloud-config.js?v=130000"></script>
+<script src="cloud.js?v=130000"></script>
+<script src="app.js?v=130000"></script>
 </body></html>

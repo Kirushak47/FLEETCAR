@@ -1,12 +1,13 @@
-FleetPilot V12.0 — Professional Polish
+FleetPilot V13.0 — Service CRM
 
-UI polish release based on V11.9.
-
-Changes:
-- calmer typography hierarchy (400/500/600 instead of widespread 800/900+)
-- softer text contrast in light and dark themes
-- unified control heights, icon/button spacing and card overflow protection
-- reduced glow, heavy shadows and excessive emphasis
-- normalized Service workspace text/button sizing
-- consistent calendar, vehicle profile and expenses typography
-- updated cache/version identifiers to 12.0
+Изменения:
+- Исправлены кнопки «Открыть», «Передать в сервис» и «+ Задача».
+- «Открыть» теперь открывает отдельную карточку заявки водителя.
+- «Передать в сервис» надёжно открывает создание сервисной задачи с данными заявки.
+- «+ Задача» открывает новую сервисную задачу для автомобиля.
+- Перестроена desktop-сетка сервиса: действия больше не выходят за правый край.
+- Компактнее входящие заявки и рабочая очередь.
+- Сохранены перенос задач вверх/вниз и выбор конкретной задачи.
+- Убраны старые зоны План/Запчасти/Запись/В ремонте/Готово.
+- Сохранена спокойная типографика V12.0.
+- Обновлён cache/version до V13.0.

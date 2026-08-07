@@ -7090,3 +7090,141 @@ async function renderWorkspaceRepairRequests(){
   requestAnimationFrame(renderFleetServiceAlertIndicators)
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
+
+
+/* =========================================================
+   FleetPilot V13.0 — Service CRM action fixes
+   ========================================================= */
+let serviceRequestDialogId="";
+function fpFindServiceRequest(requestId){
+ const id=String(requestId||"");
+ return (workspaceRepairAlerts||[]).find(row=>String(row.id)===id)
+  || (db.serviceRequests||[]).find(row=>String(row.id)===id)
+  || null;
+}
+function fpServiceRequestCarLabel(request){
+ const c=request?car(request.car_id):null;
+ return c?`${model(c).brand} ${model(c).model} · ${c.plate||"Без номера"}`:"Автомобиль";
+}
+function openServiceRequestDetails(requestId){
+ const request=fpFindServiceRequest(requestId);
+ if(!request)return toast("Заявка не найдена");
+ serviceRequestDialogId=String(request.id);
+ selectedServiceRequestId=serviceRequestDialogId;
+ const dialog=$("#serviceRequestDialog");
+ const category=DRIVER_REPAIR_CATEGORY_LABELS[request.category]||request.category||"Неисправность";
+ const status=String(request.status||"new");
+ const created=request.created_at?new Date(request.created_at).toLocaleString("ru-RU"):"—";
+ $("#serviceRequestDialogTitle").textContent=category;
+ $("#serviceRequestDialogSubtitle").textContent=`${fpServiceRequestCarLabel(request)} · ${status==="accepted"?"Принято":"Новая"}`;
+ $("#serviceRequestDialogBody").innerHTML=`
+   <div class="service-request-dialog-field wide"><small>Описание</small><span>${repairSafe(request.description||"Без описания")}</span></div>
+   <div class="service-request-dialog-field"><small>Автомобиль</small><strong>${repairSafe(fpServiceRequestCarLabel(request))}</strong></div>
+   <div class="service-request-dialog-field"><small>Пробег</small><strong>${km(request.mileage||0)}</strong></div>
+   <div class="service-request-dialog-field"><small>Водитель</small><span>${repairSafe(request.driver_email||"—")}</span></div>
+   <div class="service-request-dialog-field"><small>Создано</small><span>${repairSafe(created)}</span></div>`;
+ const accept=$("#serviceRequestAcceptButton");
+ if(accept){accept.hidden=status==="accepted";accept.disabled=false}
+ const transfer=$("#serviceRequestTransferButton");if(transfer)transfer.disabled=false;
+ dialog?.showModal();
+ renderRepairs();
+}
+window.openServiceRequestDetails=openServiceRequestDetails;
+
+async function acceptServiceRequest(requestId){
+ const request=fpFindServiceRequest(requestId);if(!request)return toast("Заявка не найдена");
+ try{
+  await window.FleetPilotCloud.updateDriverRepairRequest(request.id,"accepted","");
+  request.status="accepted";
+  const local=(db.serviceRequests||[]).find(x=>String(x.id)===String(request.id));if(local)local.status="accepted";
+  save();
+  toast("Заявка принята");
+  await renderWorkspaceRepairRequests();renderRepairs();
+  const accept=$("#serviceRequestAcceptButton");if(accept)accept.hidden=true;
+ }catch(error){toast(error.message||"Не удалось принять заявку")}
+}
+window.acceptServiceRequest=acceptServiceRequest;
+
+function transferServiceRequest(requestId){
+ const request=fpFindServiceRequest(requestId);
+ if(!request)return toast("Заявка не найдена");
+ const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
+ serviceRequestDialogId=String(request.id);
+ try{$("#serviceRequestDialog")?.close()}catch{}
+ openRepairFromDriverRequest(request);
+ requestAnimationFrame(()=>{
+  const dialog=$("#repairDialog");
+  if(dialog&&!dialog.open)dialog.showModal();
+  $("#repairTitle")?.focus();
+ });
+}
+window.transferServiceRequest=transferServiceRequest;
+
+function createServiceTaskForCar(carId){
+ const c=car(carId);if(!c)return toast("Автомобиль не найден");
+ openRepairDialog(c.id);
+ requestAnimationFrame(()=>$("#repairTitle")?.focus());
+}
+window.createServiceTaskForCar=createServiceTaskForCar;
+
+// Keep the legacy public action working, but route it through the robust lookup.
+function openRepairFromFleetRequest(requestId){transferServiceRequest(requestId)}
+window.openRepairFromFleetRequest=openRepairFromFleetRequest;
+
+// Compact service rendering: actions always stay inside the card.
+function renderServiceCarTasks(row){
+ const {c,m,repairs,requests,plannedExpenses,visibleRepairs}=row;
+ const collapsed=serviceCollapsedCars.has(String(c.id));
+ const filter=$("#serviceStatusFilter")?.value||"all";
+ const showRepairs=!["newrequests","acceptedrequests","expenses"].includes(filter);
+ const repairsToShow=showRepairs?visibleRepairs:[];
+ const expenseTasks=filter==="expenses"?plannedExpenses:(filter==="all"?plannedExpenses:[]);
+ const total=repairsToShow.length+requests.length+expenseTasks.length;
+ return `<article class="service-car-group" data-service-car="${c.id}">
+  <header class="service-car-group-head">
+   <div class="service-car-avatar">${fpUiIcon("repair")||""}</div>
+   <div class="service-car-identity"><div><h4>${m.brand} ${m.model}</h4></div><p>${c.plate||"Без номера"} · ${c.city||"Город не указан"} · ${c.tenant||"Без водителя"}</p></div>
+   <div class="service-car-group-meta"><strong>${total}</strong><small>${total===1?"задача":"задач"}</small></div>
+   <div class="service-car-group-actions">
+    <button type="button" class="service-car-collapse-button ${collapsed?"collapsed":""}" onclick="toggleServiceCarTasks('${c.id}')" title="${collapsed?"Показать задачи":"Скрыть задачи"}" aria-expanded="${!collapsed}"><span class="service-collapse-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+    <button type="button" class="btn" onclick="openCar('${c.id}','service')">Авто</button>
+    <button type="button" class="btn primary" onclick="createServiceTaskForCar('${c.id}')">+ Задача</button>
+   </div>
+  </header>
+  <div class="service-car-task-list" ${collapsed?"hidden":""}>
+   ${requests.map(req=>`<div class="service-task-row request ${String(selectedServiceRequestId)===String(req.id)?"selected":""}" data-service-request-task="${req.id}"><span class="service-task-icon">${fpUiIcon("repair")||"!"}</span><div class="service-task-copy"><strong>${DRIVER_REPAIR_CATEGORY_LABELS[req.category]||req.category||"Заявка водителя"}</strong><span>${req.description||"Без описания"}</span><small>${req.driver_email||"Водитель"} · ${km(req.mileage)}</small></div><span></span><span class="service-task-status request">${req.status==="accepted"?"Принято":"Новая"}</span><div class="service-task-actions"><button type="button" class="btn" onclick="openServiceRequestDetails('${req.id}')">Открыть</button><button type="button" class="btn primary" onclick="transferServiceRequest('${req.id}')">Передать</button></div></div>`).join("")}
+   ${expenseTasks.map(x=>`<div class="service-task-row planned-expense"><span class="service-task-icon">${fpUiIcon("expense")||""}</span><div class="service-task-copy"><strong>${x.title}</strong><span>${expenseCategoryText(x.category)}${x.note?` · ${x.note}`:""}</span><small>${date(x.date)} · ${money(x.amount)}</small></div><span></span><span class="service-task-status planned">Расход</span><div class="service-task-actions"><button type="button" class="btn" onclick="editExpense('${x.id}')">Открыть</button></div></div>`).join("")}
+   ${repairsToShow.map(r=>{const linkedExpense=serviceLinkedExpense(r),priority=serviceRepairPriority(r),overdue=serviceRepairIsOverdue(r),[simpleLabel,simpleClass]=fpSimpleTaskStatus(r);return `<div class="service-task-row service-sortable-row priority-${priority} ${overdue?"overdue":""} ${String(selectedServiceTaskId)===String(r.id)?"selected":""}" data-repair-id="${r.id}" draggable="true" ondragstart="serviceDragStart(event,'${r.id}')" ondragover="serviceDragOver(event)" ondrop="serviceTaskDrop(event,'${r.id}')" onclick="selectServiceTask('${r.id}')"><span class="service-task-icon">${fpUiIcon("repair")||""}</span><div class="service-task-copy"><div class="service-task-titleline"><strong>${r.title}</strong><span class="service-priority-chip ${priority}">${servicePriorityText(priority)}</span>${overdue?`<span class="service-overdue-chip">Просрочено</span>`:""}</div><span>${r.service||"Сервис не указан"}${r.mechanic?` · ${r.mechanic}`:""}${r.problem?` · ${r.problem}`:r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}</small></div><div class="service-task-inline-controls"><select aria-label="Приоритет" onclick="event.stopPropagation()" onchange="updateServiceRepairField('${r.id}','priority',this.value)"><option value="planned" ${priority==="planned"?"selected":""}>Планово</option><option value="today" ${priority==="today"?"selected":""}>Сегодня</option><option value="critical" ${priority==="critical"?"selected":""}>Срочно</option></select></div><span class="service-task-status ${simpleClass}">${simpleLabel}</span><div class="service-task-actions"><button type="button" class="service-order-button" onclick="event.stopPropagation();moveServiceTask('${r.id}',-1)" title="Выше">↑</button><button type="button" class="service-order-button" onclick="event.stopPropagation();moveServiceTask('${r.id}',1)" title="Ниже">↓</button>${linkedExpense?`<button type="button" class="btn" onclick="event.stopPropagation();openSmartEntity('expense','${linkedExpense.id}','${c.id}')">Расход</button>`:""}<button type="button" class="btn primary" onclick="event.stopPropagation();editRepair('${r.id}')">Открыть</button></div></div>`}).join("")}
+  </div>
+ </article>`;
+}
+
+async function renderWorkspaceRepairRequests(){
+ const root=$("#workspaceRepairRequestsList");if(!root)return;
+ if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){root.innerHTML="";return}
+ root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
+ try{
+  workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  renderFleetDriverRequestsPanel();
+  const pending=activeDriverRepairRequests();
+  const activeCounter=$("#serviceActiveRequestCount");if(activeCounter)activeCounter.textContent=String(pending.length);
+  renderServiceRequestArchive();
+  const rows=selectedWorkspaceRepairCarId?pending.filter(row=>String(row.car_id)===String(selectedWorkspaceRepairCarId)):pending;
+  const filterBar=selectedWorkspaceRepairCarId?`<div class="workspace-request-filter"><span>Показаны обращения выбранного автомобиля</span><button type="button" class="btn" onclick="clearWorkspaceRepairCarFilter()">Показать все</button></div>`:"";
+  root.innerHTML=filterBar+(rows.map(row=>{
+   const localCar=car(row.car_id);const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
+   const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";const state=String(row.status||"new");
+   return `<article class="workspace-request-row service-inbox-request urgency-${row.urgency} ${String(selectedServiceRequestId)===String(row.id)?"selected":""}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}"><div class="service-inbox-request-main"><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong><span class="service-inbox-request-badge ${state}">${state==="accepted"?"Принято":"Новая"}</span></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small></div><div class="service-inbox-request-actions"><select data-request-status="${row.id}"><option value="new" ${state==="new"?"selected":""}>Новая</option><option value="accepted" ${state==="accepted"?"selected":""}>Принято</option><option value="rejected">Отклонена</option></select><button type="button" class="btn" onclick="openServiceRequestDetails('${row.id}')">Открыть</button><button type="button" class="btn primary" onclick="transferServiceRequest('${row.id}')">Передать в сервис</button></div></article>`;
+  }).join("")||'<div class="driver-empty-state service-inbox-empty">Новых заявок нет. Все обращения обработаны.</div>');
+  $$('[data-request-status]').forEach(select=>select.onchange=async()=>{const request=fpFindServiceRequest(select.dataset.requestStatus);const next=select.value;try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,next,"");if(request)request.status=next;const local=(db.serviceRequests||[]).find(x=>String(x.id)===String(select.dataset.requestStatus));if(local)local.status=next;save();toast(next==="accepted"?"Заявка принята":next==="rejected"?"Заявка отклонена":"Статус заявки обновлён");await renderWorkspaceRepairRequests();renderRepairs();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}});
+  requestAnimationFrame(renderFleetServiceAlertIndicators);
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
+
+// Dialog actions
+$("#closeServiceRequestDialog")?.addEventListener("click",()=>$("#serviceRequestDialog")?.close());
+$("#serviceRequestAcceptButton")?.addEventListener("click",()=>{if(serviceRequestDialogId)acceptServiceRequest(serviceRequestDialogId)});
+$("#serviceRequestTransferButton")?.addEventListener("click",()=>{if(serviceRequestDialogId)transferServiceRequest(serviceRequestDialogId)});
+
+// Override old +Task button with a guarded action.
+$("#addRepair")?.addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();const first=fleetCars()[0];if(!first)return toast("Сначала добавьте автомобиль");createServiceTaskForCar(first.id)},true);
