@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V11.3.9.1 Photo Task Badge Cloud Beta",
+  "name": "FleetPilot V11.3.9.2 Car Save Fix Cloud Beta",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113910",
+  "start_url": "./?v=113920",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

@@ -6018,7 +6018,122 @@ window.deleteRepair=id=>{
  toast(removeExpense?"Ремонт и расход удалены":"Техническая запись удалена")
 };window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){const old=db.expenses.find(x=>x.id===id);db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses();renderRepairs();if(old&&selectedCarId===old.carId&&$("#carPage")?.classList.contains("active"))openCar(old.carId,"service")}};window.deleteDocument=async id=>{if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
 $("#carModelKey").onchange=toggleCustomModelFields;
-$("#carForm").onsubmit=e=>{e.preventDefault();const id=$("#carId").value||uid(),old=id?car(id):null,obj={id,inFleet:true,favorite:old?.favorite||false,archived:old?.archived||false,modelKey:$("#carModelKey").value==="__custom__"?"__custom__":$("#carModelKey").value,customBrand:$("#carModelKey").value==="__custom__"?$("#carCustomBrand").value.trim():"",customModel:$("#carModelKey").value==="__custom__"?$("#carCustomModel").value.trim():"",year:Number($("#carYear").value),plate:$("#carPlate").value.trim(),vin:$("#carVin").value.trim(),tenant:$("#carTenant").value.trim(),status:$("#carStatus").value,mileage:Number($("#carMileage").value),oilInterval:Number($("#carOilInterval").value),lastOil:Number($("#carLastOil").value),city:normalizedCity($("#carCity").value),weeklyRent:Number($("#carWeeklyRent").value),paymentTiming:$("#carPaymentTiming").value,depositTarget:Number($("#carDepositTarget").value||0),purchasePrice:Number($("#carPurchasePrice").value||0),purchaseDate:$("#carPurchaseDate").value,insurance:$("#carInsurance").value,inspection:$("#carInspection").value,customPhoto:pendingCarPhoto,history:old?.history||[{date:today(),value:Number($("#carMileage").value)}]};old?Object.assign(old,obj):db.cars.push(obj);save();$("#carDialog").close();renderFleet();toast("Автомобиль сохранён")};
+$("#carForm").onsubmit=e=>{
+ e.preventDefault();
+
+ const submitButton=$("#carSubmitButton");
+ if(submitButton?.disabled)return;
+ const originalText=submitButton?.textContent||"Сохранить";
+
+ if(submitButton){
+  submitButton.disabled=true;
+  submitButton.textContent="Сохраняю…"
+ }
+
+ try{
+  const existingId=$("#carId").value;
+  const id=existingId||uid();
+  const old=existingId?car(existingId):null;
+  const modelValue=$("#carModelKey").value;
+  const isCustom=modelValue==="__custom__";
+
+  if(isCustom&&!$("#carCustomBrand").value.trim()){
+   toast("Укажите марку автомобиля");
+   $("#carCustomBrand")?.focus();
+   return
+  }
+  if(isCustom&&!$("#carCustomModel").value.trim()){
+   toast("Укажите модель автомобиля");
+   $("#carCustomModel")?.focus();
+   return
+  }
+  if(!$("#carPlate").value.trim()){
+   toast("Укажите госномер автомобиля");
+   $("#carPlate")?.focus();
+   return
+  }
+  if(!$("#carCity").value.trim()){
+   toast("Укажите город эксплуатации");
+   $("#carCity")?.focus();
+   return
+  }
+
+  const mileage=Number($("#carMileage").value||0);
+  const lastOil=Number($("#carLastOil").value||0);
+  const oilInterval=Number($("#carOilInterval").value||10000);
+
+  if(mileage<0||lastOil<0||oilInterval<=0){
+   toast("Проверьте пробег и интервал масла");
+   return
+  }
+
+  const previousMileage=Number(old?.mileage||0);
+
+  const obj={
+   id,
+   inFleet:true,
+   favorite:old?.favorite||false,
+   archived:old?.archived||false,
+   modelKey:isCustom?"__custom__":modelValue,
+   customBrand:isCustom?$("#carCustomBrand").value.trim():"",
+   customModel:isCustom?$("#carCustomModel").value.trim():"",
+   year:Number($("#carYear").value),
+   plate:$("#carPlate").value.trim(),
+   vin:$("#carVin").value.trim(),
+   tenant:$("#carTenant").value.trim(),
+   status:$("#carStatus").value,
+   mileage,
+   oilInterval,
+   lastOil,
+   city:normalizedCity($("#carCity").value),
+   weeklyRent:Number($("#carWeeklyRent").value||0),
+   paymentTiming:$("#carPaymentTiming").value,
+   depositTarget:Number($("#carDepositTarget").value||0),
+   purchasePrice:Number($("#carPurchasePrice").value||0),
+   purchaseDate:$("#carPurchaseDate").value,
+   insurance:$("#carInsurance").value,
+   inspection:$("#carInspection").value,
+   customPhoto:pendingCarPhoto,
+   history:old?.history||[{date:today(),value:mileage}]
+  };
+
+  if(old){
+   Object.assign(old,obj)
+  }else{
+   db.cars.push(obj)
+  }
+
+  if(old&&mileage!==previousMileage){
+   obj.history=obj.history||[];
+   obj.history.push({date:today(),value:mileage})
+  }
+
+  const saved=save();
+  if(saved===false){
+   toast("Не удалось сохранить автомобиль");
+   return
+  }
+
+  $("#carDialog").close();
+  renderFleet();
+  renderRepairs();
+  renderExpenses();
+
+  if(selectedCarId===id&&$("#carPage")?.classList.contains("active")){
+   openCar(id)
+  }
+
+  toast(old?"Изменения автомобиля сохранены":"Автомобиль добавлен")
+ }catch(error){
+  console.error("Car save failed",error);
+  toast(error?.message||"Не удалось сохранить автомобиль")
+ }finally{
+  if(submitButton){
+   submitButton.disabled=false;
+   submitButton.textContent=originalText
+  }
+ }
+};
 
 $("#quickServiceForm").onsubmit=e=>{
  e.preventDefault();
