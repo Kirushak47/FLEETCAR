@@ -8921,3 +8921,10 @@ button,select,input,textarea{max-width:100%}
   #carPage .car-detail-tabs button{font-weight:500!important}
   #carPage .detail-stat-grid strong,#carPage .car-operation-grid strong{font-weight:600!important}
 }
+
+/* FleetPilot V14.0.1 — Vehicle Core logic/layout fix */
+#carPage .vehicle-core-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+#carPage .vehicle-core-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-top:2px}
+#carPage .vehicle-core-actions .btn{min-height:34px;margin:0}
+@media(max-width:1200px){#carPage .vehicle-core-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){#carPage .vehicle-core-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
