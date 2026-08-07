@@ -235,7 +235,7 @@ async function enterpriseList(){
  if(mError||iError)throw(mError||iError);
  return{members:members||[],invites:invites||[]}
 }
-async function enterpriseInvite({email,role,city}){
+async function enterpriseInvite({email,role,city,first_name,last_name,display_name,gender,phone}){
  if(!client||!membership)throw new Error("Рабочее пространство недоступно");
  if(!hasEnterpriseRole("owner"))throw new Error("Только владелец может приглашать сотрудников");
 
@@ -246,7 +246,12 @@ async function enterpriseInvite({email,role,city}){
   body:{
    email:normalized,
    role,
-   city:String(city||"").trim()||null
+   city:String(city||"").trim()||null,
+   first_name:String(first_name||"").trim()||null,
+   last_name:String(last_name||"").trim()||null,
+   display_name:String(display_name||"").trim()||null,
+   gender:String(gender||"").trim()||null,
+   phone:String(phone||"").trim()||null
   }
  });
 

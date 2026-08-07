@@ -19,7 +19,9 @@ const FLEETPILOT_ROUTES={
  companyPage:"company",
  dataPage:"data",
  attentionPage:"attention",
- searchPage:"search"
+ searchPage:"search",
+ driverPortalPage:"driver",
+ driverProfilePage:"driver/profile"
 };
 const FLEETPILOT_ROUTE_PAGES=Object.fromEntries(
  Object.entries(FLEETPILOT_ROUTES).map(([page,route])=>[route,page])
@@ -126,6 +128,9 @@ window.addEventListener("hashchange",()=>{
 
 function showPage(id){
  applyEnterpriseAccess();
+ const resolvedRole=enterpriseCurrentRole();
+ // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
+ if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";
  if(!enterpriseCanOpen(id)){
   if(fleetPilotEnterpriseAccessReady)toast("У вашей роли нет доступа к этому разделу");
   const role=enterpriseCurrentRole();
@@ -504,11 +509,18 @@ if(inviteMemberForm)inviteMemberForm.onsubmit=async event=>{
  event.preventDefault();
  inviteMessage("Создаём приглашение…");
  try{
+  const role=$("#inviteMemberRole").value;
+  const firstName=$("#inviteMemberFirstName")?.value?.trim()||"";
+  const lastName=$("#inviteMemberLastName")?.value?.trim()||"";
+  const gender=$("#inviteMemberGender")?.value||"";
+  const phone=$("#inviteMemberPhone")?.value?.trim()||"";
   const result=await window.FleetPilotCloud.enterpriseInvite({
    email:$("#inviteMemberEmail").value,
-   role:$("#inviteMemberRole").value,
-   city:$("#inviteMemberCity").value
+   role,
+   city:$("#inviteMemberCity").value,
+   first_name:firstName,last_name:lastName,display_name:`${firstName} ${lastName}`.trim(),gender,phone
   });
+  if(role==="driver")rememberDriverInviteMeta?.({email:$("#inviteMemberEmail").value,firstName,lastName,gender,phone});
   $("#inviteMemberDialog").close();
   toast(result?.emailSent===false
    ?"Приглашение сохранено. Пользователь уже зарегистрирован — ему нужно войти."

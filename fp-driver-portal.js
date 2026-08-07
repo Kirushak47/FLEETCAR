@@ -43,7 +43,7 @@ function workspaceDriverForCar(c){
  const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
  const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
  const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
- const accepted=Boolean(row?.active_handover_id||row?.handover_id||row?.issue_at||c.driverAcceptedAt);
+ const accepted=Boolean(row?.active_handover_id||row?.accepted_at||row?.vehicle_accepted_at||c.driverAcceptedAt);
  if(userId||email)return{userId,email,name:name||email,source:"account",accepted};
  if(c.tenant)return{userId:"",email:c.driverEmail||"",name:c.tenant,source:"manual",accepted:false};
  return null
@@ -71,7 +71,7 @@ function driverPickerStatus(member){
  const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
  if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
  const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
- const accepted=Boolean(row.active_handover_id||row.handover_id||row.issue_at||row.status==="issued"||row.status==="active");
+ const accepted=Boolean(row.active_handover_id||row.accepted_at||row.vehicle_accepted_at);
  return{label:accepted?"Автомобиль принят":"Ожидает приёмки",cls:accepted?"accepted":"pending",vehicle}
 }
 function renderDriverPickerCards(query=""){
@@ -182,19 +182,22 @@ function removeHandoverPhoto(index){
 window.removeHandoverPhoto=removeHandoverPhoto;
 
 function driverVehicleIsAlreadyAccepted(){
- return Boolean(
-  driverHandoverState?.active_handover_id||
-  driverHandoverState?.handover_id||
-  (driverHandoverState?.issue_at&&!driverHandoverState?.return_at)||
-  driverHandoverState?.status==="issued"||
-  driverHandoverState?.status==="active"||
-  driverPortalContext?.active_handover_id||
-  driverPortalContext?.handover_id||
-  driverPortalContext?.accepted_at||
-  driverPortalContext?.issue_at||
-  driverPortalContext?.vehicle_accepted_at
- )
+ // V18.2: assignment itself is NOT acceptance. Acceptance exists only after the
+ // driver completes handover with mileage + photo and the backend returns an active handover.
+ const state=driverHandoverState||{};
+ const ctx=driverPortalContext||{};
+ const explicit=Boolean(
+  state.active_handover_id||state.accepted_at||state.vehicle_accepted_at||
+  ctx.active_handover_id||ctx.accepted_at||ctx.vehicle_accepted_at
+ );
+ if(explicit)return true;
+ const issueMileage=Number(state.issue_mileage??ctx.issue_mileage);
+ const photos=Number(state.issue_photos_count??ctx.issue_photos_count??0) ||
+  (Array.isArray(state.issue_photos)?state.issue_photos.length:0) ||
+  (Array.isArray(ctx.issue_photos)?ctx.issue_photos.length:0);
+ return Boolean((state.status==="issued"||state.status==="active")&&Number.isFinite(issueMileage)&&issueMileage>=0&&photos>0&&!state.return_at)
 }
+
 async function loadDriverHandoverState(){
  if(enterpriseCurrentRole()!=="driver")return;
  try{
