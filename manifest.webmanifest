@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V14.0.1 Vehicle Core Logic Fix",
+  "name": "FleetPilot V14.1.0 Vehicle Core Alerts Cleanup",
   "short_name": "FleetPilot",
-  "start_url": "./?v=140001",
+  "start_url": "./?v=141000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

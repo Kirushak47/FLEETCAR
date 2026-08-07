@@ -2133,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"14.0",
+  appVersion:"14.1.1",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -5977,6 +5977,34 @@ function carTireSnapshot(c){
  const usedKm=c.tireMileage?Math.max(0,Number(c.mileage||0)-Number(c.tireMileage||0)):null;
  return{planned,paid,usedKm}
 }
+
+let selectedCarFinancePeriod="month";
+function carFinancePeriodLabel(period){return{month:"Месяц",quarter:"Квартал",year:"Год"}[period]||"Месяц"}
+function plannedFinanceForCar(carId,period="month"){
+ const bounds=periodBounds(period);
+ const plannedExpenses=(db.expenses||[]).filter(x=>x.carId===carId&&x.status==="planned"&&x.date&&inPeriod(x.date,bounds));
+ const linkedRepairIds=new Set(plannedExpenses.map(x=>String(x.linkedRepairId||"")).filter(Boolean));
+ const linkedExpenseIds=new Set(plannedExpenses.map(x=>String(x.id||"")));
+ const plannedRepairs=(db.repairs||[]).filter(r=>{
+  if(r.carId!==carId||["done","cancelled"].includes(String(r.status||""))||!r.date||!inPeriod(r.date,bounds))return false;
+  if(r.linkedExpenseId&&linkedExpenseIds.has(String(r.linkedExpenseId)))return false;
+  if(linkedRepairIds.has(String(r.id)))return false;
+  return true
+ });
+ const expenseTotal=plannedExpenses.reduce((s,x)=>s+Number(x.amount||0),0);
+ const repairTotal=plannedRepairs.reduce((s,r)=>s+Number(r.planned||0),0);
+ const rows=[
+  ...plannedExpenses.map(x=>({id:x.id,kind:"expense",title:x.title,date:x.date,amount:Number(x.amount||0),category:expenseCategoryText(x.category)})),
+  ...plannedRepairs.map(r=>({id:r.id,kind:"repair",title:r.title,date:r.date,amount:Number(r.planned||0),category:"Сервис"}))
+ ].sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+ return{plannedExpenses,plannedRepairs,expenseTotal,repairTotal,total:expenseTotal+repairTotal,rows}
+}
+function setCarFinancePeriod(period){
+ if(!["month","quarter","year"].includes(period))period="month";
+ selectedCarFinancePeriod=period;
+ if(selectedCarId)renderCarProfile(selectedCarId,"finance")
+}
+
 function renderCarProfile(id,activeTab="info"){
  if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
@@ -5990,14 +6018,13 @@ function renderCarProfile(id,activeTab="info"){
     <div class="vehicle-health-score ${healthScore.score<60?"danger":healthScore.score<80?"warning":"good"}"><small>Health Score</small><strong>${healthScore.score}</strong><span>/100</span></div>
    </div>
    <div class="vehicle-core-kpis">
-    <div><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
-    <div><small>Масло</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div>
-    <div><small>Страховка до</small><strong>${c.insurance?date(c.insurance):"—"}</strong></div>
-    <div><small>Техосмотр до</small><strong>${c.inspection?date(c.inspection):"—"}</strong></div>
-    <div><small>Активный сервис</small><strong>${rep.filter(r=>!["done","cancelled"].includes(String(r.status||""))).length}</strong></div>
-    <div><small>Последнее обслуживание</small><strong>${lastCompleted?date(lastCompleted.completedDate||lastCompleted.date):"—"}</strong></div>
+    <div class="vehicle-core-kpi"><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
+    <div class="vehicle-core-kpi ${oil(c)<=0?"danger":oil(c)<=1500?"warning":"good"}"><small>Масло</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div>
+    <div class="vehicle-core-kpi ${days(c.insurance)<0?"danger":days(c.insurance)<=30?"warning":"good"}"><small>Страховка до</small><strong>${c.insurance?date(c.insurance):"—"}</strong></div>
+    <div class="vehicle-core-kpi ${days(c.inspection)<0?"danger":days(c.inspection)<=30?"warning":"good"}"><small>Техосмотр до</small><strong>${c.inspection?date(c.inspection):"—"}</strong></div>
+    <div class="vehicle-core-kpi ${rep.filter(r=>!["done","cancelled"].includes(String(r.status||""))).length?"warning":"good"}"><small>Активный сервис</small><strong>${rep.filter(r=>!["done","cancelled"].includes(String(r.status||""))).length}</strong></div>
+    <div class="vehicle-core-kpi"><small>Последнее обслуживание</small><strong>${lastCompleted?date(lastCompleted.completedDate||lastCompleted.date):"—"}</strong></div>
    </div>
-   ${healthScore.reasons.length?`<div class="vehicle-core-alerts">${healthScore.reasons.map(x=>`<span>${x}</span>`).join("")}</div>`:`<div class="vehicle-core-alerts good"><span>Критических замечаний нет</span></div>`}
    <div class="vehicle-core-actions"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div>
   </section>`;
  const upcomingRepairs=rep.filter(x=>!["done","cancelled"].includes(String(x.status||""))).sort((a,b)=>String(a.date||"9999-12-31").localeCompare(String(b.date||"9999-12-31")));
@@ -6079,7 +6106,49 @@ function renderCarProfile(id,activeTab="info"){
    </div>
   </section>
  </div>`;
- const finance=`<div class="detail-tab-grid"><div class="card"><h3>Аренда и прибыль</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div><div><small>Чистая прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><button class="btn primary full" onclick="openPaymentDialog('${c.id}')">Добавить оплату</button></div><div class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</div><div class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></div><div class="card car-expense-preview"><div class="section-head"><h3>Расходы автомобиля</h3><button class="btn" onclick="showPage('expensesPage')">Все расходы</button></div>${exp.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,8).map(x=>`<button type="button" class="car-expense-preview-row" onclick="openSmartEntity('expense','${x.id}','${c.id}')"><span class="fp-standard-icon">${fpUiIcon(x.category==="repair"?"repair":x.category==="insurance"?"insurance":x.category==="inspection"?"inspection":x.category==="tires"?"tires":"expense")}</span><span><strong>${x.title}</strong><small>${date(x.date)} · ${expenseCategoryText(x.category)}</small></span><b>${money(x.amount)}</b><i>${fpUiIcon("arrow")}</i></button>`).join("")||`<div class="professional-empty">Расходов пока нет.</div>`}</div></div>`;
+ const financePeriod=selectedCarFinancePeriod||"month";
+ const financeData=financialData(financePeriod,c.id);
+ const financePlan=plannedFinanceForCar(c.id,financePeriod);
+ const operatingResult=financeData.grossRevenue-financeData.grossCosts;
+ const forecastAfterPlan=financeData.finalProfit-financePlan.total;
+ const paidRows=exp.filter(x=>x.status==="paid"&&x.date&&inPeriod(x.date,periodBounds(financePeriod))).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+ const finance=`<div class="car-finance-dashboard">
+  <div class="car-finance-toolbar">
+   <div><span class="eyebrow">Финансы автомобиля</span><h3>${carFinancePeriodLabel(financePeriod)}</h3><p>Фактические и плановые деньги без двойного учёта связанных ремонтов.</p></div>
+   <div class="car-finance-periods">
+    ${["month","quarter","year"].map(p=>`<button type="button" class="${financePeriod===p?"active":""}" onclick="setCarFinancePeriod('${p}')">${carFinancePeriodLabel(p)}</button>`).join("")}
+   </div>
+  </div>
+  <div class="car-finance-kpis">
+   <article class="income"><small>Получено</small><strong>${money(financeData.grossRevenue)}</strong><span>ожидается ${money(financeData.expectedRevenue)}</span></article>
+   <article class="expense"><small>Факт расходов</small><strong>${money(financeData.grossCosts)}</strong><span>сервис ${money(financeData.repairGross)} · прочее ${money(financeData.otherGross)}</span></article>
+   <article class="planned"><small>План расходов</small><strong>${money(financePlan.total)}</strong><span>${financePlan.rows.length} будущих записей</span></article>
+   <article class="result ${financeData.finalProfit<0?"negative":"positive"}"><small>Чистый результат</small><strong>${money(financeData.finalProfit)}</strong><span>операционно ${money(operatingResult)}</span></article>
+  </div>
+  <div class="car-finance-grid">
+   <section class="card car-finance-breakdown">
+    <div class="section-head"><div><span class="eyebrow">Факт</span><h3>Структура результата</h3></div><button class="btn primary" onclick="openPaymentDialog('${c.id}')">+ Оплата</button></div>
+    <div class="car-finance-lines">
+     <div><span>Полученная аренда</span><strong>${money(financeData.grossRevenue)}</strong></div>
+     <div><span>Сервис и ремонты</span><strong>− ${money(financeData.repairGross)}</strong></div>
+     <div><span>Остальные расходы</span><strong>− ${money(financeData.otherGross)}</strong></div>
+     <div><span>VAT</span><strong>− ${money(financeData.vatDue)}</strong></div>
+     <div><span>PIT</span><strong>− ${money(financeData.pit)}</strong></div>
+     <div><span>Взносы</span><strong>− ${money(financeData.contributions)}</strong></div>
+     <div class="total"><span>Чистый результат</span><strong>${money(financeData.finalProfit)}</strong></div>
+    </div>
+   </section>
+   <section class="card car-finance-plan">
+    <div class="section-head"><div><span class="eyebrow">План</span><h3>Будущие расходы</h3></div><button class="btn" onclick="openExpenseDialog('${c.id}')">+ Запланировать</button></div>
+    <div class="car-finance-plan-summary"><span>После текущего плана</span><strong class="${forecastAfterPlan<0?"negative":"positive"}">${money(forecastAfterPlan)}</strong></div>
+    <div class="car-finance-plan-list">${financePlan.rows.slice(0,8).map(x=>`<button type="button" onclick="openSmartEntity('${x.kind}','${x.id}','${c.id}')"><span><strong>${x.title}</strong><small>${date(x.date)} · ${x.category}</small></span><b>${money(x.amount)}</b>${fpUiIcon("arrow")}</button>`).join("")||`<div class="professional-empty">На выбранный период плановых расходов нет.</div>`}</div>
+   </section>
+   <section class="card"><h3>Аренда</h3><div class="detail-stat-grid"><div><small>Ставка за неделю</small><strong>${money(c.weeklyRent)}</strong></div><div><small>Порядок оплаты</small><strong>${paymentTimingText(c.paymentTiming||"advance")}</strong></div><div><small>Получено всего</small><strong>${money(received)}</strong></div><div><small>Текущий долг</small><strong>${money(debt)}</strong></div></div></section>
+   <section class="card"><h3>Себестоимость и окупаемость</h3>${renderOwnership(c)}</section>
+   <section class="card"><div class="section-head"><h3>Кауция водителя</h3><button class="btn primary" onclick="openDepositDialog('${c.id}')">+ Платёж</button></div>${renderDepositChart(c.id)}<div class="deposit-history">${renderDepositRows(c.id)}</div></section>
+   <section class="card car-expense-preview"><div class="section-head"><h3>Фактические расходы периода</h3><button class="btn" onclick="showPage('expensesPage')">Все расходы</button></div>${paidRows.slice(0,8).map(x=>`<button type="button" class="car-expense-preview-row" onclick="openSmartEntity('expense','${x.id}','${c.id}')"><span class="fp-standard-icon">${fpUiIcon(x.category==="repair"?"repair":x.category==="insurance"?"insurance":x.category==="inspection"?"inspection":x.category==="tires"?"tires":"expense")}</span><span><strong>${x.title}</strong><small>${date(x.date)} · ${expenseCategoryText(x.category)}</small></span><b>${money(x.amount)}</b><i>${fpUiIcon("arrow")}</i></button>`).join("")||`<div class="professional-empty">Фактических расходов за период нет.</div>`}</section>
+  </div>
+ </div>`;
  const history=`<div class="detail-tab-grid">
   <div class="card"><div class="section-head"><div><span class="eyebrow">Vehicle Handover</span><h3>История выдачи и возврата</h3></div></div><div id="vehicleHandoverHistory"></div></div>
   <div class="card"><div class="section-head"><h3>Лента событий</h3></div><div class="timeline">${renderTimeline(c.id)}</div></div>
