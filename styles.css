@@ -7572,3 +7572,65 @@ html[data-theme="dark"] .repair-linked-finance-info{
  .service-page-actions{display:grid;grid-template-columns:1fr 1fr}
  .owner-dashboard-kpis,.owner-dashboard-grid{grid-template-columns:1fr!important}
 }
+
+
+/* FleetPilot V11.3.4 — scalable Service inbox */
+#repairsPage .service-inbox-request{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) 210px!important;
+ gap:14px!important;
+ align-items:center!important;
+}
+.service-inbox-request-heading{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ flex-wrap:wrap;
+}
+.service-inbox-request-badge{
+ display:inline-flex!important;
+ width:max-content;
+ margin:0!important;
+ padding:4px 7px;
+ border-radius:999px;
+ font-size:8px!important;
+ font-weight:900;
+}
+.service-inbox-request-badge.new{
+ background:#fff4dd;
+ color:#b66b00!important;
+}
+.service-inbox-request-badge.accepted{
+ background:#eaf8ef;
+ color:#16824a!important;
+}
+.service-inbox-request-actions{
+ display:grid;
+ grid-template-columns:1fr;
+ gap:7px;
+}
+.service-inbox-request-actions select,
+.service-inbox-request-actions .btn{
+ width:100%;
+ min-height:36px;
+}
+.service-inbox-empty{
+ min-height:72px;
+ display:grid;
+ place-items:center;
+ border:1px dashed var(--line,#d9dee8);
+ border-radius:12px;
+ background:color-mix(in srgb,var(--card,#fff) 97%,#f5f7fb);
+}
+#repairSourceRequest:not([hidden]){
+ border-left:3px solid #5b4df5;
+}
+
+@media(max-width:1099px){
+ #repairsPage .service-inbox-request{
+  grid-template-columns:1fr!important;
+ }
+ .service-inbox-request-actions{
+  grid-template-columns:1fr 1fr;
+ }
+}

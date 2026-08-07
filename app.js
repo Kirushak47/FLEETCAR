@@ -1047,7 +1047,7 @@ function renderFleetServiceAlertIndicators(){
 
 function activeDriverRepairRequests(){
  return (workspaceRepairAlerts||[])
-  .filter(row=>!["done","rejected","cancelled"].includes(String(row.status||"")))
+  .filter(row=>["new","accepted"].includes(String(row.status||"new")))
   .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")))
 }
 
@@ -1127,40 +1127,69 @@ async function renderWorkspaceRepairRequests(){
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
-  const allRows=workspaceRepairAlerts;
+  renderFleetDriverRequestsPanel();
+
+  const pending=activeDriverRepairRequests();
   const rows=selectedWorkspaceRepairCarId
-   ?allRows.filter(row=>String(row.car_id)===selectedWorkspaceRepairCarId)
-   :allRows;
+   ?pending.filter(row=>String(row.car_id)===String(selectedWorkspaceRepairCarId))
+   :pending;
 
   const filterBar=selectedWorkspaceRepairCarId?`
    <div class="workspace-request-filter">
-    <span>Показаны заявки выбранного автомобиля</span>
+    <span>Показаны новые обращения выбранного автомобиля</span>
     <button type="button" class="btn" onclick="clearWorkspaceRepairCarFilter()">Показать все</button>
    </div>`:"";
 
   root.innerHTML=filterBar+(rows.map(row=>{
    const localCar=car(row.car_id);
    const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
-   return `<article class="workspace-request-row urgency-${row.urgency}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}">
-    <div>
-     <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category} · ${carName}</strong>
-     <span>${row.description}</span>
+   const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
+   const state=String(row.status||"new");
+
+   return `<article class="workspace-request-row service-inbox-request urgency-${row.urgency}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}">
+    <div class="service-inbox-request-main">
+     <div class="service-inbox-request-heading">
+      <strong>${category} · ${carName}</strong>
+      <span class="service-inbox-request-badge ${state}">${state==="accepted"?"Принята":"Новая"}</span>
+     </div>
+     <span>${row.description||"Без описания"}</span>
      <small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small>
     </div>
-    <select data-request-status="${row.id}">
-     ${Object.entries(DRIVER_REPAIR_STATUS_LABELS).map(([value,label])=>`<option value="${value}" ${value===row.status?"selected":""}>${label}</option>`).join("")}
-    </select>
+    <div class="service-inbox-request-actions">
+     <select data-request-status="${row.id}">
+      <option value="new" ${state==="new"?"selected":""}>Новая</option>
+      <option value="accepted" ${state==="accepted"?"selected":""}>Принята</option>
+      <option value="rejected">Отклонена</option>
+     </select>
+     <button type="button" class="btn primary" data-transfer-service="${row.id}">Передать в сервис</button>
+    </div>
    </article>`
-  }).join("")||'<div class="driver-empty-state">Активных заявок для автомобиля нет.</div>');
+  }).join("")||'<div class="driver-empty-state service-inbox-empty">Новых заявок нет. Все обращения обработаны.</div>');
 
   $$("[data-request-status]").forEach(select=>select.onchange=async()=>{
-   const request=workspaceRepairAlerts.find(row=>row.id===select.dataset.requestStatus);
-   if(select.value==="repair"){if(request)openRepairFromDriverRequest(request);select.value=request?.status||"new";return}
-   try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,select.value,"");toast("Статус заявки обновлён");await renderWorkspaceRepairRequests();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}
+   const request=workspaceRepairAlerts.find(row=>String(row.id)===String(select.dataset.requestStatus));
+   const next=select.value;
+   try{
+    await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,next,"");
+    if(request)request.status=next;
+    toast(next==="accepted"?"Заявка принята":next==="rejected"?"Заявка отклонена":"Статус заявки обновлён");
+    await renderWorkspaceRepairRequests();
+    await loadFleetServiceAlerts({rerender:true})
+   }catch(error){
+    toast(error.message||String(error))
+   }
+  });
+
+  $$("[data-transfer-service]").forEach(button=>button.onclick=()=>{
+   const request=workspaceRepairAlerts.find(row=>String(row.id)===String(button.dataset.transferService));
+   if(!request)return toast("Заявка не найдена");
+   openRepairFromDriverRequest(request)
   });
 
   requestAnimationFrame(renderFleetServiceAlertIndicators)
- }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+ }catch(error){
+  root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`
+ }
 }
 async function loadWorkspaceDriverAssignments(){
  try{
@@ -5420,7 +5449,7 @@ function openRepairFromDriverRequest(request){
  $("#repairPaymentStatus").value="unpaid";
  $("#repairLinkedRequestId").value=request.id;
  $("#repairSourceRequest").hidden=false;
- $("#repairSourceRequest").innerHTML=`<strong>Заявка водителя</strong><span>${request.driver_email||"Водитель"} · ${request.description}</span><small>Пробег: ${km(request.mileage)}</small>`;
+ $("#repairSourceRequest").innerHTML=`<strong>Передача заявки в сервис</strong><span>${request.driver_email||"Водитель"} · ${request.description}</span><small>После сохранения заявка исчезнет из входящих и появится в ремонтах · пробег ${km(request.mileage)}</small>`;
  $("#repairNote").value=request.description||""
 }
 function openExpenseDialog(carId="",id=""){
@@ -5583,7 +5612,7 @@ $("#repairForm").onsubmit=async e=>{
    },80)
   }
  });
- toast("Ремонт и пробег сохранены")
+ toast(obj.linkedRequestId?"Заявка передана в сервис":"Ремонт и пробег сохранены")
 };
 $("#depositForm").onsubmit=e=>{e.preventDefault();const id=$("#depositId").value||uid(),old=db.deposits.find(x=>x.id===id),obj={id,carId:$("#depositCarId").value,tenant:$("#depositTenant").value.trim(),amount:Number($("#depositAmount").value||0),date:$("#depositDate").value,note:$("#depositNote").value.trim()};old?Object.assign(old,obj):db.deposits.push(obj);addTimeline(obj.carId,"payment","Внесена кауция",obj.amount,obj.date,obj.note);logActivity(old?"Изменена кауция":"Добавлена кауция","Кауция",money(obj.amount),obj.carId);save();$("#depositDialog").close();if(selectedCarId===obj.carId)openCar(obj.carId,"finance");toast("Платёж кауции сохранён")};
 $("#paymentForm").onsubmit=e=>{e.preventDefault();const duplicate=db.payments.find(p=>p.id!==$("#paymentId").value&&p.carId===$("#paymentCarId").value&&p.from===$("#paymentFrom").value&&p.to===$("#paymentTo").value);if(duplicate&&!confirm("За этот расчётный период уже есть запись. Всё равно сохранить?"))return;const id=$("#paymentId").value||uid(),old=db.payments.find(x=>x.id===id),from=$("#paymentFrom").value,obj={id,carId:$("#paymentCarId").value,tenant:$("#paymentTenant").value.trim(),timing:$("#paymentTiming").value,referenceWeek:$("#paymentReferenceWeek").value.trim(),from,to:$("#paymentTo").value,expected:Number($("#paymentExpected").value),received:Number($("#paymentReceived").value),date:$("#paymentDate").value,accrualMonth:$("#paymentAccrualMonth").value||monthFromDate(from),week:$("#paymentWeek").value.trim(),note:$("#paymentNote").value.trim()};old?Object.assign(old,obj):(db.payments.push(obj),addTimeline(obj.carId,"payment","Оплата аренды",Number(obj.received||0),obj.date||obj.to,`${date(obj.from)} — ${date(obj.to)}`));logActivity(old?"Изменена оплата":"Добавлена оплата","Аренда",`${money(obj.received)} · ${obj.accrualMonth}`,obj.carId);save();$("#paymentDialog").close();renderPayments();toast("Оплата сохранена")};

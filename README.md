@@ -1,10 +1,13 @@
-# FleetPilot V11.3.3.1 — Cars Restore
+# FleetPilot V11.3.4 — Service Workflow
 
-Built directly from the confirmed working V11.3.2 version.
+Based on stable V11.3.3.1 Cars Restore.
 
-- Original car list rendering and Fleet logic are untouched.
-- Compact request summary remains in Fleet.
-- Full request list is shown in Service.
-- Dashboard and Service receive CSS-only professional styling.
-- Theme, maps, Supabase, synchronization and finance calculations are unchanged.
+Workflow:
+- Service inbox shows only New and Accepted driver requests.
+- Request status menu contains New / Accepted / Rejected only.
+- Separate “Передать в сервис” action opens the existing repair form with request/car/mileage prefilled.
+- After the linked repair is saved, the existing cloud link operation changes the request to a service/repair state.
+- That request therefore disappears from the upper inbox and remains as the linked repair below.
+- Fleet request summary counts only unresolved New/Accepted requests.
+- No changes to Fleet rendering, theme, maps, Supabase schema or finance logic.
 - No SQL required.
