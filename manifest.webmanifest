@@ -1,7 +1,7 @@
 {
-  "name": "FleetPilot V13.1.1 Service Layout Fix",
+  "name": "FleetPilot V14.0 Vehicle Core",
   "short_name": "FleetPilot",
-  "start_url": "./?v=113940",
+  "start_url": "./?v=140000",
   "display": "standalone",
   "background_color": "#f3f6fb",
   "theme_color": "#0f172a"

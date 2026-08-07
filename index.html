@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V13.1.5 Global Service Search</title>
-  <link rel="manifest" href="manifest.webmanifest?v=131500">
-  <link rel="stylesheet" href="styles.css?v=131500">
+  <title>FleetPilot V14.0 Vehicle Core</title>
+  <link rel="manifest" href="manifest.webmanifest?v=140000">
+  <link rel="stylesheet" href="styles.css?v=140000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -1350,6 +1350,7 @@
   <label>Автомобиль<select id="repairCarId"></select></label>
   <label>Что сделать<input id="repairTitle" required></label>
   <div class="grid2">
+    <label>Тип обслуживания<select id="repairServiceType"><option value="other">Другое</option><option value="oil">Замена масла</option><option value="tires">Шины / колёса</option><option value="brakes">Тормоза</option><option value="suspension">Подвеска</option><option value="engine">Двигатель</option><option value="gearbox">Коробка передач</option><option value="body">Кузов</option><option value="electrical">Электрика</option><option value="inspection">Техосмотр</option><option value="insurance">Страховка</option></select></label>
     <label>Дата / неделя<input id="repairDate" type="date" required></label>
     <label>Плановый пробег<input id="repairMileage" type="number"></label>
     <label>Плановая сумма<input id="repairPlanned" type="number" step="0.01"></label>
@@ -1770,7 +1771,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=131500"></script>
-<script src="cloud.js?v=131500"></script>
-<script src="app.js?v=131500"></script>
+<script src="cloud-config.js?v=140000"></script>
+<script src="cloud.js?v=140000"></script>
+<script src="app.js?v=140000"></script>
 </body></html>

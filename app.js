@@ -244,10 +244,76 @@ function fleetCars(){return db.cars.filter(c=>c.inFleet!==false&&!c.archived)}
 function archivedCars(){return db.cars.filter(c=>c.inFleet!==false&&c.archived)}
 function opts(selected=""){return fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
 function statusText(s){return {active:"На линии",repair:"В ремонте",free:"Свободен"}[s]||s}
+function recalculateVehicleMaintenance(carId){
+ const c=car(carId);if(!c)return;
+ const done=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&r.status==="done");
+ const latestOf=type=>done.filter(r=>inferRepairServiceType(r)===type).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||""))||Number(b.mileage||0)-Number(a.mileage||0))[0];
+ const oilRepair=latestOf("oil");
+ if(oilRepair){c.lastOil=Number(oilRepair.mileage||c.lastOil||0);c.lastOilDate=oilRepair.completedDate||oilRepair.date||""}
+ else if(c.serviceBaselineLastOil!==undefined){c.lastOil=Number(c.serviceBaselineLastOil||0);c.lastOilDate=""}
+ const tireRepair=latestOf("tires");
+ if(tireRepair){c.tireInstalled=tireRepair.completedDate||tireRepair.date||"";c.tireMileage=Number(tireRepair.mileage||c.tireMileage||0)}
+ else{if(c.serviceBaselineTireInstalled!==undefined)c.tireInstalled=c.serviceBaselineTireInstalled;if(c.serviceBaselineTireMileage!==undefined)c.tireMileage=Number(c.serviceBaselineTireMileage||0)}
+}
 function paymentStatus(p){const rest=Math.max(0,p.expected-p.received);return rest===0?"paid":p.received>0?"partial":"unpaid"}
 
 function repairStatusText(value){
- return{planned:"Запланирован",parts:"Ожидает запчасти",service:"Записан в сервис",repair:"В ремонте",done:"Выполнен"}[value]||value
+ return{planned:"Запланирован",parts:"Ожидает запчасти",service:"Записан в сервис",repair:"В ремонте",done:"Выполнен",cancelled:"Отменён"}[value]||value
+}
+function serviceTypeText(value){return{oil:"Замена масла",tires:"Шины / колёса",brakes:"Тормоза",suspension:"Подвеска",engine:"Двигатель",gearbox:"Коробка передач",body:"Кузов",electrical:"Электрика",inspection:"Техосмотр",insurance:"Страховка",other:"Другое"}[value]||"Другое"}
+function inferRepairServiceType(repair={}){
+ if(repair.serviceType&&repair.serviceType!=="other")return repair.serviceType;
+ const text=`${repair.title||""} ${repair.problem||""} ${repair.note||""}`.toLowerCase();
+ if(/масл|oil|фильтр масла/.test(text))return"oil";
+ if(/шин|колес|колёс|резин|tire/.test(text))return"tires";
+ if(/торм|колод|диск торм/.test(text))return"brakes";
+ if(/подвес|ступич|амортиз|стойк|рычаг|ходов/.test(text))return"suspension";
+ if(/двигат|мотор|engine/.test(text))return"engine";
+ if(/короб|кпп|gearbox|transmission/.test(text))return"gearbox";
+ if(/кузов|бампер|двер|крыл|body/.test(text))return"body";
+ if(/электр|аккумуля|генератор|стартер/.test(text))return"electrical";
+ if(/техосмотр|inspection|przegl/.test(text))return"inspection";
+ if(/страхов|insurance|oc\b|ac\b/.test(text))return"insurance";
+ return"other"
+}
+function vehicleEffectiveStatus(c){
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));
+ if(active.some(r=>["repair","parts","service"].includes(String(r.status||""))))return"repair";
+ return c.status|| (c.tenant?"active":"free")
+}
+function vehicleHealthScore(c){
+ let score=100;const reasons=[];
+ const oilLeft=oil(c),insuranceDays=days(c.insurance),inspectionDays=days(c.inspection);
+ if(oilLeft<=0){score-=30;reasons.push("масло просрочено")}else if(oilLeft<=1500){score-=12;reasons.push("скоро масло")};
+ if(insuranceDays<0){score-=25;reasons.push("страховка просрочена")}else if(insuranceDays<=30){score-=10;reasons.push("страховка заканчивается")};
+ if(inspectionDays<0){score-=25;reasons.push("ТО просрочено")}else if(inspectionDays<=30){score-=10;reasons.push("ТО заканчивается")};
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));
+ if(active.some(r=>r.priority==="critical")){score-=20;reasons.push("срочный ремонт")}else if(active.length){score-=Math.min(15,active.length*4);reasons.push(`${active.length} активн. задач`)}
+ return{score:Math.max(0,Math.round(score)),reasons}
+}
+function applyCompletedServiceToVehicle(repair,previous=null){
+ if(!repair||repair.status!=="done")return;
+ const c=car(repair.carId);if(!c)return;
+ const type=inferRepairServiceType(repair),performed=repair.completedDate||repair.date||today(),mileage=Number(repair.mileage||c.mileage||0);
+ const firstCompletion=!previous||previous.status!=="done";
+ repair.serviceType=type;
+ if(mileage>Number(c.mileage||0))c.mileage=mileage;
+ if(type==="oil"){
+  if(c.serviceBaselineLastOil===undefined)c.serviceBaselineLastOil=Number(c.lastOil||0);
+  c.lastOil=mileage;
+  c.lastOilDate=performed;
+  if(!Array.isArray(c.history))c.history=[];
+  if(!c.history.some(x=>x.date===performed&&Number(x.value)===mileage))c.history.push({date:performed,value:mileage});
+  if(firstCompletion)addTimeline(c.id,"repair","Замена масла выполнена",-Number(repair.actual||repair.planned||0),performed,`Следующая через ${km(c.oilInterval||10000)}`);
+ }
+ if(type==="tires"){
+  if(c.serviceBaselineTireInstalled===undefined)c.serviceBaselineTireInstalled=c.tireInstalled||"";
+  if(c.serviceBaselineTireMileage===undefined)c.serviceBaselineTireMileage=Number(c.tireMileage||0);
+  c.tireInstalled=performed;c.tireMileage=mileage;
+  if(firstCompletion)addTimeline(c.id,"repair","Шины обновлены",-Number(repair.actual||repair.planned||0),performed,`${tireSeasonText(c.tireSeason)} · ${c.tireSize||"размер не указан"}`);
+ }
+ c.lastServiceDate=performed;c.lastServiceMileage=mileage;
+ if(firstCompletion)logActivity("Завершено обслуживание","Автомобиль",`${serviceTypeText(type)} · ${repair.title}`,c.id)
 }
 function expenseStatusText(value){
  return{planned:"Запланирован",paid:"Оплачен",cancelled:"Отменён"}[value]||value
@@ -2067,7 +2133,7 @@ function backupPayload(){
  return{
   application:"FleetPilot",
   formatVersion:1,
-  appVersion:"3.8",
+  appVersion:"14.0",
   exportedAt:new Date().toISOString(),
   data:structuredClone(db)
  }
@@ -4799,6 +4865,7 @@ function renderFleet(){
  const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):c.status===f)))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
  const debt=db.payments.reduce((s,p)=>s+Math.max(0,p.expected-p.received),0);
  const healthRows=cityFilteredCars().map(c=>({c,h:healthDetails(c)}));
+ const fleetHealthAverage=cityFilteredCars().length?Math.round(cityFilteredCars().reduce((sum,c)=>sum+vehicleHealthScore(c).score,0)/cityFilteredCars().length):100;
  $("#attentionCount").textContent=healthRows.reduce((s,x)=>s+x.h.items.length,0);
  $("#healthSummary").innerHTML=[
   ["🚨 Требуют внимания",healthRows.filter(x=>x.h.level!=="good").length,healthRows.some(x=>x.h.level==="danger")?"danger":"warning"],
@@ -4806,17 +4873,17 @@ function renderFleet(){
   ["🛢️ ТО скоро",healthRows.filter(x=>x.h.oilLeft>0&&x.h.oilLeft<=1500).length,"warning"],
   ["🛡️ Страховка",healthRows.filter(x=>x.h.insuranceDays>=0&&x.h.insuranceDays<=30).length,"warning"]
  ].map((x,index)=>`<button class="health-tile ${x[2]} animated-health-tile" style="--tile-index:${index}" onclick="showPage('attentionPage')"><span>${x[0]}</span><strong data-animate-value="${x[1]}" data-animate-format="integer">${x[1]}</strong></button>`).join("");
- $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>c.status==="active").length],["В ремонте",cityFilteredCars().filter(c=>c.status==="repair").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+ $("#fleetSummary").innerHTML=[["Всего",cityFilteredCars().length],["На линии",cityFilteredCars().filter(c=>vehicleEffectiveStatus(c)==="active").length],["В ремонте",cityFilteredCars().filter(c=>vehicleEffectiveStatus(c)==="repair").length],["Требуют внимания",cityFilteredCars().filter(attention).length],["Состояние парка",fleetHealthAverage+"/100"],["Общий долг",money(debt)]].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c);return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
-<div class="no-photo-hero ${c.status} ${c.customPhoto?"has-custom-photo":""}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c),effectiveStatus=vehicleEffectiveStatus(c),healthScore=vehicleHealthScore(c),activeRepairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
+<div class="no-photo-hero ${effectiveStatus} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
  <div class="photo-service-task-badge">${fleetServiceBadgeMarkup(c.id)}</div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${c.status}">${statusText(c.status)}</span></div>
+  <div class="hero-status-row"><span class="status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-health-inline">${healthScore.score}/100</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
@@ -4896,7 +4963,7 @@ function renderFleet(){
   <div class="desktop-car-identity">
     <div class="desktop-car-title-line">
       <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
-      <span class="desktop-status ${c.status}">${statusText(c.status)}</span>
+      <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span>
     </div>
     ${(()=>{
       const gps=gpsStatusForCar(c);
@@ -4947,6 +5014,8 @@ function renderFleet(){
     <button type="button" class="desktop-kpi" onclick="event.stopPropagation();openMileage('${c.id}')"><strong>${km(c.mileage)}</strong><small>Пробег</small></button>
     <span class="desktop-kpi-divider"></span>
     <div class="desktop-kpi profit ${monthProfit<0?"negative":""}"><strong data-animate-value="${monthProfit}" data-animate-format="money">${money(0)}</strong><small>Прибыль за месяц</small></div>
+    <span class="desktop-kpi-divider"></span>
+    <button type="button" class="desktop-kpi vehicle-health-kpi" onclick="event.stopPropagation();openCar('${c.id}','info')"><strong>${healthScore.score}/100</strong><small>Состояние · ${activeRepairs.length} задач</small></button>
   </div>
   <div class="desktop-today-card ${nextEvent&&nextEvent.days<=14?"warning":""}" ${nextEvent?`role="button" tabindex="0" onclick="event.stopPropagation();openSmartEntity('${nextEvent.type}','${nextEvent.entityId||""}','${c.id}')"`:""}>
     <small>Сегодня</small>
@@ -5097,9 +5166,10 @@ function updateServiceRepairField(id,field,value){
  if(field==="status"&&value==="done"&&Number(repair.actual||0)<=0&&repair.paymentStatus!=="warranty"){
   editRepair(repair.id);setTimeout(()=>toast("Для завершения укажите фактическую сумму или гарантию"),80);return
  }
+ const previous=structuredClone(repair);
  repair[field]=value;
  if(field==="status"&&value==="done")repair.completedDate=repair.completedDate||today();
- syncLinkedExpenseFromRepair(repair);syncCarServiceStatus(repair.carId);
+ syncServiceRelations(repair,previous);
  logActivity("Изменена сервисная задача","Сервис",`${repair.title} · ${field}`,repair.carId);
  save();renderRepairs();renderExpenses();renderFleet()
 }
@@ -5291,6 +5361,7 @@ function syncCarServiceStatus(carId){
 }
 function advanceServiceRepair(id){
  const repair=db.repairs.find(r=>String(r.id)===String(id));if(!repair)return toast("Задача не найдена");
+ const previous=structuredClone(repair);
  const next=serviceNextStatus(repair.status);if(!next)return editRepair(repair.id);
  if(next==="done"&&Number(repair.actual||0)<=0&&repair.paymentStatus!=="warranty"){
   editRepair(repair.id);
@@ -5299,7 +5370,7 @@ function advanceServiceRepair(id){
  }
  repair.status=next;
  if(next==="done")repair.completedDate=repair.completedDate||today();
- syncServiceRelations(repair);
+ syncServiceRelations(repair,previous);
  addTimeline(repair.carId,"repair",repair.title,-Number(repair.actual||repair.planned||0),today(),repairStatusText(next));
  logActivity("Изменён статус ремонта","Сервис",`${repair.title} → ${repairStatusText(next)}`,repair.carId);
  save();renderRepairs();renderExpenses();renderFleet();
@@ -5911,7 +5982,22 @@ function renderCarProfile(id,activeTab="info"){
  selectedCarId=id;
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
  const tire=carTireSnapshot(c);
- const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card car-operation-card"><div class="card-title-row"><div><span class="eyebrow">Эксплуатация</span><h3>Шины и сезонность</h3></div><button class="btn" onclick="openCarDialog('${c.id}')">Изменить</button></div><div class="car-operation-grid"><div><small>Сезон</small><strong>${tireSeasonText(c.tireSeason)}</strong></div><div><small>Размер</small><strong>${c.tireSize||"Не указан"}</strong></div><div><small>Установлены</small><strong>${c.tireInstalled?date(c.tireInstalled):"—"}</strong></div><div><small>Пробег на комплекте</small><strong>${tire.usedKm===null?"—":km(tire.usedKm)}</strong></div></div>${tire.planned?`<button class="car-operation-alert" onclick="openSmartEntity('expense','${tire.planned.id}','${c.id}')"><span>Ближайшая задача по шинам</span><strong>${tire.planned.title} · ${date(tire.planned.date)}</strong><b>${money(tire.planned.amount)}</b></button>`:tire.paid?`<div class="car-operation-note"><span>Последняя операция</span><strong>${tire.paid.title} · ${date(tire.paid.date)}</strong></div>`:`<div class="car-operation-note"><span>История шин</span><strong>Записей пока нет</strong></div>`}</div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p><button class="inline-entity-link" onclick="openSmartEntity('repair','${x.id}','${c.id}')">${date(x.date)} · ${x.title} · ${money(x.planned)}</button></p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
+ const effectiveStatus=vehicleEffectiveStatus(c),healthScore=vehicleHealthScore(c);
+ const lastCompleted=[...rep].filter(r=>r.status==="done").sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||"")))[0];
+ const vehicleCore=`<section class="vehicle-core-overview">
+   <div class="vehicle-core-main">
+    <div><span class="eyebrow">Vehicle Core</span><h3>Состояние автомобиля</h3><p>${statusText(effectiveStatus)} · ${c.tenant||"Без водителя"} · ${c.city||"Город не указан"}</p></div>
+    <div class="vehicle-health-score ${healthScore.score<60?"danger":healthScore.score<80?"warning":"good"}"><small>Health Score</small><strong>${healthScore.score}</strong><span>/100</span></div>
+   </div>
+   <div class="vehicle-core-kpis">
+    <div><small>Пробег</small><strong>${km(c.mileage)}</strong></div>
+    <div><small>Масло</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div>
+    <div><small>Активный сервис</small><strong>${rep.filter(r=>!["done","cancelled"].includes(String(r.status||""))).length}</strong></div>
+    <div><small>Последнее обслуживание</small><strong>${lastCompleted?date(lastCompleted.completedDate||lastCompleted.date):"—"}</strong></div>
+   </div>
+   ${healthScore.reasons.length?`<div class="vehicle-core-alerts">${healthScore.reasons.map(x=>`<span>${x}</span>`).join("")}</div>`:`<div class="vehicle-core-alerts good"><span>Критических замечаний нет</span></div>`}
+  </section>`;
+ const info=`${vehicleCore}<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card car-operation-card"><div class="card-title-row"><div><span class="eyebrow">Эксплуатация</span><h3>Шины и сезонность</h3></div><button class="btn" onclick="openCarDialog('${c.id}')">Изменить</button></div><div class="car-operation-grid"><div><small>Сезон</small><strong>${tireSeasonText(c.tireSeason)}</strong></div><div><small>Размер</small><strong>${c.tireSize||"Не указан"}</strong></div><div><small>Установлены</small><strong>${c.tireInstalled?date(c.tireInstalled):"—"}</strong></div><div><small>Пробег на комплекте</small><strong>${tire.usedKm===null?"—":km(tire.usedKm)}</strong></div></div>${tire.planned?`<button class="car-operation-alert" onclick="openSmartEntity('expense','${tire.planned.id}','${c.id}')"><span>Ближайшая задача по шинам</span><strong>${tire.planned.title} · ${date(tire.planned.date)}</strong><b>${money(tire.planned.amount)}</b></button>`:tire.paid?`<div class="car-operation-note"><span>Последняя операция</span><strong>${tire.paid.title} · ${date(tire.paid.date)}</strong></div>`:`<div class="car-operation-note"><span>История шин</span><strong>Записей пока нет</strong></div>`}</div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p><button class="inline-entity-link" onclick="openSmartEntity('repair','${x.id}','${c.id}')">${date(x.date)} · ${x.title} · ${money(x.planned)}</button></p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
  const serviceActive=rep.filter(x=>!["done","cancelled"].includes(String(x.status||"")));
  const serviceHistory=rep.filter(x=>["done","cancelled"].includes(String(x.status||""))).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||"")));
  const carRequests=activeDriverRepairRequests().filter(x=>String(x.car_id)===String(c.id));
@@ -5945,7 +6031,7 @@ function renderCarProfile(id,activeTab="info"){
       <div class="car-service-entry-main">
        <div class="car-service-entry-title"><strong>${r.title}</strong><span class="car-service-entry-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span></div>
        <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
-       <div class="car-service-entry-meta"><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${serviceRepairCostMeta(r)}</span>${serviceLinkedExpense(r)?`<span>${expenseStatusText(serviceLinkedExpense(r).status)}</span>`:""}</div>
+       <div class="car-service-entry-meta"><span>${serviceTypeText(inferRepairServiceType(r))}</span><span>${date(r.date)}</span><span>${km(r.mileage)}</span><span>${serviceRepairCostMeta(r)}</span>${serviceLinkedExpense(r)?`<span>${expenseStatusText(serviceLinkedExpense(r).status)}</span>`:""}</div>
       </div>
       <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">${fpUiIcon("arrow")}</button>
      </article>`).join("")}
@@ -5976,6 +6062,7 @@ function renderCarProfile(id,activeTab="info"){
        <div class="car-service-entry-title"><strong>${r.title}</strong><span class="car-service-entry-status ${r.status==="done"?"done":"cancelled"}">${repairStatusText(r.status)}</span></div>
        <p>${r.service||"Сервис не указан"}${r.note?` · ${r.note}`:""}</p>
        <div class="car-service-entry-meta">
+        <span>${serviceTypeText(inferRepairServiceType(r))}</span>
         <span>${date(r.completedDate||r.date)}</span>
         <span>${km(r.mileage)}</span>
         <span>${money(r.actual||r.planned||0)}</span>
@@ -5997,7 +6084,7 @@ function renderCarProfile(id,activeTab="info"){
  const damages=`<div class="card"><div class="section-head"><h3>Повреждения</h3><button class="btn primary" onclick="openDamageDialog('${c.id}')">+ Добавить</button></div><div class="damage-gallery">${renderDamageGallery(c.id)}</div></div>`;
  const tabContent={info,service,finance,history,documents,damages}[activeTab]||info;
  showPage("carPage");
- $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":c.status} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":c.status}">${attention(c)?"Требует внимания":statusText(c.status)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Информация",activeTab)}${carTabButton(c.id,"service","Сервис",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="copyCurrentCarLink('${c.id}','${activeTab}')">🔗 Скопировать ссылку</button><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
+ $("#carDetail").innerHTML=`<div class="detail-summary ${attention(c)?"attention":effectiveStatus} ${c.customPhoto?"has-custom-photo":""}">${c.customPhoto?`<img class="detail-custom-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}"><div class="detail-photo-shade"></div>`:""}<div class="detail-content"><span class="status ${attention(c)?"attention":effectiveStatus}">${attention(c)?"Требует внимания":statusText(effectiveStatus)}</span><h2>${m.brand} ${m.model}</h2><p>${c.plate} · ${c.year} · ${c.city||"Город не указан"} · ${c.tenant||"Без арендатора"}</p></div><div class="detail-summary-profit"><small>Прибыль месяца</small><strong>${money(monthProfit)}</strong></div></div><div class="car-detail-tabs">${carTabButton(c.id,"info","Обзор",activeTab)}${carTabButton(c.id,"service","Сервис",activeTab)}${carTabButton(c.id,"finance","Финансы",activeTab)}${carTabButton(c.id,"documents","Документы",activeTab)}${carTabButton(c.id,"history","История",activeTab)}${carTabButton(c.id,"damages","Повреждения",activeTab)}</div><div class="car-tab-content">${tabContent}</div><div class="card car-management-card"><button class="btn" onclick="copyCurrentCarLink('${c.id}','${activeTab}')">🔗 Скопировать ссылку</button><button class="btn" onclick="toggleFavorite('${c.id}')">${c.favorite?"★ Убрать из избранного":"☆ В избранное"}</button><button class="btn" onclick="openCarDialog('${c.id}')">Редактировать автомобиль</button>${isSimpleMode()?"":`<button class="btn archive-btn" onclick="toggleArchive('${c.id}')">${c.archived?"Вернуть из архива":"Переместить в архив"}</button><button class="btn danger" onclick="deleteCar('${c.id}')">Удалить автомобиль</button>`}</div>`
  if(activeTab==="history")loadVehicleHandoverHistory(c.id);
 }
 function requireFleetCar(){if(fleetCars().length)return true;toast("Сначала добавьте автомобиль в автопарк");return false}
@@ -6163,6 +6250,7 @@ function openRepairDialog(carId="",id=""){
  setValue("#repairId",r?.id||"");
  setHtml("#repairCarId",opts(selected));
  setValue("#repairTitle",r?.title||"");
+ setValue("#repairServiceType",r?.serviceType||inferRepairServiceType(r||{}));
  setValue("#repairProblem",r?.problem||"");
  setValue("#repairDate",r?.date||today());
  setValue("#repairMileage",Math.max(Number(r?.mileage||0),latestMileage));
@@ -6349,6 +6437,7 @@ function openRepairFromDriverRequest(request){
  const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
  openRepairDialog(c.id);
  $("#repairTitle").value=DRIVER_REPAIR_CATEGORY_LABELS[request.category]||"Ремонт по заявке";
+ if($("#repairServiceType"))$("#repairServiceType").value={engine:"engine",suspension:"suspension",brakes:"brakes",electric:"electrical",body:"body",tires:"tires"}[request.category]||"other";
  $("#repairDate").value=today();
  $("#repairMileage").value=Math.max(Number(c.mileage||0),Number(request.mileage||0));
  $("#repairStatus").value="repair";
@@ -6391,6 +6480,7 @@ window.deleteRepair=id=>{
  }
  if(expense&&removeExpense)db.expenses=db.expenses.filter(x=>x.id!==expense.id);
  db.repairs=db.repairs.filter(x=>x.id!==id);
+ recalculateVehicleMaintenance(repair.carId);syncCarServiceStatus(repair.carId);
  save();renderRepairs();renderExpenses();renderFleet();renderProfitability();
  toast(removeExpense?"Ремонт и расход удалены":"Техническая запись удалена")
 };window.deletePayment=id=>{if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(confirm("Удалить плановый расход?")){const old=db.expenses.find(x=>x.id===id);db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses();renderRepairs();if(old&&selectedCarId===old.carId&&$("#carPage")?.classList.contains("active"))openCar(old.carId,"service")}};window.deleteDocument=async id=>{if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
@@ -6559,6 +6649,7 @@ $("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId")
 $("#expenseCategory").onchange=syncExpenseRepairFields;
 $("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
 $("#repairCarId").onchange=()=>{$("#repairMileage").value=currentConfirmedMileage($("#repairCarId").value);updateRepairCarMeta()};
+$("#repairTitle")?.addEventListener("blur",()=>{const select=$("#repairServiceType");if(select&&select.value==="other")select.value=inferRepairServiceType({title:$("#repairTitle").value,problem:$("#repairProblem")?.value||"",note:$("#repairNote")?.value||""})});
 $("#repairAddPart")?.addEventListener("click",()=>{repairEditorParts.push({name:"",qty:1,price:0});renderRepairPartsEditor()});
 $("#repairAddChecklist")?.addEventListener("click",()=>{repairEditorChecklist.push({text:"",done:false});renderRepairChecklistEditor()});
 $("#repairLaborCost")?.addEventListener("input",updateRepairCalculatedTotal);
@@ -6612,7 +6703,7 @@ $("#repairForm").onsubmit=async e=>{
   }
 
   const obj={
-   id,carId,title:$("#repairTitle").value.trim(),date:$("#repairDate").value,
+   id,carId,title:$("#repairTitle").value.trim(),serviceType:$("#repairServiceType")?.value||"other",date:$("#repairDate").value,
    mileage,planned:Number($("#repairPlanned").value||0),actual,status,
    service:$("#repairService").value.trim(),problem:$("#repairProblem")?.value.trim()||"",note:$("#repairNote").value.trim(),
    parts:structuredClone(repairEditorParts.filter(p=>String(p.name||"").trim()).map(p=>({name:String(p.name||"").trim(),qty:Math.max(1,Number(p.qty||1)),price:Number(p.price||0)}))),
@@ -6652,7 +6743,7 @@ $("#repairForm").onsubmit=async e=>{
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
   if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
-  syncServiceRelations(obj);
+  syncServiceRelations(obj,previous);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
   logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);
 
@@ -7109,11 +7200,14 @@ function renderServiceCarTasks(row){
 }
 
 // Fix accidental recursion left by previous relation patch.
-function syncServiceRelations(repair){
+function syncServiceRelations(repair,previous=null){
  if(!repair)return;
+ repair.serviceType=repair.serviceType||inferRepairServiceType(repair);
  syncLinkedExpenseFromRepair(repair);
  const c=car(repair.carId);
  if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
+ applyCompletedServiceToVehicle(repair,previous);
+ recalculateVehicleMaintenance(repair.carId);
  syncCarServiceStatus(repair.carId)
 }
 function selectServiceRequest(id){
@@ -7284,7 +7378,7 @@ $("#serviceRequestTransferButton")?.addEventListener("click",()=>{if(serviceRequ
 $("#addRepair")?.addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();const first=fleetCars()[0];if(!first)return toast("Сначала добавьте автомобиль");createServiceTaskForCar(first.id)},true);
 
 
-// FleetPilot V13.1.5 — global service search + collapsible panels
+// FleetPilot V14.0 — service search retained + Vehicle Core
 const SERVICE_INCOMING_COLLAPSED_KEY="fleetpilot.service.incoming.collapsed.v1";
 const SERVICE_PLANNING_COLLAPSED_KEY="fleetpilot.service.planning.collapsed.v1";
 function serviceIncomingPanelCollapsed(){try{return localStorage.getItem(SERVICE_INCOMING_COLLAPSED_KEY)==="1"}catch{return false}}

@@ -8855,3 +8855,69 @@ button,select,input,textarea{max-width:100%}
   #repairsPage .service-global-search{grid-template-columns:auto minmax(0,1fr)!important}
   #repairsPage .service-global-search .btn{grid-column:2!important;width:100%!important}
 }
+
+/* FleetPilot V14.0 — Vehicle Core / desktop fleet foundation */
+@media (min-width:1100px){
+  #fleetPage .desktop-fleet-row{
+    border-radius:16px!important;
+    box-shadow:0 5px 18px rgba(15,23,42,.045)!important;
+    transform:none!important;
+  }
+  #fleetPage .desktop-fleet-row:hover{
+    transform:none!important;
+    box-shadow:0 8px 24px rgba(15,23,42,.07)!important;
+  }
+  #fleetPage .desktop-car-title-line h3{
+    font-size:18px!important;
+    font-weight:600!important;
+    letter-spacing:-.018em!important;
+  }
+  #fleetPage .desktop-car-title-line p,
+  #fleetPage .desktop-kpi small,
+  #fleetPage .desktop-service-copy small,
+  #fleetPage .desktop-service-copy em{
+    font-weight:400!important;
+  }
+  #fleetPage .desktop-status{
+    min-height:28px!important;
+    padding:0 10px!important;
+    font-size:10px!important;
+    font-weight:500!important;
+    box-shadow:none!important;
+  }
+  #fleetPage .desktop-status::before{box-shadow:none!important;width:6px!important;height:6px!important;flex-basis:6px!important}
+  #fleetPage .desktop-car-kpis{gap:12px!important;min-width:0!important;padding:0 8px!important}
+  #fleetPage .desktop-kpi{min-width:0!important}
+  #fleetPage .desktop-kpi strong{font-size:17px!important;font-weight:600!important;white-space:nowrap!important}
+  #fleetPage .vehicle-health-kpi{border:0!important;background:transparent!important;color:inherit!important;cursor:pointer!important;padding:0!important;text-align:left!important}
+  #fleetPage .vehicle-health-kpi small{display:block!important;max-width:110px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  #fleetPage .vehicle-health-inline{
+    display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid rgba(148,163,184,.2);border-radius:999px;
+    background:rgba(15,23,42,.04);font-size:11px;font-weight:600;color:#64748b;
+  }
+  html[data-theme="dark"] #fleetPage .vehicle-health-inline{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08);color:#aeb8c8}
+
+  #carPage .vehicle-core-overview{
+    display:grid;gap:14px;margin-bottom:14px;padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:var(--surface-main);
+  }
+  #carPage .vehicle-core-main{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:0}
+  #carPage .vehicle-core-main h3{margin:2px 0 4px;font-size:20px;font-weight:600;letter-spacing:-.02em}
+  #carPage .vehicle-core-main p{margin:0;color:var(--muted);font-size:13px;font-weight:400}
+  #carPage .vehicle-health-score{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:end;column-gap:3px;min-width:100px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(148,163,184,.06)}
+  #carPage .vehicle-health-score small{grid-column:1/-1;color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+  #carPage .vehicle-health-score strong{font-size:25px;line-height:1;font-weight:600}
+  #carPage .vehicle-health-score span{font-size:11px;color:var(--muted)}
+  #carPage .vehicle-health-score.good strong{color:#16864b}
+  #carPage .vehicle-health-score.warning strong{color:#b96d08}
+  #carPage .vehicle-health-score.danger strong{color:#c93636}
+  #carPage .vehicle-core-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  #carPage .vehicle-core-kpis>div{min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:rgba(148,163,184,.035)}
+  #carPage .vehicle-core-kpis small,#carPage .vehicle-core-kpis strong{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #carPage .vehicle-core-kpis small{color:var(--muted);font-size:10px;font-weight:400}
+  #carPage .vehicle-core-kpis strong{margin-top:4px;font-size:14px;font-weight:600}
+  #carPage .vehicle-core-alerts{display:flex;flex-wrap:wrap;gap:6px}
+  #carPage .vehicle-core-alerts span{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:8px;background:rgba(245,158,11,.09);color:#a85d07;font-size:11px;font-weight:500}
+  #carPage .vehicle-core-alerts.good span{background:rgba(34,197,94,.08);color:#16864b}
+  #carPage .car-detail-tabs button{font-weight:500!important}
+  #carPage .detail-stat-grid strong,#carPage .car-operation-grid strong{font-weight:600!important}
+}
