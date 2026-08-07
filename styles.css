@@ -8232,7 +8232,7 @@ html[data-theme="dark"] .repair-linked-finance-info{
 @media(max-width:760px){.service-crm-toolbar{grid-template-columns:1fr 1fr}.service-task-row{grid-template-columns:32px minmax(0,1fr)}.service-task-inline-controls,.service-task-status,.service-task-actions{grid-column:2}.service-task-inline-controls{grid-template-columns:1fr}.service-drop-zones{grid-template-columns:repeat(2,1fr)}}
 
 
-/* FleetPilot V11.6 — full service task card */
+/* FleetPilot V11.7 — full service task card */
 .repair-task-dialog{width:min(1120px,calc(100% - 28px));max-height:94vh;border-radius:20px}
 .repair-task-modal{padding:0;max-height:94vh;overflow:hidden;display:flex;flex-direction:column;background:var(--surface-main,#f6f7fb)}
 .repair-task-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px 16px;background:var(--card,#fff);border-bottom:1px solid var(--line,#e6e8ee)}

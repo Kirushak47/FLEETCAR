@@ -5274,8 +5274,7 @@ function advanceServiceRepair(id){
  }
  repair.status=next;
  if(next==="done")repair.completedDate=repair.completedDate||today();
- syncLinkedExpenseFromRepair(repair);
- syncCarServiceStatus(repair.carId);
+ syncServiceRelations(repair);
  addTimeline(repair.carId,"repair",repair.title,-Number(repair.actual||repair.planned||0),today(),repairStatusText(next));
  logActivity("Изменён статус ремонта","Сервис",`${repair.title} → ${repairStatusText(next)}`,repair.carId);
  save();renderRepairs();renderExpenses();renderFleet();
@@ -5758,7 +5757,11 @@ function allEvents(){
   if(c.inspection){const doc=(db.documents||[]).find(x=>x.carId===c.id&&x.type==="inspection");result.push({date:c.inspection,carId:c.id,entityId:doc?.id||"",title:"Техосмотр",type:"inspection",car:m.brand+" "+m.model+" · "+c.plate})}
  }
  for(const r of db.repairs.filter(x=>x.status!=="done"))result.push({date:r.date,carId:r.carId,entityId:r.id,title:r.title,type:"repair",car:model(car(r.carId)).brand+" "+model(car(r.carId)).model+" · "+car(r.carId).plate});
- for(const x of db.expenses.filter(x=>x.status==="planned"))result.push({date:x.date,carId:x.carId,entityId:x.id,title:x.title,type:"expense",car:model(car(x.carId)).brand+" "+model(car(x.carId)).model+" · "+car(x.carId).plate,amount:x.amount});
+ for(const x of db.expenses.filter(x=>x.status==="planned")){
+  const linked=x.linkedRepairId?db.repairs.find(r=>String(r.id)===String(x.linkedRepairId)):null;
+  if(linked&&!['done','cancelled'].includes(String(linked.status||'')))continue;
+  result.push({date:x.date,carId:x.carId,entityId:x.id,title:x.title,type:"expense",car:model(car(x.carId)).brand+" "+model(car(x.carId)).model+" · "+car(x.carId).plate,amount:x.amount})
+ }
  for(const d of db.documents){
   for(const i of d.installments||[])if(!i.paid)result.push({date:i.due,carId:d.carId,entityId:d.id,title:`${d.title}: рата ${i.number}`,type:"installment",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate,amount:i.amount});
   if(d.expiry)result.push({date:d.expiry,carId:d.carId,entityId:d.id,title:`Документ: ${d.title}`,type:d.type||"document",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate});
@@ -5920,7 +5923,7 @@ function renderCarProfile(id,activeTab="info"){
        <p>${expenseCategoryText(x.category)}${x.note?` · ${x.note}`:""}</p>
        <div class="car-service-entry-meta"><span>${date(x.date)}</span><span>${money(x.amount)}</span></div>
       </div>
-      <button class="car-service-open" onclick="editExpense('${x.id}')" title="Открыть расход">›</button>
+      <button class="car-service-open" onclick="openSmartEntity('expense','${x.id}','${c.id}')" title="Открыть расход">›</button>
      </article>`).join("")}
    </div>
   </section>`:""}
@@ -5938,6 +5941,7 @@ function renderCarProfile(id,activeTab="info"){
         <span>${km(r.mileage)}</span>
         <span>${money(r.actual||r.planned||0)}</span>
         ${r.warrantyUntil?`<span>Гарантия до ${date(r.warrantyUntil)}</span>`:""}
+        ${serviceLinkedExpense(r)?`<button class="inline-entity-link" onclick="event.stopPropagation();openSmartEntity('expense','${serviceLinkedExpense(r).id}','${c.id}')">Расход ${money(serviceLinkedExpense(r).amount)}</button>`:""}
        </div>
       </div>
       <button class="car-service-open" onclick="openSmartEntity('repair','${r.id}','${c.id}')" title="Открыть в сервисе">›</button>
@@ -6226,7 +6230,7 @@ function createOrUpdateRepairFromExpense(expense){
  });
 
  expense.linkedRepairId=repair.id;
- expense.financeSource="expense";
+ expense.financeSource=expense.financeSource||"expense";
  const c=car(expense.carId);
  if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
  return repair
@@ -6236,17 +6240,21 @@ function syncLinkedExpenseFromRepair(repair){
  const shouldCreate=repair.status==="done"&&amount>0&&["paid","partial","driver"].includes(repair.paymentStatus);
 
  let expense=repair.linkedExpenseId?db.expenses.find(x=>x.id===repair.linkedExpenseId):null;
- if(!expense){
-  expense=db.expenses.find(x=>x.linkedRepairId===repair.id)||null
- }
+ if(!expense)expense=db.expenses.find(x=>String(x.linkedRepairId)===String(repair.id))||null;
 
+ // A service-generated expense follows the repair lifecycle. If the repair is reopened,
+ // cancelled, or no longer has a billable amount, remove only the automatic finance row.
  if(!shouldCreate){
-  // Keep an already entered expense, but never create a new one for a planned/unpaid repair.
+  if(expense&&expense.financeSource==="service"){
+   db.expenses=db.expenses.filter(x=>String(x.id)!==String(expense.id));
+   repair.linkedExpenseId="";
+   return null
+  }
   return expense||null
  }
 
  if(!expense){
-  expense={id:uid()};
+  expense={id:uid(),financeSource:"service"};
   db.expenses.push(expense)
  }
 
@@ -6257,12 +6265,18 @@ function syncLinkedExpenseFromRepair(repair){
   date:repair.completedDate||repair.date||today(),
   amount,
   status:repair.paymentStatus==="paid"?"paid":"planned",
-  note:repair.note||"",
-  linkedRepairId:repair.id,
-  financeSource:"expense"
+  note:repair.note||repair.problem||"",
+  linkedRepairId:repair.id
  });
+ if(!expense.financeSource)expense.financeSource="service";
  repair.linkedExpenseId=expense.id;
  return expense
+}
+function syncServiceRelations(repair){
+ if(!repair)return;
+ syncServiceRelations(repair);
+ const c=car(repair.carId);
+ if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
 }
 function openRepairFromDriverRequest(request){
  const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");
@@ -6571,9 +6585,7 @@ $("#repairForm").onsubmit=async e=>{
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
   if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
-  syncCarServiceStatus(carId);
-
-  syncLinkedExpenseFromRepair(obj);
+  syncServiceRelations(obj);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
   logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);
 
