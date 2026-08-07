@@ -6170,6 +6170,18 @@ function printExpenseDrilldown(){
 }
 window.openExpenseDrilldown=openExpenseDrilldown;window.setExpenseDrilldownTab=setExpenseDrilldownTab;window.setExpenseDrilldownCategory=setExpenseDrilldownCategory;window.openExpenseDrilldownEntity=openExpenseDrilldownEntity;window.expenseDrilldownCsv=expenseDrilldownCsv;window.printExpenseDrilldown=printExpenseDrilldown;
 
+function openCar(id,activeTab="info"){
+ const target=car(id);
+ if(!target){toast("Автомобиль не найден");return}
+ const tab=FLEETPILOT_CAR_TABS.has(activeTab)?activeTab:"info";
+ selectedCarId=target.id;
+ showPage("carPage");
+ renderCarProfile(target.id,tab);
+ if(fleetPilotRouteReady&&!fleetPilotApplyingRoute)fleetPilotSetRoute(fleetPilotCarRoute(target.id,tab));
+ requestAnimationFrame(()=>{try{window.scrollTo({top:0,left:0,behavior:"auto"})}catch{window.scrollTo(0,0)}})
+}
+window.openCar=openCar;
+
 function renderCarProfile(id,activeTab="info"){
  if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
