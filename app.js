@@ -738,15 +738,27 @@ function enterprisePermissionConfigured(role=enterpriseCurrentRole()){
  const values=companyPermissions?.[role];
  return Boolean(values&&Object.keys(values).length)
 }
+function enterpriseLegacyPermissionAllowed(role,permission){
+ const page=Object.entries(PAGE_PERMISSION_MAP).find(([,key])=>key===permission)?.[0];
+ if(page)return(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(page);
+ const defaults={
+  coordinator:["cars.view","cars.create","cars.edit","cars.assign","cars.mileage","cars.gps","service.view","service.create","service.edit","service.photos","service.calendar","documents.view","documents.create","documents.delete","documents.contracts","company.team"],
+  accountant:["cars.view","finance.view","finance.expenses","finance.payments","finance.analytics","service.calendar","documents.view","documents.create","documents.contracts"],
+  mechanic:["cars.view","cars.mileage","cars.gps","service.view","service.create","service.edit","service.photos","service.calendar","documents.view","documents.create","documents.contracts"],
+  driver:["driver.portal","driver.tasks","driver.photos","driver.protocols"],
+  user:["cars.view","cars.gps","finance.view","finance.analytics","service.view","service.calendar","documents.view"]
+ };
+ return(defaults[role]||defaults.user).includes(permission)
+}
 function enterpriseCan(permission){
  const role=enterpriseCurrentRole();
  if(role==="owner"||window.FleetPilotCloud?.isWorkspaceOwner)return true;
  if(!permission)return true;
  const values=companyPermissions?.[role]||{};
+ // Explicit administrator choices always win. Sparse permission objects from older
+ // versions inherit the role defaults instead of accidentally hiding whole modules.
  if(Object.prototype.hasOwnProperty.call(values,permission))return Boolean(values[permission]);
- // Until the administrator has saved a custom matrix, preserve the legacy role behavior.
- if(!enterprisePermissionConfigured(role))return true;
- return false
+ return enterpriseLegacyPermissionAllowed(role,permission)
 }
 function enterprisePagePermission(pageId){
  if(pageId==="searchPage")return enterpriseCan("cars.view")||enterpriseCan("service.view")||enterpriseCan("documents.view")||enterpriseCan("finance.view");
@@ -7955,12 +7967,13 @@ function renderDocuments(){
  root.innerHTML=rows.map(row=>{
   const st=fpDocumentState(row),install=row.type==="insurance"&&row.paymentMode==="installments"?installmentSummary(row):null;
   const paidPct=install&&Number(row.cost||0)>0?Math.min(100,Math.round(install.paid/Number(row.cost||0)*100)):0;
-  return `<article class="document-register-row" data-document-id="${row.id}">
+  return `<article class="document-register-row document-register-clickable" data-document-id="${row.id}" role="button" tabindex="0" aria-label="Открыть документ" onclick="openDocumentDialog('', '${row.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDocumentDialog('', '${row.id}')}">
    <div class="document-register-main"><div class="document-register-icon">${fpDocumentIcon(row.type)}</div><div><strong>${row.title||documentTypeText(row.type)||"Документ"}</strong><small>${documentTypeText(row.type)} · ${fpDocumentCarLabel(row)}</small>${install?`<div class="document-installment-progress"><i><b style="width:${paidPct}%"></b></i><em>${money(install.paid)} / ${money(row.cost||0)}</em></div>`:""}</div></div>
-   <div class="document-register-cell document-number-cell"><span>Номер</span><strong>${row.number||"—"}</strong><small>${row.fileId?"Файл прикреплён":"Без вложения"}</small></div>
+   <div class="document-register-cell document-number-cell"><span>Номер</span><strong>${row.number||"—"}</strong><small>${row.fileId?"Есть вложение":"Без вложения"}</small></div>
    <div class="document-register-cell"><span>Срок</span><strong>${row.expiry?date(row.expiry):"Не указан"}</strong><small>${st.detail}</small></div>
    <div class="document-register-cell"><span>Статус</span><span class="document-status-badge ${st.key}"><i class="document-status-dot"></i>${st.label}</span>${Number(row.cost||0)?`<small>Стоимость ${money(row.cost)}</small>`:""}</div>
-   <div class="document-register-actions"><button type="button" class="btn" onclick="openDocumentDialog('', '${row.id}')">Открыть</button><button type="button" class="btn" title="Удалить" onclick="deleteDocument('${row.id}')">⋮</button></div>
+   <div class="document-register-file-slot ${row.fileId?"has-file":"no-file"}" title="${row.fileId?"К документу прикреплён файл":"Файл не прикреплён"}" aria-label="${row.fileId?"Есть прикреплённый файл":"Нет прикреплённого файла"}"><span aria-hidden="true">▣</span></div>
+   <div class="document-register-actions"><button type="button" class="btn document-more-button" title="Удалить документ" aria-label="Удалить документ" onclick="event.stopPropagation();deleteDocument('${row.id}')">⋮</button></div>
   </article>`
  }).join("")||'<div class="document-empty-professional">По выбранным фильтрам документов нет.</div>';
  ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})

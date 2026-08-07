@@ -9233,3 +9233,30 @@ html[data-theme="dark"] .car-finance-kpis article.planned strong{color:#fcd34d}
  .mobile-role-menu-grid button span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:rgba(99,102,241,.1);color:#4f46e5}
  .mobile-role-menu-grid button b{font-size:10px}
 }
+
+/* FleetPilot V15.1 — clickable document register + stable attachment column */
+.document-register-row.document-register-clickable{
+  cursor:pointer;
+  grid-template-columns:minmax(260px,1.65fr) minmax(150px,.9fr) minmax(145px,.78fr) minmax(155px,.82fr) 34px 38px;
+  transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.document-register-row.document-register-clickable:hover{border-color:rgba(99,102,241,.28);background:color-mix(in srgb,var(--card,#fff) 94%,#eef2ff 6%);box-shadow:0 7px 20px rgba(15,23,42,.055)}
+.document-register-row.document-register-clickable:active{transform:scale(.997)}
+.document-register-row.document-register-clickable:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+.document-register-file-slot{width:34px;height:34px;display:grid;place-items:center;align-self:center;border-radius:10px;border:1px solid transparent;font-size:14px;flex:none}
+.document-register-file-slot.has-file{background:rgba(99,102,241,.09);border-color:rgba(99,102,241,.16);color:#5b5bd6}
+.document-register-file-slot.no-file{visibility:hidden}
+.document-register-actions{width:38px;min-width:38px}
+.document-register-actions .document-more-button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;border-radius:10px!important}
+@media(max-width:1180px){.document-register-row.document-register-clickable{grid-template-columns:minmax(230px,1.5fr) minmax(145px,.8fr) minmax(150px,.8fr) 34px 38px}}
+@media(max-width:820px){
+ .document-register-row.document-register-clickable{grid-template-columns:minmax(0,1fr) 32px 34px!important;align-items:start!important;gap:7px 8px!important}
+ .document-register-row.document-register-clickable .document-register-main{grid-column:1;grid-row:1}
+ .document-register-row.document-register-clickable .document-register-file-slot{grid-column:2;grid-row:1;width:30px;height:30px;border-radius:9px}
+ .document-register-row.document-register-clickable .document-register-actions{grid-column:3;grid-row:1;width:34px;min-width:34px;align-self:start;display:block}
+ .document-register-row.document-register-clickable .document-register-actions .document-more-button{width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important}
+ .document-register-row.document-register-clickable .document-register-cell{grid-column:1 / 4!important;display:grid!important;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:7px;margin:0!important;padding-top:5px;border-top:1px solid var(--line,#e6eaf0)}
+ .document-register-row.document-register-clickable .document-register-cell>span:first-child{margin:0}
+ .document-register-row.document-register-clickable .document-register-cell>strong,.document-register-row.document-register-clickable .document-register-cell>.document-status-badge{margin:0!important;justify-self:start}
+ .document-register-row.document-register-clickable .document-register-cell>small{grid-column:2;margin-top:1px!important}
+}
