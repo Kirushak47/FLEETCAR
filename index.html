@@ -608,9 +608,11 @@
       <div class="section-head professional-page-head">
         <div><span class="eyebrow">Планирование</span><h2>Календарь автопарка</h2><p>Страховки, техосмотры, сервисы, платежи и другие сроки.</p></div>
         <div class="calendar-professional-toolbar">
+          <input id="calendarSelectedDate" type="date" aria-label="Выбрать день">
           <select id="calendarRange">
-            <option value="30">30 дней</option>
-            <option value="90" selected>90 дней</option>
+            <option value="14">14 дней</option>
+            <option value="30" selected>30 дней</option>
+            <option value="90">90 дней</option>
             <option value="365">Год</option>
           </select>
           <select id="calendarTypeFilter">
@@ -629,8 +631,11 @@
           <div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3>Ближайшие события</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div>
           <div id="calendarList" class="calendar-professional-list"></div>
         </section>
-        <aside class="professional-panel professional-side-panel">
-          <div class="professional-panel-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div>
+        <aside class="professional-panel professional-side-panel calendar-side-panel">
+          <div class="professional-panel-head calendar-month-head"><div><span class="eyebrow">Месяц</span><h3 id="calendarMonthTitle">Календарь</h3></div><div class="calendar-month-actions"><button type="button" id="calendarPrevMonth" aria-label="Предыдущий месяц">‹</button><button type="button" id="calendarToday">Сегодня</button><button type="button" id="calendarNextMonth" aria-label="Следующий месяц">›</button></div></div>
+          <div id="calendarMonthGrid" class="calendar-month-grid"></div>
+          <div class="calendar-selected-day"><span>Выбранный день</span><strong id="calendarSelectedDayLabel">Не выбран</strong><button type="button" id="calendarClearDay">Показать период</button></div>
+          <div class="professional-panel-head calendar-upcoming-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div>
           <div id="calendarMonthOverview" class="calendar-month-overview"></div>
         </aside>
       </div>
@@ -1257,6 +1262,10 @@
     <label>Дата покупки<input id="carPurchaseDate" type="date"></label>
     <label>Страховка до<input id="carInsurance" type="date"></label>
     <label>Техосмотр до<input id="carInspection" type="date"></label>
+    <label>Сезон шин<select id="carTireSeason"><option value="">Не указано</option><option value="summer">Летние</option><option value="winter">Зимние</option><option value="allseason">Всесезонные</option></select></label>
+    <label>Размер шин<input id="carTireSize" placeholder="Например: 205/55 R16"></label>
+    <label>Дата установки шин<input id="carTireInstalled" type="date"></label>
+    <label>Пробег установки шин<input id="carTireMileage" type="number" min="0" placeholder="км"></label>
   </div>
   <div class="car-photo-editor">
     <div id="carPhotoPreview" class="car-photo-preview">

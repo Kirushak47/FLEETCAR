@@ -47,16 +47,16 @@ const seed={settings:{currency:"PLN",tax:{vat:"no",method:"ryczalt",ryczaltRate:
 const demoSeed=(()=>{
  const d=(n)=>addDays(today(),n);
  const cars=[
-  {id:"d1",modelKey:"toyota-prius-3",year:2017,plate:"WX 4821P",tenant:"Алексей",status:"active",city:"Warszawa",mileage:286420,oilInterval:10000,lastOil:279800,weeklyRent:760,insurance:d(14),inspection:d(92)},
-  {id:"d2",modelKey:"toyota-auris",year:2016,plate:"WA 7316K",tenant:"Михаил",status:"active",city:"Warszawa",mileage:241880,oilInterval:10000,lastOil:233000,weeklyRent:720,insurance:d(164),inspection:d(22)},
-  {id:"d3",modelKey:"toyota-corolla",year:2020,plate:"WZ 9054C",tenant:"Олег",status:"active",city:"Warszawa",mileage:164230,oilInterval:15000,lastOil:154000,weeklyRent:850,insurance:d(244),inspection:d(187)},
-  {id:"d4",modelKey:"skoda-octavia-3",year:2019,plate:"WE 1187L",tenant:"Андрей",status:"repair",city:"Warszawa",mileage:198760,oilInterval:15000,lastOil:188500,weeklyRent:820,insurance:d(61),inspection:d(116)},
-  {id:"d5",modelKey:"kia-ceed",year:2018,plate:"WU 4428N",tenant:"Игорь",status:"active",city:"Warszawa",mileage:173910,oilInterval:15000,lastOil:161000,weeklyRent:740,insurance:d(-3),inspection:d(203)},
-  {id:"d6",modelKey:"hyundai-ioniq",year:2019,plate:"WI 6305H",tenant:"Владимир",status:"active",city:"Warszawa",mileage:152480,oilInterval:15000,lastOil:147200,weeklyRent:790,insurance:d(118),inspection:d(9)},
-  {id:"d7",modelKey:"ford-mondeo",year:2017,plate:"WB 2746F",tenant:"Сергей",status:"free",city:"Warszawa",mileage:226540,oilInterval:15000,lastOil:214000,weeklyRent:700,insurance:d(321),inspection:d(72)},
-  {id:"d8",modelKey:"toyota-camry",year:2018,plate:"WN 8862T",tenant:"Дмитрий",status:"active",city:"Warszawa",mileage:189330,oilInterval:10000,lastOil:184000,weeklyRent:880,insurance:d(47),inspection:d(154)},
-  {id:"d9",modelKey:"nissan-leaf",year:2020,plate:"WW 3901E",tenant:"Роман",status:"repair",city:"Warszawa",mileage:118760,oilInterval:30000,lastOil:104000,weeklyRent:810,insurance:d(209),inspection:d(28)},
-  {id:"d10",modelKey:"skoda-fabia-combi",year:2018,plate:"WF 5173S",tenant:"Павел",status:"active",city:"Warszawa",mileage:207140,oilInterval:15000,lastOil:195000,weeklyRent:690,insurance:d(83),inspection:d(-8)}
+  {id:"d1",modelKey:"toyota-prius-3",year:2017,plate:"WX 4821P",tenant:"Алексей",status:"active",city:"Warszawa",mileage:286420,oilInterval:10000,lastOil:279800,weeklyRent:760,insurance:d(14),inspection:d(92),tireSeason:"summer",tireSize:"195/65 R15",tireInstalled:d(-118),tireMileage:278400},
+  {id:"d2",modelKey:"toyota-auris",year:2016,plate:"WA 7316K",tenant:"Михаил",status:"active",city:"Warszawa",mileage:241880,oilInterval:10000,lastOil:233000,weeklyRent:720,insurance:d(164),inspection:d(22),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-96),tireMileage:235200},
+  {id:"d3",modelKey:"toyota-corolla",year:2020,plate:"WZ 9054C",tenant:"Олег",status:"active",city:"Warszawa",mileage:164230,oilInterval:15000,lastOil:154000,weeklyRent:850,insurance:d(244),inspection:d(187),tireSeason:"winter",tireSize:"205/55 R16",tireInstalled:d(-280),tireMileage:151500},
+  {id:"d4",modelKey:"skoda-octavia-3",year:2019,plate:"WE 1187L",tenant:"Андрей",status:"repair",city:"Warszawa",mileage:198760,oilInterval:15000,lastOil:188500,weeklyRent:820,insurance:d(61),inspection:d(116),tireSeason:"allseason",tireSize:"225/45 R17",tireInstalled:d(-210),tireMileage:187000},
+  {id:"d5",modelKey:"kia-ceed",year:2018,plate:"WU 4428N",tenant:"Игорь",status:"active",city:"Warszawa",mileage:173910,oilInterval:15000,lastOil:161000,weeklyRent:740,insurance:d(-3),inspection:d(203),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-132),tireMileage:165100},
+  {id:"d6",modelKey:"hyundai-ioniq",year:2019,plate:"WI 6305H",tenant:"Владимир",status:"active",city:"Warszawa",mileage:152480,oilInterval:15000,lastOil:147200,weeklyRent:790,insurance:d(118),inspection:d(9),tireSeason:"summer",tireSize:"205/55 R16",tireInstalled:d(-104),tireMileage:145600},
+  {id:"d7",modelKey:"ford-mondeo",year:2017,plate:"WB 2746F",tenant:"Сергей",status:"free",city:"Warszawa",mileage:226540,oilInterval:15000,lastOil:214000,weeklyRent:700,insurance:d(321),inspection:d(72),tireSeason:"allseason",tireSize:"215/60 R16",tireInstalled:d(-315),tireMileage:205300},
+  {id:"d8",modelKey:"toyota-camry",year:2018,plate:"WN 8862T",tenant:"Дмитрий",status:"active",city:"Warszawa",mileage:189330,oilInterval:10000,lastOil:184000,weeklyRent:880,insurance:d(47),inspection:d(154),tireSeason:"summer",tireSize:"215/55 R17",tireInstalled:d(-80),tireMileage:184800},
+  {id:"d9",modelKey:"nissan-leaf",year:2020,plate:"WW 3901E",tenant:"Роман",status:"repair",city:"Warszawa",mileage:118760,oilInterval:30000,lastOil:104000,weeklyRent:810,insurance:d(209),inspection:d(28),tireSeason:"summer",tireSize:"215/50 R17",tireInstalled:d(-152),tireMileage:109400},
+  {id:"d10",modelKey:"skoda-fabia-combi",year:2018,plate:"WF 5173S",tenant:"Павел",status:"active",city:"Warszawa",mileage:207140,oilInterval:15000,lastOil:195000,weeklyRent:690,insurance:d(83),inspection:d(-8),tireSeason:"summer",tireSize:"185/60 R15",tireInstalled:d(-141),tireMileage:198100}
  ].map(c=>({...c,vin:"",inFleet:true,favorite:["d1","d3"].includes(c.id),history:[{date:d(-35),value:c.mileage-1820},{date:d(-14),value:c.mileage-720},{date:today(),value:c.mileage}]}));
  const repairs=[
   ["r1","d1","Замена масла и фильтров",d(5),680,"planned","Auto Service Centrum"],
@@ -5217,7 +5217,7 @@ function renderServiceCarTasks(row){
    </div>
    <div class="service-car-group-actions">
     <button type="button" class="service-car-collapse-button ${collapsed?"collapsed":""}" onclick="toggleServiceCarTasks('${c.id}')" title="${collapsed?"Показать задачи":"Скрыть задачи"}" aria-expanded="${!collapsed}">
-     <span>⌄</span>
+     <span class="service-collapse-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </button>
     <button class="btn" onclick="openCar('${c.id}','service')">Автомобиль</button>
     <button class="btn primary" onclick="openRepairDialog('${c.id}')">+ Задача</button>
@@ -5603,13 +5603,15 @@ function highlightSmartTarget(selector){
 function openSmartEntity(type,entityId,carId=''){
  smartNavigationTarget={type,entityId:String(entityId||''),carId:String(carId||'')};
  if(type==='repair'){
+  const row=db.repairs.find(x=>String(x.id)===String(entityId));
+  const search=$("#serviceSearch");if(search)search.value="";
+  const status=$("#serviceStatusFilter");if(status)status.value="all";
+  const city=$("#serviceCityFilter");if(city)city.value="all";
+  selectedWorkspaceRepairCarId=row?.carId?String(row.carId):String(carId||"");
   showPage('repairsPage');
   setTimeout(()=>{
    renderRepairs();
-   if(!highlightSmartTarget(`[data-repair-id="${CSS.escape(String(entityId))}"]`)){
-    const row=db.repairs.find(x=>String(x.id)===String(entityId));
-    if(row)openRepairDialog('',row.id)
-   }
+   if(!highlightSmartTarget(`[data-repair-id="${CSS.escape(String(entityId))}"]`)&&row)editRepair(row.id)
   },80);return
  }
  if(type==='driver_request'){
@@ -5620,18 +5622,22 @@ function openSmartEntity(type,entityId,carId=''){
    highlightSmartTarget(`[data-workspace-request-id="${CSS.escape(String(entityId))}"]`)
   },80);return
  }
- if(type==='document'||type==='insurance'||type==='inspection'){
+ if(type==='document'||type==='insurance'||type==='inspection'||type==='installment'){
+  let row=db.documents.find(x=>String(x.id)===String(entityId));
+  if(!row&&carId&&['insurance','inspection'].includes(type))row=db.documents.find(x=>String(x.carId)===String(carId)&&String(x.type)===String(type));
   showPage('documentsPage');
   setTimeout(()=>{
    renderDocuments();
-   if(!highlightSmartTarget(`[data-document-id="${CSS.escape(String(entityId))}"]`)){
-    const row=db.documents.find(x=>String(x.id)===String(entityId));if(row)openDocumentDialog('',row.id)
-   }
+   if(row){if(!highlightSmartTarget(`[data-document-id="${CSS.escape(String(row.id))}"]`))openDocumentDialog('',row.id)}
+   else if(carId)openCar(String(carId),'info')
   },80);return
  }
  if(type==='expense'){
+  const search=$("#expenseSearch");if(search)search.value="";
+  const status=$("#expenseStatusFilter");if(status)status.value="all";
+  const category=$("#expenseCategoryFilter");if(category)category.value="all";
   showPage('expensesPage');
-  setTimeout(()=>{renderExpenses();highlightSmartTarget(`[data-expense-id="${CSS.escape(String(entityId))}"]`)},80);return
+  setTimeout(()=>{renderExpenses();if(!highlightSmartTarget(`[data-expense-id="${CSS.escape(String(entityId))}"]`)){const row=db.expenses.find(x=>String(x.id)===String(entityId));if(row)editExpense(row.id)}},80);return
  }
  if(carId){showPage('fleetPage');setTimeout(()=>openCar(String(carId)),60)}
 }
@@ -5640,67 +5646,74 @@ function allEvents(){
  const result=[];
  for(const c of cityFilteredCars()){
   const m=model(c);
-  if(c.insurance)result.push({date:c.insurance,carId:c.id,title:"Окончание страховки",type:"insurance",car:m.brand+" "+m.model+" · "+c.plate});
-  if(c.inspection)result.push({date:c.inspection,carId:c.id,title:"Техосмотр",type:"inspection",car:m.brand+" "+m.model+" · "+c.plate});
+  if(c.insurance){const doc=(db.documents||[]).find(x=>x.carId===c.id&&x.type==="insurance");result.push({date:c.insurance,carId:c.id,entityId:doc?.id||"",title:"Окончание страховки",type:"insurance",car:m.brand+" "+m.model+" · "+c.plate})}
+  if(c.inspection){const doc=(db.documents||[]).find(x=>x.carId===c.id&&x.type==="inspection");result.push({date:c.inspection,carId:c.id,entityId:doc?.id||"",title:"Техосмотр",type:"inspection",car:m.brand+" "+m.model+" · "+c.plate})}
  }
  for(const r of db.repairs.filter(x=>x.status!=="done"))result.push({date:r.date,carId:r.carId,entityId:r.id,title:r.title,type:"repair",car:model(car(r.carId)).brand+" "+model(car(r.carId)).model+" · "+car(r.carId).plate});
  for(const x of db.expenses.filter(x=>x.status==="planned"))result.push({date:x.date,carId:x.carId,entityId:x.id,title:x.title,type:"expense",car:model(car(x.carId)).brand+" "+model(car(x.carId)).model+" · "+car(x.carId).plate,amount:x.amount});
  for(const d of db.documents){
-  for(const i of d.installments||[])if(!i.paid)result.push({date:i.due,carId:d.carId,title:`${d.title}: рата ${i.number}`,type:"installment",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate,amount:i.amount});
+  for(const i of d.installments||[])if(!i.paid)result.push({date:i.due,carId:d.carId,entityId:d.id,title:`${d.title}: рата ${i.number}`,type:"installment",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate,amount:i.amount});
   if(d.expiry)result.push({date:d.expiry,carId:d.carId,entityId:d.id,title:`Документ: ${d.title}`,type:d.type||"document",car:model(car(d.carId)).brand+" "+model(car(d.carId)).model+" · "+car(d.carId).plate});
  }
  return result.filter(x=>x.date).map(x=>({...x,days:days(x.date)}))
 }
 function eventsForCar(carId){return allEvents().filter(x=>x.carId===carId)}
 function eventIcon(type){return{insurance:"🛡️",inspection:"🔍",repair:"🔧",expense:"💰",installment:"💳",document:"📄"}[type]||"📅"}
+let calendarViewMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+function calendarIsoLocal(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function selectCalendarDay(value){
+ const input=$("#calendarSelectedDate");if(input)input.value=value||"";
+ if(value){const d=new Date(value+"T12:00:00");calendarViewMonth=new Date(d.getFullYear(),d.getMonth(),1)}
+ renderCalendar()
+}
+window.selectCalendarDay=selectCalendarDay;
+function moveCalendarMonth(delta){calendarViewMonth=new Date(calendarViewMonth.getFullYear(),calendarViewMonth.getMonth()+delta,1);renderCalendar()}
+function renderCalendarMonthGrid(all){
+ const root=$("#calendarMonthGrid"),title=$("#calendarMonthTitle");if(!root)return;
+ const year=calendarViewMonth.getFullYear(),month=calendarViewMonth.getMonth();
+ if(title)title.textContent=calendarViewMonth.toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+ const selected=$("#calendarSelectedDate")?.value||"";
+ const first=new Date(year,month,1),offset=(first.getDay()+6)%7,daysInMonth=new Date(year,month+1,0).getDate();
+ const cells=[];
+ ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].forEach(x=>cells.push(`<span class="calendar-weekday">${x}</span>`));
+ for(let i=0;i<offset;i++)cells.push('<span class="calendar-day empty"></span>');
+ for(let day=1;day<=daysInMonth;day++){
+  const d=new Date(year,month,day),iso=calendarIsoLocal(d),count=all.filter(x=>x.date===iso).length;
+  const isToday=iso===today(),isSelected=iso===selected;
+  cells.push(`<button type="button" class="calendar-day ${isToday?"today":""} ${isSelected?"selected":""} ${count?"has-events":""}" onclick="selectCalendarDay('${iso}')"><strong>${day}</strong>${count?`<span>${count}</span>`:""}</button>`)
+ }
+ root.innerHTML=cells.join("")
+}
 function renderCalendar(){
- const range=Number($("#calendarRange")?.value||90);
+ const range=Number($("#calendarRange")?.value||30);
  const typeFilter=$("#calendarTypeFilter")?.value||"all";
- const all=allEvents();
- const events=all.filter(x=>x.days>=0&&x.days<=range&&(typeFilter==="all"||x.type===typeFilter)).sort((a,b)=>a.date.localeCompare(b.date));
+ const selectedDate=$("#calendarSelectedDate")?.value||"";
+ const all=allEvents().filter(x=>typeFilter==="all"||x.type===typeFilter);
+ const periodEvents=all.filter(x=>x.days>=0&&x.days<=range).sort((a,b)=>a.date.localeCompare(b.date));
+ const events=(selectedDate?all.filter(x=>x.date===selectedDate):periodEvents).sort((a,b)=>a.date.localeCompare(b.date));
  const overdue=all.filter(x=>x.days<0).length;
 
  $("#calendarSummary").innerHTML=[
-  ["Сегодня",events.filter(x=>x.days===0).length,"События на сегодня"],
-  ["7 дней",events.filter(x=>x.days<=7).length,"Ближайшая неделя"],
-  ["30 дней",events.filter(x=>x.days<=30).length,"Ближайший месяц"],
+  ["Сегодня",all.filter(x=>x.days===0).length,"События на сегодня"],
+  ["7 дней",all.filter(x=>x.days>=0&&x.days<=7).length,"Ближайшая неделя"],
+  ["30 дней",all.filter(x=>x.days>=0&&x.days<=30).length,"Ближайший месяц"],
   ["Просрочено",overdue,"Требует внимания"]
  ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 
  const counter=$("#calendarVisibleCount");if(counter)counter.textContent=String(events.length);
+ const dayLabel=$("#calendarSelectedDayLabel");if(dayLabel)dayLabel.textContent=selectedDate?new Date(selectedDate+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}):`Ближайшие ${range} дней`;
+ const listTitle=$("#calendarList")?.closest(".professional-panel")?.querySelector("h3");if(listTitle)listTitle.textContent=selectedDate?"События выбранного дня":"Ближайшие события";
  const grouped=new Map();
- events.forEach(event=>{
-  const key=(event.date||"").slice(0,7);
-  if(!grouped.has(key))grouped.set(key,[]);
-  grouped.get(key).push(event)
- });
+ events.forEach(event=>{const key=selectedDate?event.date:(event.date||"").slice(0,7);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event)});
 
- $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([month,items])=>{
-  const monthLabel=new Date(month+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
-  return `<section class="calendar-month-group">
-   <h4>${monthLabel}</h4>
-   ${items.map(e=>`<article class="calendar-professional-row ${e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')">
-    <div class="calendar-professional-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div>
-    <div class="calendar-professional-icon">${eventIcon(e.type)}</div>
-    <div class="calendar-professional-main">
-     <strong>${e.title}</strong>
-     <span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span>
-     <small>${e.days===0?"Сегодня":`через ${e.days} дн.`}</small>
-    </div>
-    <b>›</b>
-   </article>`).join("")}
-  </section>`
- }).join(""):`<div class="professional-empty">На выбранный период событий нет.</div>`;
+ $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([group,items])=>{
+  const groupLabel=selectedDate?new Date(group+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}):new Date(group+"-01T12:00:00").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+  return `<section class="calendar-month-group"><h4>${groupLabel}</h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${new Date(e.date+"T12:00:00").getDate()}</strong><span>${new Date(e.date+"T12:00:00").toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon">${eventIcon(e.type)}</div><div class="calendar-professional-main"><strong>${e.title}</strong><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b>›</b></article>`).join("")}</section>`
+ }).join(""):`<div class="professional-empty">${selectedDate?"На выбранный день событий нет.":"На выбранный период событий нет."}</div>`;
 
+ renderCalendarMonthGrid(all);
  const overview=$("#calendarMonthOverview");
- if(overview){
-  overview.innerHTML=[0,1,2,3].map(offset=>{
-   const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);
-   const key=d.toISOString().slice(0,7);
-   const count=all.filter(x=>(x.date||"").startsWith(key)).length;
-   return `<div class="calendar-month-card"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></div>`
-  }).join("")
- }
+ if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);const key=calendarIsoLocal(d).slice(0,7);const count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}
 }
 
 function renderDocuments(){
@@ -5735,11 +5748,20 @@ function openCar(id,activeTab="info"){
  }else run()
 }
 
+function tireSeasonText(value){return{summer:"Летние",winter:"Зимние",allseason:"Всесезонные"}[value]||"Не указано"}
+function carTireSnapshot(c){
+ const rows=(db.expenses||[]).filter(x=>x.carId===c.id&&x.category==="tires").sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+ const planned=rows.find(x=>x.status==="planned");
+ const paid=rows.find(x=>x.status==="paid");
+ const usedKm=c.tireMileage?Math.max(0,Number(c.mileage||0)-Number(c.tireMileage||0)):null;
+ return{planned,paid,usedKm}
+}
 function renderCarProfile(id,activeTab="info"){
  if(isSimpleMode()&&!simpleModeCarTab(activeTab))activeTab="info";
  selectedCarId=id;
  const c=car(id),m=model(c),payments=db.payments.filter(x=>x.carId===id),received=payments.reduce((s,x)=>s+x.received,0),debt=payments.reduce((s,x)=>s+Math.max(0,x.expected-x.received),0),rep=db.repairs.filter(x=>x.carId===id),exp=db.expenses.filter(x=>x.carId===id),docs=db.documents.filter(x=>x.carId===id),monthProfit=financialData("month",c.id).finalProfit,forecast=forecastService(c);
- const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p>${date(x.date)} · ${x.title} · ${money(x.planned)}</p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
+ const tire=carTireSnapshot(c);
+ const info=`<div class="detail-tab-grid"><div class="card detail-primary-card"><h3>Основная информация</h3><div class="detail-stat-grid"><div><small>Пробег</small><strong>${km(c.mileage)}</strong></div><div><small>До замены масла</small><strong>${oil(c)<=0?"Просрочено":km(oil(c))}</strong></div><div><small>Страховка до</small><strong>${date(c.insurance)}</strong></div><div><small>Техосмотр до</small><strong>${date(c.inspection)}</strong></div></div><div class="detail-action-row"><button class="btn primary" onclick="openMileage('${c.id}')">Обновить пробег</button>${isSimpleMode()?"":`<button class="btn" onclick="openRepairDialog('${c.id}')">Запланировать ремонт</button>`}</div></div><div class="card car-operation-card"><div class="card-title-row"><div><span class="eyebrow">Эксплуатация</span><h3>Шины и сезонность</h3></div><button class="btn" onclick="openCarDialog('${c.id}')">Изменить</button></div><div class="car-operation-grid"><div><small>Сезон</small><strong>${tireSeasonText(c.tireSeason)}</strong></div><div><small>Размер</small><strong>${c.tireSize||"Не указан"}</strong></div><div><small>Установлены</small><strong>${c.tireInstalled?date(c.tireInstalled):"—"}</strong></div><div><small>Пробег на комплекте</small><strong>${tire.usedKm===null?"—":km(tire.usedKm)}</strong></div></div>${tire.planned?`<button class="car-operation-alert" onclick="openSmartEntity('expense','${tire.planned.id}','${c.id}')"><span>Ближайшая задача по шинам</span><strong>${tire.planned.title} · ${date(tire.planned.date)}</strong><b>${money(tire.planned.amount)}</b></button>`:tire.paid?`<div class="car-operation-note"><span>Последняя операция</span><strong>${tire.paid.title} · ${date(tire.paid.date)}</strong></div>`:`<div class="car-operation-note"><span>История шин</span><strong>Записей пока нет</strong></div>`}</div><div class="card"><h3>Прогноз обслуживания</h3>${forecast?`<div class="service-forecast"><div><small>Осталось</small><strong>${km(forecast.remainingKm)}</strong></div><div><small>В среднем за день</small><strong>${km(forecast.averageDailyKm)}</strong></div><div><small>Ориентировочно</small><strong>${forecast.days} дн.</strong></div></div><p class="forecast-note">${forecast.confidence==="limited"?"Предварительный прогноз — пока мало записей пробега.":"Расчёт по медиане последних записей пробега."}</p>`:"<p>Недостаточно корректной истории пробега для прогноза.</p>"}</div><div class="card"><h3>Ближайшие ремонты</h3>${rep.filter(x=>x.status!=="done").slice(0,6).map(x=>`<p><button class="inline-entity-link" onclick="openSmartEntity('repair','${x.id}','${c.id}')">${date(x.date)} · ${x.title} · ${money(x.planned)}</button></p>`).join("")||"Нет запланированных ремонтов"}</div></div>`;
  const serviceActive=rep.filter(x=>!["done","cancelled"].includes(String(x.status||"")));
  const serviceHistory=rep.filter(x=>["done","cancelled"].includes(String(x.status||""))).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||"")));
  const carRequests=activeDriverRepairRequests().filter(x=>String(x.car_id)===String(c.id));
@@ -5868,7 +5890,7 @@ function renderCarPhotoPreview(){
  $("#removeCarPhoto").disabled=!pendingCarPhoto
 }
 
-function openCarDialog(id=""){const c=id?car(id):null,custom=Boolean(c&&(c.customBrand||c.customModel));$("#carId").value=c?.id||"";$("#carModelKey").innerHTML=modelOptions(custom?"__custom__":(c?.modelKey||"toyota-prius-3"));$("#carModelKey").value=custom?"__custom__":(c?.modelKey||"toyota-prius-3");$("#carCustomBrand").value=c?.customBrand||"";$("#carCustomModel").value=c?.customModel||"";toggleCustomModelFields();$("#carYear").value=c?.year||new Date().getFullYear();$("#carPlate").value=c?.plate||"";$("#carVin").value=c?.vin||"";$("#carTenant").value=c?.tenant||"";$("#carStatus").value=c?.status||"active";$("#carMileage").value=c?.mileage||0;$("#carOilInterval").value=c?.oilInterval||10000;$("#carLastOil").value=c?.lastOil||0;$("#carCity").value=c?.city||"";refreshCityControls();$("#carWeeklyRent").value=c?.weeklyRent||700;$("#carPaymentTiming").value=c?.paymentTiming||"advance";$("#carDepositTarget").value=c?.depositTarget||0;$("#carPurchasePrice").value=c?.purchasePrice||"";$("#carPurchaseDate").value=c?.purchaseDate||"";$("#carInsurance").value=c?.insurance||addDays(today(),365);$("#carInspection").value=c?.inspection||addDays(today(),365);pendingCarPhoto=c?.customPhoto||"";$("#carPhotoFile").value="";renderCarPhotoPreview();$("#carDialog").showModal()}
+function openCarDialog(id=""){const c=id?car(id):null,custom=Boolean(c&&(c.customBrand||c.customModel));$("#carId").value=c?.id||"";$("#carModelKey").innerHTML=modelOptions(custom?"__custom__":(c?.modelKey||"toyota-prius-3"));$("#carModelKey").value=custom?"__custom__":(c?.modelKey||"toyota-prius-3");$("#carCustomBrand").value=c?.customBrand||"";$("#carCustomModel").value=c?.customModel||"";toggleCustomModelFields();$("#carYear").value=c?.year||new Date().getFullYear();$("#carPlate").value=c?.plate||"";$("#carVin").value=c?.vin||"";$("#carTenant").value=c?.tenant||"";$("#carStatus").value=c?.status||"active";$("#carMileage").value=c?.mileage||0;$("#carOilInterval").value=c?.oilInterval||10000;$("#carLastOil").value=c?.lastOil||0;$("#carCity").value=c?.city||"";refreshCityControls();$("#carWeeklyRent").value=c?.weeklyRent||700;$("#carPaymentTiming").value=c?.paymentTiming||"advance";$("#carDepositTarget").value=c?.depositTarget||0;$("#carPurchasePrice").value=c?.purchasePrice||"";$("#carPurchaseDate").value=c?.purchaseDate||"";$("#carInsurance").value=c?.insurance||addDays(today(),365);$("#carInspection").value=c?.inspection||addDays(today(),365);$("#carTireSeason").value=c?.tireSeason||"";$("#carTireSize").value=c?.tireSize||"";$("#carTireInstalled").value=c?.tireInstalled||"";$("#carTireMileage").value=c?.tireMileage||"";pendingCarPhoto=c?.customPhoto||"";$("#carPhotoFile").value="";renderCarPhotoPreview();$("#carDialog").showModal()}
 
 function quickServiceDefaults(type){
  return{
@@ -6218,6 +6240,10 @@ $("#carForm").onsubmit=e=>{
    purchaseDate:$("#carPurchaseDate").value,
    insurance:$("#carInsurance").value,
    inspection:$("#carInspection").value,
+   tireSeason:$("#carTireSeason").value,
+   tireSize:$("#carTireSize").value.trim(),
+   tireInstalled:$("#carTireInstalled").value,
+   tireMileage:Number($("#carTireMileage").value||0),
    customPhoto:pendingCarPhoto,
    history:old?.history||[{date:today(),value:mileage}]
   };
@@ -6504,6 +6530,11 @@ $("#openAttention").onclick=()=>showPage("attentionPage");
 $("#backFromAttention").onclick=()=>showPage("fleetPage");
 $("#calendarRange").onchange=renderCalendar;
 const calendarTypeFilter=$("#calendarTypeFilter");if(calendarTypeFilter)calendarTypeFilter.onchange=renderCalendar;
+const calendarSelectedDate=$("#calendarSelectedDate");if(calendarSelectedDate)calendarSelectedDate.onchange=()=>selectCalendarDay(calendarSelectedDate.value);
+const calendarPrevMonth=$("#calendarPrevMonth");if(calendarPrevMonth)calendarPrevMonth.onclick=()=>moveCalendarMonth(-1);
+const calendarNextMonth=$("#calendarNextMonth");if(calendarNextMonth)calendarNextMonth.onclick=()=>moveCalendarMonth(1);
+const calendarToday=$("#calendarToday");if(calendarToday)calendarToday.onclick=()=>selectCalendarDay(today());
+const calendarClearDay=$("#calendarClearDay");if(calendarClearDay)calendarClearDay.onclick=()=>selectCalendarDay("");
 const paymentSearch=$("#paymentSearch");if(paymentSearch)paymentSearch.oninput=renderPayments;
 const paymentStatusFilter=$("#paymentStatusFilter");if(paymentStatusFilter)paymentStatusFilter.onchange=renderPayments;
 const expenseSearch=$("#expenseSearch");if(expenseSearch)expenseSearch.oninput=renderExpenses;
