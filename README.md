@@ -1,11 +1,12 @@
-# FleetPilot V11.3.9.4 — Auth Route Boot Fix
+# FleetPilot V11.6 — Service Task Card
 
-Fixes the remaining refresh/deep-link race:
-- access checks no longer reject pages while Supabase membership/role is still loading;
-- logged-in deep links wait for `fleetpilot:access-ready`;
-- once role/membership is resolved, the URL hash is the final navigation authority;
-- removes the false “У вашей роли нет доступа к этому разделу” toast during F5 startup;
-- performs a second route restore after late desktop initialization;
-- real role restrictions still work after access is ready;
-- previous photo service badge and collapsible Service queue remain unchanged.
-No SQL required.
+Second service-module stage.
+
+- Full CRM-style service task card.
+- Problem description and work checklist.
+- Parts list with quantity, unit price and calculated total.
+- Labor cost and combined estimate.
+- Before/after repair photos stored with the task.
+- Payment, warranty and completion data in one card.
+- Automatic task history for key changes.
+- Existing links to car profile, calendar and expenses remain intact.

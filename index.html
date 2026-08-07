@@ -1335,31 +1335,78 @@
   <button class="btn primary full">Сохранить</button>
 </form></dialog>
 
-<dialog id="repairDialog"><form id="repairForm" class="modal">
-  <div class="modal-head"><h2>Ремонт</h2><button type="button" data-close="repairDialog">✕</button></div>
-  <input id="repairId" type="hidden">
-  <label>Автомобиль<select id="repairCarId"></select></label>
-  <label>Что сделать<input id="repairTitle" required></label>
-  <div class="grid2">
-    <label>Дата / неделя<input id="repairDate" type="date" required></label>
-    <label>Плановый пробег<input id="repairMileage" type="number"></label>
-    <label>Плановая сумма<input id="repairPlanned" type="number" step="0.01"></label>
-    <label>Фактическая сумма<input id="repairActual" type="number" step="0.01"></label>
-    <label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="parts">Ожидает запчасти</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option><option value="cancelled">Отменён</option></select></label>
-    <label>Сервис<input id="repairService"></label>
-    <label>Исполнитель<input id="repairMechanic" placeholder="Механик / сервис-менеджер"></label>
-    <label>Приоритет<select id="repairPriority"><option value="planned">Планово</option><option value="today">Сегодня</option><option value="critical">Срочно</option></select></label>
-    <label>Статус оплаты<select id="repairPaymentStatus"><option value="unpaid">Не оплачено</option><option value="partial">Частично</option><option value="paid">Оплачено</option><option value="driver">Оплата водителем</option><option value="insurance">Страховая</option><option value="warranty">Гарантия</option></select></label>
-    <label>Оплачено<input id="repairPaidAmount" type="number" step="0.01" min="0"></label>
-    <label>Дата завершения<input id="repairCompletedDate" type="date"></label>
-    <label>Гарантия до<input id="repairWarrantyUntil" type="date"></label>
+<dialog id="repairDialog" class="repair-task-dialog"><form id="repairForm" class="modal repair-task-modal">
+  <div class="repair-task-head">
+    <div><span class="eyebrow">Сервисная задача</span><h2 id="repairDialogTitle">Новая задача</h2><p id="repairDialogSubtitle">Полная карточка обслуживания автомобиля</p></div>
+    <button type="button" class="repair-task-close" data-close="repairDialog" aria-label="Закрыть">✕</button>
   </div>
-  <input id="repairLinkedRequestId" type="hidden">
-  <input id="repairLinkedExpenseId" type="hidden">
-  <div id="repairSourceRequest" class="repair-source-request" hidden></div>
-  <div id="repairLinkedFinanceInfo" class="repair-linked-finance-info" hidden></div>
-  <label>Выполненные работы / комментарий<textarea id="repairNote"></textarea></label>
-  <button id="repairSubmitButton" type="submit" class="btn primary full">Сохранить</button>
+  <input id="repairId" type="hidden"><input id="repairLinkedRequestId" type="hidden"><input id="repairLinkedExpenseId" type="hidden">
+  <div class="repair-task-layout">
+    <aside class="repair-task-sidebar">
+      <div class="repair-task-car"><small>Автомобиль</small><select id="repairCarId"></select><strong id="repairCarMeta">—</strong></div>
+      <label>Статус<select id="repairStatus"><option value="planned">Запланирован</option><option value="parts">Ожидает запчасти</option><option value="service">Записан в сервис</option><option value="repair">В ремонте</option><option value="done">Выполнен</option><option value="cancelled">Отменён</option></select></label>
+      <label>Приоритет<select id="repairPriority"><option value="planned">Планово</option><option value="today">Сегодня</option><option value="critical">Срочно</option></select></label>
+      <label>Исполнитель<input id="repairMechanic" placeholder="Механик / менеджер"></label>
+      <label>Сервис<input id="repairService" placeholder="Название сервиса"></label>
+      <div id="repairSourceRequest" class="repair-source-request" hidden></div>
+      <div id="repairLinkedFinanceInfo" class="repair-linked-finance-info" hidden></div>
+    </aside>
+    <main class="repair-task-main">
+      <section class="repair-task-section repair-task-summary-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Основное</span><h3>Описание задачи</h3></div></div>
+        <label>Что нужно сделать<input id="repairTitle" required placeholder="Например: замена передних амортизаторов"></label>
+        <label>Причина / описание проблемы<textarea id="repairProblem" rows="3" placeholder="Симптомы, жалоба водителя, диагностика"></textarea></label>
+        <div class="grid2">
+          <label>Дата / срок<input id="repairDate" type="date" required></label>
+          <label>Пробег<input id="repairMileage" type="number"></label>
+        </div>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Работы</span><h3>Чек-лист</h3></div><button id="repairAddChecklist" type="button" class="btn">+ Пункт</button></div>
+        <div id="repairChecklistEditor" class="repair-checklist-editor"></div>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Материалы</span><h3>Запчасти</h3></div><button id="repairAddPart" type="button" class="btn">+ Запчасть</button></div>
+        <div id="repairPartsEditor" class="repair-parts-editor"></div>
+        <div class="repair-parts-total"><span>Запчасти</span><strong id="repairPartsTotal">0,00 zł</strong></div>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Финансы</span><h3>Стоимость и оплата</h3></div></div>
+        <div class="repair-finance-grid">
+          <label>Плановая сумма<input id="repairPlanned" type="number" step="0.01"></label>
+          <label>Работа<input id="repairLaborCost" type="number" step="0.01" min="0"></label>
+          <label>Фактическая сумма<input id="repairActual" type="number" step="0.01"></label>
+          <label>Оплачено<input id="repairPaidAmount" type="number" step="0.01" min="0"></label>
+          <label>Статус оплаты<select id="repairPaymentStatus"><option value="unpaid">Не оплачено</option><option value="partial">Частично</option><option value="paid">Оплачено</option><option value="driver">Оплата водителем</option><option value="insurance">Страховая</option><option value="warranty">Гарантия</option></select></label>
+          <label>Гарантия до<input id="repairWarrantyUntil" type="date"></label>
+          <label>Дата завершения<input id="repairCompletedDate" type="date"></label>
+        </div>
+        <div class="repair-total-strip"><span>Расчётный итог</span><strong id="repairCalculatedTotal">0,00 zł</strong><small>работа + запчасти</small></div>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Фото</span><h3>До / после ремонта</h3></div></div>
+        <div class="repair-photo-columns">
+          <div><div class="repair-photo-column-head"><strong>До ремонта</strong><label class="repair-photo-add">+ Добавить<input id="repairPhotosBeforeInput" type="file" accept="image/*" multiple hidden></label></div><div id="repairPhotosBefore" class="repair-photo-grid"></div></div>
+          <div><div class="repair-photo-column-head"><strong>После ремонта</strong><label class="repair-photo-add">+ Добавить<input id="repairPhotosAfterInput" type="file" accept="image/*" multiple hidden></label></div><div id="repairPhotosAfter" class="repair-photo-grid"></div></div>
+        </div>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">Комментарий</span><h3>Результат и заметки</h3></div></div>
+        <label>Выполненные работы / комментарий<textarea id="repairNote" rows="4" placeholder="Что сделано, рекомендации, что проверить позже"></textarea></label>
+      </section>
+
+      <section class="repair-task-section">
+        <div class="repair-section-title"><div><span class="eyebrow">CRM</span><h3>История изменений</h3></div></div>
+        <div id="repairHistory" class="repair-history"></div>
+      </section>
+    </main>
+  </div>
+  <div class="repair-task-footer"><button type="button" class="btn" data-close="repairDialog">Закрыть</button><button id="repairSubmitButton" type="submit" class="btn primary">Сохранить задачу</button></div>
 </form></dialog>
 
 <dialog id="paymentDialog"><form id="paymentForm" class="modal">
