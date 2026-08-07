@@ -282,9 +282,8 @@ function inferRepairServiceType(repair={}){
  return"other"
 }
 function vehicleUsageStatus(c){
- // V18.4: an account assignment is not an active vehicle until the driver
- // completes the acceptance flow (mileage + photo). Manual drivers do not
- // have a Driver Portal, so a manual assignment is treated as active.
+ // Assignment state is separate from the operational Fleet Board status.
+ // A linked account driver stays pending until mileage + photo acceptance.
  const hasAccount=Boolean(c?.driverUserId);
  const hasManual=Boolean(!hasAccount&&(c?.tenant||c?.driverEmail));
  if(hasAccount)return c?.driverAcceptedAt?"active":"pending";
@@ -304,8 +303,16 @@ function vehicleServiceStatusText(c){
  return state==="service"?"В сервисе":state==="needed"?"Требует ремонта":"Сервис не требуется"
 }
 function vehicleEffectiveStatus(c){
- // V18.3: usage and service are independent. Effective status is ONLY usage.
- return vehicleUsageStatus(c)
+ // V18.5: restore the original single operational status used by Fleet Board.
+ // Active service work sends the car to the repair column. No separate “Service OK” badge.
+ const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c?.id)&&!terminal.has(String(r.status||"").toLowerCase()));
+ if(active.some(r=>["repair","parts","service","accepted","scheduled"].includes(String(r.status||"").toLowerCase())))return"repair";
+ if(String(c?.status||"").toLowerCase()==="repair")return"repair";
+ // A linked account driver is not online until the driver accepts the car.
+ if(c?.driverUserId&&!c?.driverAcceptedAt)return"free";
+ if(c?.driverUserId||c?.tenant||c?.driverEmail)return"active";
+ return"free"
 }
 function vehicleHealthScore(c){
  let score=100;const reasons=[];

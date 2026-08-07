@@ -752,3 +752,9 @@ body[hidden]{display:none}
 /* V18.4 — pending driver acceptance is a first-class vehicle state */
 .status.pending,.desktop-status.pending,.stable-table-status.pending{background:rgba(245,158,11,.12);color:#b45309;border-color:rgba(245,158,11,.28)}
 .vehicle-status-pair .status.pending::before{content:"◷ ";font-weight:800}
+
+/* V18.5 — restore classic service UI and make the shared Driver Picker authoritative */
+.service-ok,.service-ok-badge,.vehicle-service-ok,[data-service-state="none"],.fleet-service-status.none{display:none!important}
+.car-driver-picker-field #carTenant{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+.car-driver-picker-field .rich-driver-picker{margin-top:0}
+.car-driver-picker-field:has(.rich-driver-picker) .car-driver-hint{margin-top:8px}

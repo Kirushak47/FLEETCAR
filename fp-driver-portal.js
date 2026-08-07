@@ -56,6 +56,8 @@ async function assignVehicleDriverUnified(driverUserId,carId,options={}){
  // Critical: assigning/reassigning ALWAYS starts a fresh pending acceptance.
  target.driverAcceptedAt="";
  target.driverAssignedAt=new Date().toISOString();
+ // Pending acceptance must never look like an already active vehicle.
+ if(String(target.status||"")!=="repair")target.status="free";
  save?.();
  await loadWorkspaceDriverAssignments?.();
  renderFleet?.();
@@ -71,6 +73,7 @@ async function unassignVehicleDriverUnified(driverUserId,carId=""){
   if((uid&&String(c.driverUserId||"")===uid)||(carId&&String(c.id)===String(carId))){
    c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignedAt="";
    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+   if(String(c.status||"")!=="repair")c.status="free";
   }
  });
  save?.();
@@ -853,7 +856,7 @@ async function loadWorkspaceDriverAssignments(){
 }
 function driverAssignmentControl(member){
  if(member.role!=="driver")return"";
- const selected=workspaceDriverAssignments[member.user_id]||"";
+ const selected=workspaceDriverAssignments[member.user_id]||fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))?.id||"";
  return `<select data-driver-assignment="${member.user_id}">
   <option value="">Без автомобиля</option>
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
@@ -897,4 +900,28 @@ function driverAssignmentControl(member){
  }
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
  setTimeout(install,700)
+})();
+
+
+/* =========================================================
+   V18.5 — Car dialog always uses the shared Driver Picker
+   ========================================================= */
+(function installCarDriverPickerLifecycle(){
+ const boot=()=>{
+  const dialog=$("#carDialog");
+  if(!dialog||dialog.dataset.driverPickerLifecycle==="1")return;
+  dialog.dataset.driverPickerLifecycle="1";
+  const refresh=async()=>{
+   if(!dialog.open)return;
+   const id=String($("#carId")?.value||"");
+   try{await prepareCarDriverPicker(id?car(id):null)}catch(error){console.warn("Driver picker",error)}
+  };
+  new MutationObserver(()=>{if(dialog.open)setTimeout(refresh,0)}).observe(dialog,{attributes:true,attributeFilter:["open"]});
+  dialog.addEventListener("click",event=>{
+   if(event.target?.id==="carTenant"&&!$("#carDriverPickerPanel"))refresh();
+  });
+  if(dialog.open)refresh();
+ };
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
+ setTimeout(boot,500);
 })();

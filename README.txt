@@ -1,25 +1,48 @@
-FleetPilot V18.4 — Unified Driver Assignment & Acceptance Flow
+FleetPilot V18.5 — Unified Driver Assignment + Classic Service UI Fix
 
-WHAT CHANGED
-- One single driver-assignment pipeline is now used from:
-  • Add vehicle
-  • Edit vehicle / Vehicle Profile
-  • Company → Drivers
-  • Create Driver → assign vehicle
-- Assigning a vehicle NEVER means that the driver accepted it.
-- Account driver lifecycle is now:
-  Assigned → Waiting for acceptance → Driver enters mileage + uploads photo → Accepted → On line.
-- On every new/re-assignment, driverAcceptedAt is cleared and the vehicle returns to Waiting for acceptance.
-- The Drivers Registry and Vehicle Profile use the same acceptance check.
-- issue_at alone no longer marks a vehicle as accepted.
-- Vehicle usage status now supports "Waiting for acceptance".
-- Manual driver entries remain supported and do not require Driver Portal acceptance.
-- Removing/replacing a driver uses the same shared unassignment logic.
+ЧТО ИСПРАВЛЕНО
 
-FILES TO REPLACE
+1. ЕДИНАЯ ЛОГИКА НАЗНАЧЕНИЯ ВОДИТЕЛЯ
+- Профиль автомобиля, форма Добавить/Редактировать автомобиль и Компания → Водители используют один и тот же механизм.
+- Назначение аккаунта водителя НЕ означает принятие автомобиля.
+- После назначения статус приёмки: «Ожидает подтверждения».
+- Автомобиль не становится активным, пока водитель не подтвердит приём.
+
+2. DRIVER PORTAL — ПРИЁМ АВТОМОБИЛЯ
+- После назначения у водителя появляется «Принять автомобиль».
+- Для приёмки обязательно указать пробег.
+- Для приёмки обязательно добавить минимум одно фото.
+- Только после подтверждения: «Автомобиль принят», а автомобиль становится «На линии».
+- После возврата автомобиль становится «Свободен», если он не находится в ремонте.
+
+3. КОМПАНИЯ → ВОДИТЕЛИ
+- После привязки автомобиля в карточке водителя сразу отображается конкретный автомобиль.
+- Выпадающий список больше не должен оставаться на «Без автомобиля» после назначения.
+- Статус отображается одинаково: «Ожидает приёмки» / «Автомобиль принят».
+- Назначение из этого раздела использует тот же unified assignment pipeline.
+
+4. ПРОФИЛЬ / ФОРМА АВТОМОБИЛЯ
+- Driver Picker автоматически загружается при каждом открытии окна автомобиля.
+- Показывается красивый список реальных водителей текущего Workspace: имя, e-mail, текущий автомобиль, статус.
+- Сохраняется отдельная опция ручного ввода водителя.
+- Можно отвязать водителя, история при этом не удаляется.
+
+5. СТАТУСЫ АВТОМОБИЛЕЙ И СЕРВИС — ВОЗВРАТ К КЛАССИЧЕСКОЙ ЛОГИКЕ
+- Fleet Board снова использует три основных статуса: На линии / В ремонте / Свободен.
+- Активная сервисная работа переводит автомобиль в «В ремонте».
+- Вернута старая иконка ключа/сервиса со счётчиком активных задач.
+- Убран экспериментальный бейдж «Сервис OK».
+- Убрана экспериментальная логика двух параллельных статусов.
+
+6. СИНХРОНИЗАЦИЯ
+- Назначение/принятие/возврат перерисовывают Автопарк и реестр Водителей.
+- Одинаковая логика статуса используется во всех точках назначения.
+
+ФАЙЛЫ ДЛЯ ЗАМЕНЫ
 - index.html
 - sw.js
 - fp-core-data.js
 - fp-driver-portal.js
 - fp-roles-company.js
+- fp-router-navigation.js
 - fp-current-ui.css

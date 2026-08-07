@@ -392,9 +392,15 @@ if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
   if(assignedCar){
    const savedMileage=Number(result?.mileage??enteredMileage);
    if(Number.isFinite(savedMileage))assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),savedMileage);
-   if(type==="issue")assignedCar.driverAcceptedAt=result?.issue_at||driverHandoverState?.issue_at||new Date().toISOString();
-   if(type==="return")assignedCar.driverAcceptedAt="";
-   save?.()
+   if(type==="issue"){
+    assignedCar.driverAcceptedAt=result?.issue_at||driverHandoverState?.issue_at||new Date().toISOString();
+    if(String(assignedCar.status||"")!=="repair")assignedCar.status="active";
+   }
+   if(type==="return"){
+    assignedCar.driverAcceptedAt="";
+    if(String(assignedCar.status||"")!=="repair")assignedCar.status="free";
+   }
+   save?.();renderFleet?.();renderDriversRegistry?.()
   }
   $("#vehicleHandoverDialog").close();
   toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
