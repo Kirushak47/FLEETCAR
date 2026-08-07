@@ -8794,3 +8794,38 @@ button,select,input,textarea{max-width:100%}
   #repairsPage .service-inbox-request-actions select{width:108px!important;min-width:108px!important;max-width:108px!important}
   #repairsPage .service-inbox-request-actions .btn{width:78px!important;min-width:78px!important;max-width:78px!important}
 }
+
+
+/* FleetPilot V13.1.2 — incoming driver request controls */
+#repairsPage .service-incoming-panel-head{gap:16px}
+#repairsPage .service-incoming-body[hidden]{display:none!important}
+#repairsPage .service-incoming-searchbar{
+ display:grid!important;
+ grid-template-columns:minmax(260px,1fr) auto auto auto!important;
+ align-items:center!important;
+ gap:8px!important;
+ padding:10px 0 12px!important;
+ min-width:0!important;
+}
+#repairsPage .service-incoming-searchfield{
+ display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important;
+ height:36px!important;padding:0 11px!important;border:1px solid var(--line,#e5e7eb)!important;border-radius:10px!important;background:var(--card,#fff)!important;
+}
+#repairsPage .service-incoming-searchfield>span{flex:0 0 auto!important;opacity:.55!important;font-size:15px!important}
+#repairsPage .service-incoming-searchfield input{
+ width:100%!important;min-width:0!important;border:0!important;outline:0!important;background:transparent!important;padding:0!important;height:34px!important;font-size:13px!important;font-weight:400!important;color:inherit!important;
+}
+#repairsPage .service-incoming-searchbar>.btn{height:36px!important;min-height:36px!important;padding:0 14px!important;white-space:nowrap!important}
+#repairsPage .service-incoming-search-result{font-size:12px!important;font-weight:500!important;color:var(--muted,#64748b)!important;white-space:nowrap!important;text-align:right!important}
+#repairsPage .service-incoming-toggle{white-space:nowrap!important}
+@media(max-width:1100px){
+ #repairsPage .service-incoming-searchbar{grid-template-columns:minmax(200px,1fr) auto auto!important}
+ #repairsPage .service-incoming-search-result{grid-column:1/-1!important;text-align:left!important}
+}
+@media(max-width:760px){
+ #repairsPage .service-incoming-searchbar{grid-template-columns:1fr 1fr!important}
+ #repairsPage .service-incoming-searchfield{grid-column:1/-1!important}
+ #repairsPage .service-incoming-searchbar>.btn{width:100%!important}
+ #repairsPage .service-incoming-search-result{grid-column:1/-1!important}
+ #repairsPage .service-request-head-actions{flex-wrap:wrap!important;justify-content:flex-end!important}
+}

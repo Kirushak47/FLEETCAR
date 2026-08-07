@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V13.1.3 Service Conversion Fix</title>
-  <link rel="manifest" href="manifest.webmanifest?v=131300">
-  <link rel="stylesheet" href="styles.css?v=131300">
+  <title>FleetPilot V13.1.4 Incoming Controls Merge</title>
+  <link rel="manifest" href="manifest.webmanifest?v=131400">
+  <link rel="stylesheet" href="styles.css?v=131400">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -499,18 +499,30 @@
         <button type="button" id="clearServiceFilters" class="btn">Сбросить</button>
       </section>
 
-      <section class="professional-panel service-requests-panel">
-        <div class="professional-panel-head">
+      <section class="professional-panel service-requests-panel" id="serviceIncomingPanel">
+        <div class="professional-panel-head service-incoming-panel-head">
           <div>
             <span class="eyebrow">Входящие</span>
             <h3>Новые заявки водителей</h3>
           </div>
           <div class="service-request-head-actions">
             <span id="serviceActiveRequestCount" class="professional-counter">0</span>
+            <button type="button" id="toggleServiceIncoming" class="btn service-incoming-toggle" aria-expanded="true">Скрыть входящие</button>
             <button type="button" id="toggleServiceRequestArchive" class="btn">Архив заявок</button>
           </div>
         </div>
-        <div id="workspaceRepairRequestsList" class="workspace-request-list"></div>
+        <div id="serviceIncomingBody" class="service-incoming-body">
+          <div class="service-incoming-searchbar">
+            <div class="service-incoming-searchfield">
+              <span aria-hidden="true">⌕</span>
+              <input id="serviceIncomingSearch" type="search" placeholder="Авто, номер, водитель, описание или категория">
+            </div>
+            <button type="button" id="serviceIncomingFind" class="btn primary">Найти</button>
+            <button type="button" id="serviceIncomingReset" class="btn">Сбросить</button>
+            <span id="serviceIncomingSearchResult" class="service-incoming-search-result" aria-live="polite"></span>
+          </div>
+          <div id="workspaceRepairRequestsList" class="workspace-request-list"></div>
+        </div>
       </section>
 
       <section id="serviceRequestArchivePanel" class="professional-panel service-request-archive-panel" hidden>
@@ -1760,7 +1772,7 @@
 </div></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud-config.js?v=131300"></script>
-<script src="cloud.js?v=131300"></script>
-<script src="app.js?v=131300"></script>
+<script src="cloud-config.js?v=131400"></script>
+<script src="cloud.js?v=131400"></script>
+<script src="app.js?v=131400"></script>
 </body></html>

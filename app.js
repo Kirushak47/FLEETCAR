@@ -7266,3 +7266,79 @@ $("#serviceRequestTransferButton")?.addEventListener("click",()=>{if(serviceRequ
 
 // Override old +Task button with a guarded action.
 $("#addRepair")?.addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();const first=fleetCars()[0];if(!first)return toast("Сначала добавьте автомобиль");createServiceTaskForCar(first.id)},true);
+
+
+// FleetPilot V13.1.2 — Incoming driver requests search + collapsible panel
+const SERVICE_INCOMING_COLLAPSED_KEY="fleetpilot.service.incoming.collapsed.v1";
+let serviceIncomingSearchQuery="";
+function serviceIncomingPanelCollapsed(){try{return localStorage.getItem(SERVICE_INCOMING_COLLAPSED_KEY)==="1"}catch{return false}}
+function setServiceIncomingCollapsed(collapsed){
+ const body=$("#serviceIncomingBody"),button=$("#toggleServiceIncoming");
+ if(body)body.hidden=!!collapsed;
+ if(button){button.setAttribute("aria-expanded",String(!collapsed));button.textContent=collapsed?"Показать входящие":"Скрыть входящие"}
+ try{localStorage.setItem(SERVICE_INCOMING_COLLAPSED_KEY,collapsed?"1":"0")}catch{}
+}
+function toggleServiceIncoming(){setServiceIncomingCollapsed(!$("#serviceIncomingBody")||!$("#serviceIncomingBody").hidden?true:false)}
+window.toggleServiceIncoming=toggleServiceIncoming;
+function normalizedIncomingSearch(value){return String(value||"").trim().toLocaleLowerCase("ru-RU")}
+function incomingRequestMatches(row,query){
+ if(!query)return true;
+ const localCar=car(row.car_id);
+ const m=localCar?model(localCar):null;
+ const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"";
+ const haystack=[
+  category,row.description,row.driver_email,row.driver_name,row.driver_phone,row.status,row.urgency,row.car_id,
+  localCar?.plate,localCar?.city,localCar?.tenant,m?.brand,m?.model
+ ].map(v=>String(v||"")).join(" ").toLocaleLowerCase("ru-RU");
+ return query.split(/\s+/).filter(Boolean).every(token=>haystack.includes(token));
+}
+function applyServiceIncomingSearch(){
+ serviceIncomingSearchQuery=normalizedIncomingSearch($("#serviceIncomingSearch")?.value);
+ renderWorkspaceRepairRequests();
+}
+function resetServiceIncomingSearch(){
+ serviceIncomingSearchQuery="";
+ const input=$("#serviceIncomingSearch");if(input)input.value="";
+ renderWorkspaceRepairRequests();
+}
+window.applyServiceIncomingSearch=applyServiceIncomingSearch;
+window.resetServiceIncomingSearch=resetServiceIncomingSearch;
+
+async function renderWorkspaceRepairRequests(){
+ const root=$("#workspaceRepairRequestsList");if(!root)return;
+ if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole())){root.innerHTML="";return}
+ root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
+ try{
+  workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  renderFleetDriverRequestsPanel();
+  const pending=activeDriverRepairRequests();
+  const activeCounter=$("#serviceActiveRequestCount");if(activeCounter)activeCounter.textContent=String(pending.length);
+  renderServiceRequestArchive();
+  let rows=selectedWorkspaceRepairCarId?pending.filter(row=>String(row.car_id)===String(selectedWorkspaceRepairCarId)):pending;
+  const query=serviceIncomingSearchQuery;
+  rows=rows.filter(row=>incomingRequestMatches(row,query));
+  const result=$("#serviceIncomingSearchResult");
+  if(result)result.textContent=query?`Найдено: ${rows.length} из ${pending.length}`:`Всего: ${pending.length}`;
+  const filterBar=selectedWorkspaceRepairCarId?`<div class="workspace-request-filter"><span>Показаны обращения выбранного автомобиля</span><button type="button" class="btn" onclick="clearWorkspaceRepairCarFilter()">Показать все</button></div>`:"";
+  root.innerHTML=filterBar+(rows.map(row=>{
+   const localCar=car(row.car_id);const carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль");
+   const category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";const state=String(row.status||"new");
+   return `<article class="workspace-request-row service-inbox-request urgency-${row.urgency} ${String(selectedServiceRequestId)===String(row.id)?"selected":""}" data-workspace-request-id="${row.id}" data-workspace-request-car="${row.car_id}"><div class="service-inbox-request-main"><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${new Date(row.created_at).toLocaleString("ru-RU")} · ${km(row.mileage)}</small></div><div class="service-inbox-request-actions"><select data-request-status="${row.id}" aria-label="Статус заявки"><option value="new" ${state==="new"?"selected":""}>Новая</option><option value="accepted" ${state==="accepted"?"selected":""}>Принято</option><option value="rejected">Отклонена</option></select><button type="button" class="btn" onclick="openServiceRequestDetails('${row.id}')">Открыть</button></div></article>`;
+  }).join("")||`<div class="driver-empty-state service-inbox-empty">${query?"По этому запросу заявок не найдено.":"Новых заявок нет. Все обращения обработаны."}</div>`);
+  $$('[data-request-status]').forEach(select=>select.onchange=async()=>{const request=fpFindServiceRequest(select.dataset.requestStatus);const next=select.value;try{await window.FleetPilotCloud.updateDriverRepairRequest(select.dataset.requestStatus,next,"");if(request)request.status=next;const local=(db.serviceRequests||[]).find(x=>String(x.id)===String(select.dataset.requestStatus));if(local)local.status=next;save();toast(next==="accepted"?"Заявка принята":next==="rejected"?"Заявка отклонена":"Статус заявки обновлён");await renderWorkspaceRepairRequests();renderRepairs();await loadFleetServiceAlerts({rerender:true})}catch(error){toast(error.message||String(error))}});
+  requestAnimationFrame(renderFleetServiceAlertIndicators);
+ }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
+}
+
+(function initIncomingRequestControls(){
+ const bind=()=>{
+  const toggle=$("#toggleServiceIncoming"),find=$("#serviceIncomingFind"),reset=$("#serviceIncomingReset"),input=$("#serviceIncomingSearch");
+  if(toggle&&!toggle.dataset.bound){toggle.dataset.bound="1";toggle.addEventListener("click",()=>setServiceIncomingCollapsed(!$("#serviceIncomingBody")?.hidden));}
+  if(find&&!find.dataset.bound){find.dataset.bound="1";find.addEventListener("click",applyServiceIncomingSearch);}
+  if(reset&&!reset.dataset.bound){reset.dataset.bound="1";reset.addEventListener("click",resetServiceIncomingSearch);}
+  if(input&&!input.dataset.bound){input.dataset.bound="1";input.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();applyServiceIncomingSearch()}});}
+  setServiceIncomingCollapsed(serviceIncomingPanelCollapsed());
+  const result=$("#serviceIncomingSearchResult");if(result&&!result.textContent)result.textContent="Всего: 0";
+ };
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
+})();
