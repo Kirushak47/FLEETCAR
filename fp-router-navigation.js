@@ -195,6 +195,9 @@ if(ownerDashboardReset)ownerDashboardReset.onclick=()=>{
 
 
 $$("[data-company-tab]").forEach(button=>button.onclick=()=>activateCompanyTab(button.dataset.companyTab));
+$("#refreshDriversRegistry")?.addEventListener("click",()=>renderDriversRegistry?.());
+$("#driversRegistrySearch")?.addEventListener("input",()=>renderDriversRegistry?.());
+$("#driversRegistryFilter")?.addEventListener("change",()=>renderDriversRegistry?.());
 const openInviteMemberSecondary=$("#openInviteMemberSecondary");
 if(openInviteMemberSecondary)openInviteMemberSecondary.onclick=()=>$("#openInviteMember")?.click();
 

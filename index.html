@@ -4,19 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>FleetPilot V17.2 Driver Assignment</title>
+  <title>FleetPilot V17.3 Drivers Registry</title>
   <link rel="manifest" href="manifest.webmanifest?v=160000">
   <!-- FleetPilot styles: load in this order; CSS cascade depends on it -->
-  <link rel="stylesheet" href="fp-base.css?v=172000">
-  <link rel="stylesheet" href="fp-service-layout.css?v=172000">
-  <link rel="stylesheet" href="fp-desktop-gps.css?v=172000">
-  <link rel="stylesheet" href="fp-cloud-roles.css?v=172000">
-  <link rel="stylesheet" href="fp-driver.css?v=172000">
-  <link rel="stylesheet" href="fp-crm-service.css?v=172000">
-  <link rel="stylesheet" href="fp-current-ui.css?v=172000">
+  <link rel="stylesheet" href="fp-base.css?v=173000">
+  <link rel="stylesheet" href="fp-service-layout.css?v=173000">
+  <link rel="stylesheet" href="fp-desktop-gps.css?v=173000">
+  <link rel="stylesheet" href="fp-cloud-roles.css?v=173000">
+  <link rel="stylesheet" href="fp-driver.css?v=173000">
+  <link rel="stylesheet" href="fp-crm-service.css?v=173000">
+  <link rel="stylesheet" href="fp-current-ui.css?v=173000">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="fp-mobile-v17.css?v=172000">
-  <script>window.FLEETPILOT_VERSION="17.2";window.FLEETPILOT_BUILD="172000";</script>
+  <link rel="stylesheet" href="fp-mobile-v17.css?v=173000">
+  <script>window.FLEETPILOT_VERSION="17.3";window.FLEETPILOT_BUILD="173000";</script>
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -47,7 +47,7 @@
     </div>
   </aside>
   <header class="topbar">
-    <div><span class="eyebrow">FleetPilot V17.2</span><h1 id="pageTitle">Главная</h1></div>
+    <div><span class="eyebrow">FleetPilot V17.3</span><h1 id="pageTitle">Главная</h1></div>
     <div class="topbar-actions">
   <button id="globalSearchButton" class="round secondary-round" aria-label="Глобальный поиск">⌕</button>
   <button id="headerAdd" class="round">＋</button>
@@ -802,6 +802,7 @@
     <nav class="company-tabs" aria-label="Разделы компании">
       <button type="button" class="active" data-company-tab="overview">Обзор</button>
       <button type="button" data-company-tab="team">Команда</button>
+      <button type="button" data-company-tab="drivers">Водители</button>
       <button type="button" data-company-tab="invites">Приглашения</button>
       <button type="button" data-company-tab="permissions">Права ролей</button>
       <button type="button" data-company-tab="settings">Настройки</button>
@@ -840,11 +841,33 @@
           <option value="coordinator">Координатор</option>
           <option value="accountant">Бухгалтер</option>
           <option value="mechanic">Механик</option>
-          <option value="driver">Водитель</option>
         </select>
         <button type="button" id="refreshEnterpriseMembers" class="btn">Обновить</button>
       </div>
       <div id="enterpriseMembersList" class="enterprise-members-list"></div>
+    </section>
+
+    <section class="company-panel" data-company-panel="drivers">
+      <div class="company-section-head">
+        <div>
+          <span class="eyebrow">Driver registry</span>
+          <h3>Водители</h3>
+          <p>Водители текущего Workspace, назначенные автомобили и статус приёмки.</p>
+        </div>
+        <button type="button" id="refreshDriversRegistry" class="btn">Обновить</button>
+      </div>
+      <div class="drivers-registry-toolbar">
+        <input id="driversRegistrySearch" type="search" placeholder="Поиск по имени, e-mail или автомобилю">
+        <select id="driversRegistryFilter">
+          <option value="">Все водители</option>
+          <option value="assigned">С автомобилем</option>
+          <option value="free">Без автомобиля</option>
+          <option value="pending">Ожидают приёмки</option>
+          <option value="accepted">Автомобиль принят</option>
+          <option value="manual">Введены вручную</option>
+        </select>
+      </div>
+      <div id="driversRegistryList" class="drivers-registry-list"></div>
     </section>
 
     <section class="company-panel" data-company-panel="invites">
@@ -1855,16 +1878,16 @@
 <script src="cloud-config.js?v=158000"></script>
 <script src="cloud.js?v=158000"></script>
 <!-- FleetPilot application code: order is intentional -->
-<script src="fp-core-data.js?v=172000"></script>
-<script src="fp-roles-company.js?v=172000"></script>
-<script src="fp-driver-portal.js?v=172000"></script>
-<script src="fp-router-navigation.js?v=172000"></script>
-<script src="fp-files-backups.js?v=172000"></script>
-<script src="fp-analytics-dashboard.js?v=172000"></script>
-<script src="fp-gps-map.js?v=172000"></script>
-<script src="fp-fleet.js?v=172000"></script>
-<script src="fp-service-finance.js?v=172000"></script>
-<script src="fp-calendar-vehicle.js?v=172000"></script>
-<script src="fp-actions-documents.js?v=172000"></script>
-<script src="fp-boot-hotfixes.js?v=172000"></script>
+<script src="fp-core-data.js?v=173000"></script>
+<script src="fp-roles-company.js?v=173000"></script>
+<script src="fp-driver-portal.js?v=173000"></script>
+<script src="fp-router-navigation.js?v=173000"></script>
+<script src="fp-files-backups.js?v=173000"></script>
+<script src="fp-analytics-dashboard.js?v=173000"></script>
+<script src="fp-gps-map.js?v=173000"></script>
+<script src="fp-fleet.js?v=173000"></script>
+<script src="fp-service-finance.js?v=173000"></script>
+<script src="fp-calendar-vehicle.js?v=173000"></script>
+<script src="fp-actions-documents.js?v=173000"></script>
+<script src="fp-boot-hotfixes.js?v=173000"></script>
 </body></html>

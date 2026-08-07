@@ -288,3 +288,7 @@
 
 /* V17.2 — mobile driver assignment */
 @media(max-width:1099px){.fleet-driver-assignment{margin:8px 0 0;padding:9px 10px;border-radius:12px}.fleet-driver-assignment strong{font-size:13px}.fleet-driver-assignment small{font-size:11px}.car-driver-picker-field{grid-column:1/-1}.car-driver-hint{line-height:1.35}}
+
+
+/* V17.3 Drivers Registry mobile */
+@media(max-width:760px){.drivers-registry-toolbar{grid-template-columns:1fr;gap:8px}.driver-registry-card{grid-template-columns:42px minmax(0,1fr);gap:10px;padding:14px}.driver-registry-avatar{width:42px;height:42px;border-radius:13px}.driver-registry-status{grid-column:1/-1;justify-self:start}.driver-registry-select,.driver-registry-manual{grid-column:1/-1;width:100%;text-align:left}.driver-registry-vehicle{align-items:flex-start}.company-tabs{overflow-x:auto;scrollbar-width:none}.company-tabs::-webkit-scrollbar{display:none}#driverHandoverActions[data-issued="1"] #startVehicleIssue{display:none!important}}

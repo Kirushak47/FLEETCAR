@@ -140,6 +140,20 @@ function removeHandoverPhoto(index){
 }
 window.removeHandoverPhoto=removeHandoverPhoto;
 
+function driverVehicleIsAlreadyAccepted(){
+ return Boolean(
+  driverHandoverState?.active_handover_id||
+  driverHandoverState?.handover_id||
+  (driverHandoverState?.issue_at&&!driverHandoverState?.return_at)||
+  driverHandoverState?.status==="issued"||
+  driverHandoverState?.status==="active"||
+  driverPortalContext?.active_handover_id||
+  driverPortalContext?.handover_id||
+  driverPortalContext?.accepted_at||
+  driverPortalContext?.issue_at||
+  driverPortalContext?.vehicle_accepted_at
+ )
+}
 async function loadDriverHandoverState(){
  if(enterpriseCurrentRole()!=="driver")return;
  try{
@@ -147,9 +161,11 @@ async function loadDriverHandoverState(){
   const actions=$("#driverHandoverActions");
   if(!actions)return;
   actions.hidden=!driverPortalContext?.car_id;
-  const issued=Boolean(driverHandoverState?.active_handover_id||driverHandoverState?.handover_id||driverHandoverState?.issue_at&&!driverHandoverState?.return_at||driverHandoverState?.status==="issued"||driverHandoverState?.status==="active");
-  $("#startVehicleIssue").hidden=issued;
-  $("#startVehicleReturn").hidden=!issued
+  const issued=driverVehicleIsAlreadyAccepted();
+  actions.dataset.issued=issued?"1":"0";
+  const issueButton=$("#startVehicleIssue"),returnButton=$("#startVehicleReturn");
+  if(issueButton){issueButton.hidden=issued;issueButton.style.display=issued?"none":""}
+  if(returnButton){returnButton.hidden=!issued;returnButton.style.display=issued?"":"none"}
  }catch(error){
   console.warn("Handover state",error)
  }
@@ -222,7 +238,7 @@ function renderDriverVehicleCard(){
  if(!assigned?.car_id){
   root.innerHTML=`<div class="driver-empty-state">
    <strong>Автомобиль ещё не назначен</strong>
-   <span>Владелец или координатор должен назначить автомобиль в разделе «Компания → Команда».</span>
+   <span>Владелец или координатор должен назначить автомобиль в разделе «Компания → Водители».</span>
   </div>`;
   return
  }
@@ -246,10 +262,18 @@ function renderDriverVehicleCard(){
   </div>
   <div class="driver-vehicle-stats">
    <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
-   <div><small>${(driverHandoverState?.active_handover_id||driverHandoverState?.issue_at&&!driverHandoverState?.return_at)?"Принят":"Назначен"}</small><strong>${driverHandoverState?.issue_at?new Date(driverHandoverState.issue_at).toLocaleDateString("ru-RU"):assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
+   <div><small>${driverVehicleIsAlreadyAccepted()?"Принят":"Назначен"}</small><strong>${driverHandoverState?.issue_at?new Date(driverHandoverState.issue_at).toLocaleDateString("ru-RU"):assigned.assigned_at?new Date(assigned.assigned_at).toLocaleDateString("ru-RU"):"—"}</strong></div>
    <div><small>Следующее ТО</small><strong>${assignedCar?km(Math.max(0,oil(assignedCar))):"—"}</strong></div>
    <div><small>Город</small><strong>${displayCar.city||window.FleetPilotCloud?.membership?.city||"—"}</strong></div>
   </div>`
+ const actions=$("#driverHandoverActions");
+ if(actions&&driverPortalContext?.car_id){
+  const accepted=driverVehicleIsAlreadyAccepted();
+  actions.dataset.issued=accepted?"1":"0";
+  const issueButton=$("#startVehicleIssue"),returnButton=$("#startVehicleReturn");
+  if(issueButton){issueButton.hidden=accepted;issueButton.style.display=accepted?"none":""}
+  if(returnButton){returnButton.hidden=!accepted;returnButton.style.display=accepted?"":"none"}
+ }
 }
 function renderDriverDocuments(){
  const root=$("#driverDocumentsList");if(!root)return;

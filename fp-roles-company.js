@@ -8,7 +8,7 @@
 window.FLEETPILOT_BUILD="16.1";
 window.addEventListener("DOMContentLoaded",()=>{
  document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V16.1"));
- document.documentElement.dataset.fleetpilotBuild="16.1";
+ document.documentElement.dataset.fleetpilotBuild="17.3";
 });
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
@@ -407,6 +407,7 @@ function activateCompanyTab(tab){
  $$("[data-company-tab]").forEach(btn=>btn.classList.toggle("active",btn.dataset.companyTab===tab));
  $$("[data-company-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.companyPanel===tab));
  if(tab==="permissions")renderRolePermissions();
+ if(tab==="drivers")renderDriversRegistry();
  if(tab==="settings")fillWorkspaceSettings();
  if(tab==="activity")renderCompanyActivity()
 }
@@ -465,6 +466,70 @@ async function renderCompanyActivity(){
    </article>`).join("")||'<div class="owner-empty">Журнал пока пуст.</div>'
  }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
 }
+
+function driverRegistryAssignmentRow(userId){
+ return (workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||"")===String(userId||"")&&String(row.status||"")!=="returned")||null
+}
+function driverRegistryCarForRow(row){return row?.car_id?car(String(row.car_id)):null}
+function driverRegistryAccepted(row){return Boolean(row?.active_handover_id||row?.handover_id||row?.issue_at||row?.status==="issued"||row?.status==="active")}
+async function renderDriversRegistry(){
+ const root=$("#driversRegistryList");if(!root)return;
+ root.innerHTML='<div class="owner-empty">Загрузка водителей…</div>';
+ try{
+  await loadWorkspaceDriverAssignments?.();
+  const members=(workspaceDriverDirectory||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
+  const query=($("#driversRegistrySearch")?.value||"").trim().toLowerCase();
+  const filter=$("#driversRegistryFilter")?.value||"";
+  const accountRows=members.map(member=>{
+   const assignment=driverRegistryAssignmentRow(member.user_id);
+   const assignedCar=driverRegistryCarForRow(assignment);
+   const accepted=driverRegistryAccepted(assignment);
+   return{type:"account",member,assignment,assignedCar,accepted,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}
+  });
+  const knownEmails=new Set(accountRows.map(x=>normalizeDriverIdentity(x.email)).filter(Boolean));
+  const manualRows=fleetCars().filter(c=>c.tenant&&!c.driverUserId&&!knownEmails.has(normalizeDriverIdentity(c.driverEmail))).map(c=>({
+   type:"manual",member:null,assignment:null,assignedCar:c,accepted:false,name:c.tenant||c.driverName||"Водитель",email:c.driverEmail||""
+  }));
+  const rows=[...accountRows,...manualRows].filter(item=>{
+   const c=item.assignedCar;
+   const text=`${item.name} ${item.email} ${c?`${model(c).brand} ${model(c).model} ${c.plate}`:""}`.toLowerCase();
+   if(query&&!text.includes(query))return false;
+   if(filter==="assigned"&&!c)return false;
+   if(filter==="free"&&c)return false;
+   if(filter==="pending"&&(!c||item.type!=="account"||item.accepted))return false;
+   if(filter==="accepted"&&(!c||!item.accepted))return false;
+   if(filter==="manual"&&item.type!=="manual")return false;
+   return true
+  });
+  root.innerHTML=rows.map(item=>{
+   const c=item.assignedCar;
+   const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль не назначен";
+   const status=item.type==="manual"?"Введён вручную":!c?"Без автомобиля":item.accepted?"Автомобиль принят":"Ожидает приёмки";
+   const cls=item.type==="manual"?"manual":!c?"free":item.accepted?"accepted":"pending";
+   return `<article class="driver-registry-card ${cls}">
+    <div class="driver-registry-avatar">${String(item.name||"D").trim().charAt(0).toUpperCase()}</div>
+    <div class="driver-registry-main">
+      <strong>${item.name||"Водитель"}</strong>
+      <small>${item.email||"Без e-mail"}</small>
+      <div class="driver-registry-vehicle"><span>🚗</span><b>${vehicle}</b></div>
+    </div>
+    <span class="driver-registry-status ${cls}">${status}</span>
+    ${item.type==="account"?`<label class="driver-registry-select"><small>Автомобиль</small>${driverAssignmentControl(item.member)}</label>`:`<span class="driver-registry-manual">Ручная запись</span>`}
+   </article>`
+  }).join("")||'<div class="owner-empty">Водители не найдены.</div>';
+  $$('[data-driver-assignment]').forEach(select=>select.onchange=async()=>{
+   try{
+    await window.FleetPilotCloud.assignDriverVehicle(select.dataset.driverAssignment,select.value||null);
+    await loadWorkspaceDriverAssignments?.();
+    renderFleet?.();
+    renderDriversRegistry();
+    if(selectedCarId&&$("#carPage")?.classList.contains("active"))openCar(selectedCarId);
+    toast(select.value?"Автомобиль назначен":"Назначение снято")
+   }catch(error){toast(error.message||String(error));renderDriversRegistry()}
+  })
+ }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
+}
+window.renderDriversRegistry=renderDriversRegistry;
 async function renderEnterprisePage(){
  const root=$("#enterpriseMembersList");if(!root)return;
  applyEnterpriseAccess();
@@ -485,6 +550,7 @@ async function renderEnterprisePage(){
   const query=($("#enterpriseMemberSearch")?.value||"").trim().toLowerCase();
   const roleFilter=$("#enterpriseRoleFilter")?.value||"";
   const filtered=members.filter(member=>{
+   if(member.role==="driver")return false;
    const text=`${enterpriseMemberEmail(member)} ${member.role} ${member.city||""}`.toLowerCase();
    return(!query||text.includes(query))&&(!roleFilter||member.role===roleFilter)
   });
@@ -516,7 +582,6 @@ async function renderEnterprisePage(){
     <select data-enterprise-role="${member.user_id}" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>${enterpriseRoleOptions(member.role)}</select>
     <input data-enterprise-city="${member.user_id}" value="${member.city||""}" placeholder="Город" ${(canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id)?"":"disabled"}>
     <span class="enterprise-status ${member.status}">${member.status==="active"?"Активен":"Отключён"}</span>
-    ${driverAssignmentControl(member)}
     ${canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id?`<button type="button" class="enterprise-member-toggle" data-enterprise-toggle="${member.user_id}" data-status="${member.status}">${member.status==="active"?"Отключить":"Включить"}</button>`:""}
    </article>`).join("")||`<div class="owner-empty">Участники не найдены.</div>`;
 
