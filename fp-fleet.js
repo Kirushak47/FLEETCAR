@@ -390,7 +390,7 @@ function renderOwnerDashboard(){
   let note="Требуется проверка";
   try{
    const h=safeDesktopHealth(car),gps=gpsStatusForCar(car);
-   if(car.status==="repair")note="Автомобиль в ремонте";
+   if(vehicleEffectiveStatus(car)==="repair")note="Автомобиль в ремонте";
    else if(h.insuranceDays<=7)note=`Страховка: ${h.insuranceDays} дн.`;
    else if(h.inspectionDays<=7)note=`Техосмотр: ${h.inspectionDays} дн.`;
    else if(h.oilLeft<=1000)note=`Масло через ${Math.max(0,Math.round(h.oilLeft))} км`;
@@ -433,7 +433,7 @@ function renderFleet(){
  const source=f==="archive"
   ?archivedCars().filter(c=>selectedFleetCity==="all"||normalizedCity(c.city)===selectedFleetCity)
   :cityFilteredCars();
- const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();const usage=vehicleUsageStatus(c),service=vehicleServiceState(c);return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):(f==="repair"?service!=="none":usage===f))))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
+ const list=source.filter(c=>{const m=model(c),hay=`${m.brand} ${m.model} ${c.plate} ${c.tenant} ${c.city||""}`.toLowerCase();const usage=vehicleEffectiveStatus(c),service=vehicleServiceState(c);return hay.includes(q)&&(f==="all"||f==="archive"||(f==="favorites"?c.favorite:(f==="attention"?attention(c):(f==="repair"?service!=="none":usage===f))))}).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||String(a.plate).localeCompare(String(b.plate)));
  const debt=db.payments.reduce((s,p)=>s+Math.max(0,p.expected-p.received),0);
  const healthRows=cityFilteredCars().map(c=>({c,h:healthDetails(c)}));
  const fleetHealthAverage=cityFilteredCars().length?Math.round(cityFilteredCars().reduce((sum,c)=>sum+vehicleHealthScore(c).score,0)/cityFilteredCars().length):100;
@@ -448,7 +448,7 @@ function renderFleet(){
  $("#fleetGrid").innerHTML=list.map(c=>{const m=model(c),o=oil(c),ins=days(c.insurance),insp=days(c.inspection),att=attention(c);const last=[...db.payments].filter(p=>p.carId===c.id).sort((a,b)=>b.to.localeCompare(a.to))[0];
  const monthData=financialData(period,c.id),monthProfit=monthData.finalProfit;
  const events=eventsForCar(c.id).filter(e=>e.days>=0).sort((a,b)=>a.date.localeCompare(b.date));
- const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c),effectiveStatus=vehicleUsageStatus(c),serviceState=vehicleServiceState(c),healthScore=vehicleHealthScore(c),activeRepairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
+ const nextEvent=events[0],serviceForecast=forecastService(c);const health=healthDetails(c),effectiveStatus=vehicleEffectiveStatus(c),serviceState=vehicleServiceState(c),healthScore=vehicleHealthScore(c),activeRepairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));return `<div class="fleet-card-responsive-wrap"><div class="mobile-fleet-card"><article class="car-card no-photo-card health-${health.level} animated-car-card" data-fleet-car-id="${c.id}" style="--card-index:${list.indexOf(c)}">
 <div class="no-photo-hero ${effectiveStatus} ${c.customPhoto?"has-custom-photo":""}">
  ${c.customPhoto?`<img class="custom-car-photo" src="${c.customPhoto}" alt="${m.brand} ${m.model}">`:""}
  <div class="custom-photo-shade"></div>
@@ -810,3 +810,29 @@ function populateServiceCityFilter(){
  select.value=cities.includes(current)?current:"all"
 }
 
+
+
+/* =========================================================
+   V18.7 — Fleet Board source of truth
+   ========================================================= */
+function setVehicleOperationalStatus(carId,status,options={}){
+ const c=car(String(carId||""));
+ if(!c)return false;
+ const next=String(status||"").toLowerCase();
+ if(!["active","repair","free"].includes(next))return false;
+ c.status=next;
+ save?.();
+ renderFleet?.();
+ renderStableFleetTable?.();
+ try{renderDesktopCommandKpis?.()}catch{}
+ try{renderDesktopCommand?.()}catch{}
+ try{renderControlCenterExtras?.()}catch{}
+ window.dispatchEvent(new CustomEvent("fleetpilot:vehicle-status-changed",{detail:{carId:c.id,status:next,source:options.source||"fleet-board"}}));
+ return true
+}
+window.setVehicleOperationalStatus=setVehicleOperationalStatus;
+
+// Any legacy control that changes c.status can announce a refresh; all badges now read the same field.
+window.addEventListener("fleetpilot:vehicle-status-changed",()=>{
+ requestAnimationFrame(()=>{try{renderFleet?.()}catch{};try{renderStableFleetTable?.()}catch{}})
+});

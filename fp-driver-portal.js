@@ -946,3 +946,92 @@ function driverAssignmentControl(member){
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
  setTimeout(boot,500);
 })();
+
+
+/* =========================================================
+   V18.7 — Driver handover validation + photo state fix
+   ========================================================= */
+function handoverCurrentMileage(){
+ const input=$("#vehicleHandoverMileage");
+ const raw=String(input?.value??"").replace(/\s+/g,"").replace(",",".");
+ const n=Number(raw);return Number.isFinite(n)?Math.max(0,Math.round(n)):0
+}
+function handoverRequirementsState(){
+ const type=$("#vehicleHandoverType")?.value||"issue";
+ const mileage=handoverCurrentMileage();
+ const confirm=Boolean($("#vehicleHandoverConfirm")?.checked);
+ const photos=Array.isArray(vehicleHandoverPhotoData)?vehicleHandoverPhotoData:[];
+ const assigned=driverAssignedCar();
+ const minimum=Number(assigned?.mileage||driverPortalContext?.mileage||0);
+ return{type,mileage,confirm,photos,minimum,valid:mileage>=minimum&&photos.length>0&&confirm}
+}
+function syncHandoverValidationUI(){
+ const state=handoverRequirementsState();
+ const button=$("#vehicleHandoverSubmit");
+ if(button){button.disabled=!state.valid;button.classList.toggle("disabled",!state.valid)}
+ if(!state.valid){
+  if(state.mileage<state.minimum)handoverMessage(`Пробег не может быть меньше ${state.minimum.toLocaleString("ru-RU")} км. Добавьте фото и подтвердите состояние автомобиля.`,"error");
+  else if(!state.photos.length)handoverMessage("Добавьте минимум одну фотографию автомобиля, затем подтвердите приём.","error");
+  else if(!state.confirm)handoverMessage("Отметьте подтверждение состояния автомобиля.","error");
+ }else handoverMessage("");
+ return state
+}
+async function handleHandoverPhotosChange(event){
+ const files=Array.from(event?.target?.files||[]).slice(0,8);
+ if(!files.length){vehicleHandoverPhotoData=[];renderHandoverPhotoPreview();syncHandoverValidationUI();return}
+ const output=[];
+ handoverMessage("Обрабатываем фотографии…");
+ try{
+  for(const file of files)output.push(await compressHandoverImage(file));
+  vehicleHandoverPhotoData=output;
+  renderHandoverPhotoPreview();
+  syncHandoverValidationUI();
+ }catch(error){handoverMessage(error.message||String(error),"error")}
+}
+async function submitVehicleHandoverFromPortal(event){
+ event?.preventDefault?.();event?.stopPropagation?.();
+ const state=syncHandoverValidationUI();
+ if(!state.valid)return false;
+ const submit=$("#vehicleHandoverSubmit");
+ if(submit?.dataset.busy==="1")return false;
+ if(submit){submit.dataset.busy="1";submit.disabled=true;submit.textContent="Сохраняем…"}
+ try{
+  const equipment={};$$('[data-handover-equipment]').forEach(input=>equipment[input.dataset.handoverEquipment]=Boolean(input.checked));
+  const result=await window.FleetPilotCloud.submitVehicleHandover({
+   type:state.type,mileage:state.mileage,fuelLevel:Number($("#vehicleHandoverFuel")?.value||0),
+   equipment,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
+  });
+  const assigned=driverAssignedCar();
+  if(assigned){
+   if(state.mileage>Number(assigned.mileage||0))assigned.mileage=state.mileage;
+   if(state.type==="issue"){assigned.driverAcceptedAt=result?.accepted_at||result?.issue_at||new Date().toISOString();assigned.driverAcceptedRevision=assigned.driverAssignmentRevision||""}
+   if(state.type==="return"){assigned.driverAcceptedAt="";assigned.driverAcceptedRevision=""}
+   save?.();
+  }
+  driverHandoverState=result||await window.FleetPilotCloud.getDriverHandoverState?.();
+  $("#vehicleHandoverDialog")?.close();
+  await loadDriverHandoverState?.();
+  renderDriverVehicleCard?.();
+  renderDriversRegistry?.();
+  renderFleet?.();
+  toast(state.type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
+  return true
+ }catch(error){
+  handoverMessage(error.message||String(error),"error");return false
+ }finally{
+  if(submit){submit.dataset.busy="0";submit.disabled=false;submit.textContent=state.type==="issue"?"Подтвердить приём":"Подтвердить возврат";syncHandoverValidationUI()}
+ }
+}
+function installHandoverValidationFix(){
+ const file=$("#vehicleHandoverPhotos"),form=$("#vehicleHandoverForm"),confirm=$("#vehicleHandoverConfirm"),mileage=$("#vehicleHandoverMileage");
+ if(file&&!file.dataset.v187){file.dataset.v187="1";file.addEventListener("change",handleHandoverPhotosChange)}
+ if(confirm&&!confirm.dataset.v187){confirm.dataset.v187="1";confirm.addEventListener("change",syncHandoverValidationUI)}
+ if(mileage&&!mileage.dataset.v187){mileage.dataset.v187="1";mileage.addEventListener("input",syncHandoverValidationUI)}
+ if(form&&!form.dataset.v187){form.dataset.v187="1";form.addEventListener("submit",submitVehicleHandoverFromPortal,true)}
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",installHandoverValidationFix);else installHandoverValidationFix();
+setTimeout(installHandoverValidationFix,500);
+
+const _v187OpenVehicleHandover=openVehicleHandover;
+openVehicleHandover=function(type){_v187OpenVehicleHandover(type);installHandoverValidationFix();setTimeout(syncHandoverValidationUI,0)};
+window.openVehicleHandover=openVehicleHandover;

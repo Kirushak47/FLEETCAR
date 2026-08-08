@@ -771,3 +771,7 @@ body[hidden]{display:none}
 .driver-picker-unlink{margin-top:8px;border:1px solid #fecaca;background:#fff7f7;color:#b42318;border-radius:11px;padding:9px 12px;font-weight:750;cursor:pointer}
 /* Acceptance belongs in Driver/Vehicle profiles, never as an extra Fleet-card status. */
 .mobile-fleet-card .fleet-driver-meta.pending,.desktop-fleet-card .desktop-driver-meta.pending{display:none!important}
+
+/* V18.7 */
+#vehicleHandoverSubmit:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.15)}
+.service-ok-badge,.vehicle-service-ok,.service-status-ok,[data-service-state="ok"]{display:none!important}

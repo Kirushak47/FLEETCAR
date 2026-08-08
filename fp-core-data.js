@@ -282,13 +282,9 @@ function inferRepairServiceType(repair={}){
  return"other"
 }
 function vehicleUsageStatus(c){
- // Assignment state is separate from the operational Fleet Board status.
- // A linked account driver stays pending until mileage + photo acceptance.
- const hasAccount=Boolean(c?.driverUserId);
- const hasManual=Boolean(!hasAccount&&(c?.tenant||c?.driverEmail));
- if(hasAccount)return c?.driverAcceptedAt?"active":"pending";
- if(hasManual)return"active";
- return"free"
+ // V18.7 — Fleet Board is the single source of truth for operational status.
+ // Driver assignment / acceptance never changes the board column implicitly.
+ return vehicleEffectiveStatus(c)
 }
 function vehicleServiceState(c){
  const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
