@@ -303,15 +303,12 @@ function vehicleServiceStatusText(c){
  return state==="service"?"В сервисе":state==="needed"?"Требует ремонта":"Сервис не требуется"
 }
 function vehicleEffectiveStatus(c){
- // V18.5: restore the original single operational status used by Fleet Board.
- // Active service work sends the car to the repair column. No separate “Service OK” badge.
- const terminal=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
- const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c?.id)&&!terminal.has(String(r.status||"").toLowerCase()));
- if(active.some(r=>["repair","parts","service","accepted","scheduled"].includes(String(r.status||"").toLowerCase())))return"repair";
- if(String(c?.status||"").toLowerCase()==="repair")return"repair";
- // A linked account driver is not online until the driver accepts the car.
- if(c?.driverUserId&&!c?.driverAcceptedAt)return"free";
- if(c?.driverUserId||c?.tenant||c?.driverEmail)return"active";
+ // V18.6: Fleet Board status is controlled ONLY by the vehicle status field.
+ // Driver assignment, acceptance and service tasks never rewrite the board column.
+ const raw=String(c?.status||"").toLowerCase();
+ if(raw==="active"||raw==="repair"||raw==="free")return raw;
+ // Legacy temporary assignment statuses must not leak into Fleet Board.
+ if(raw==="pending"||raw==="assigned"||raw==="issued")return"free";
  return"free"
 }
 function vehicleHealthScore(c){

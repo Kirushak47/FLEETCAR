@@ -46,7 +46,12 @@ async function assignVehicleDriverUnified(driverUserId,carId,options={}){
  if(previous?.userId&&String(previous.userId)!==uid&&window.FleetPilotCloud?.assignDriverVehicle){
   await window.FleetPilotCloud.assignDriverVehicle(previous.userId,null);
  }
- if(window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(uid,cid);
+ // Always create a fresh assignment cycle, even when the same driver is assigned again.
+ // Detaching first prevents an old accepted handover from being reused by the backend.
+ if(window.FleetPilotCloud?.assignDriverVehicle){
+  try{await window.FleetPilotCloud.assignDriverVehicle(uid,null)}catch(error){console.warn("Driver pre-detach",error)}
+  await window.FleetPilotCloud.assignDriverVehicle(uid,cid);
+ }
  target.driverUserId=uid;
  target.driverEmail=workspaceDriverEmail(member)||options.email||"";
  target.driverName=workspaceDriverName(member)||options.name||target.driverEmail||"Водитель";
@@ -55,9 +60,9 @@ async function assignVehicleDriverUnified(driverUserId,carId,options={}){
  target.tenant=target.driverName||target.driverEmail;
  // Critical: assigning/reassigning ALWAYS starts a fresh pending acceptance.
  target.driverAcceptedAt="";
+ target.driverAcceptedRevision="";
  target.driverAssignedAt=new Date().toISOString();
- // Pending acceptance must never look like an already active vehicle.
- if(String(target.status||"")!=="repair")target.status="free";
+ target.driverAssignmentRevision=`${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
  save?.();
  await loadWorkspaceDriverAssignments?.();
  renderFleet?.();
@@ -73,7 +78,6 @@ async function unassignVehicleDriverUnified(driverUserId,carId=""){
   if((uid&&String(c.driverUserId||"")===uid)||(carId&&String(c.id)===String(carId))){
    c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignedAt="";
    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
-   if(String(c.status||"")!=="repair")c.status="free";
   }
  });
  save?.();
@@ -100,6 +104,23 @@ function workspaceDriverAssignmentForCar(carId){
  const id=String(carId||"");
  return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&String(row.status||"")!=="returned")||null
 }
+function driverAssignmentStartedAt(row,c=null){
+ const value=row?.assigned_at||row?.assignment_at||row?.created_at||c?.driverAssignedAt||"";
+ const t=value?Date.parse(value):NaN;return Number.isFinite(t)?t:0
+}
+function driverHandoverAcceptedAt(row){
+ const value=row?.accepted_at||row?.vehicle_accepted_at||row?.issue_at||"";
+ const t=value?Date.parse(value):NaN;return Number.isFinite(t)?t:0
+}
+function driverAcceptanceBelongsToAssignment(row,c=null){
+ const evidence=Boolean(row?.active_handover_id||row?.handover_id||row?.accepted_at||row?.vehicle_accepted_at||(row?.status==="issued"&&row?.issue_mileage!=null&&Number(row?.issue_photos_count||0)>0));
+ if(!evidence)return Boolean(c?.driverAcceptedAt&&(!c?.driverAssignmentRevision||c?.driverAcceptedRevision===c?.driverAssignmentRevision));
+ const started=driverAssignmentStartedAt(row,c),accepted=driverHandoverAcceptedAt(row);
+ if(started&&accepted&&accepted+1000<started)return false;
+ if(c?.driverAssignmentRevision&&c?.driverAcceptedRevision&&c.driverAcceptedRevision!==c.driverAssignmentRevision)return false;
+ return true
+}
+window.driverAcceptanceBelongsToAssignment=driverAcceptanceBelongsToAssignment;
 function workspaceDriverForCar(c){
  if(!c)return null;
  const row=workspaceDriverAssignmentForCar(c.id);
@@ -107,7 +128,7 @@ function workspaceDriverForCar(c){
  const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
  const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
  const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
- const accepted=Boolean(row?.active_handover_id||row?.accepted_at||row?.vehicle_accepted_at||c.driverAcceptedAt);
+ const accepted=driverAcceptanceBelongsToAssignment(row,c);
  if(userId||email)return{userId,email,name:name||email,source:"account",accepted};
  if(c.tenant)return{userId:"",email:c.driverEmail||"",name:c.tenant,source:"manual",accepted:false};
  return null
@@ -135,7 +156,7 @@ function driverPickerStatus(member){
  const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
  if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
  const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
- const accepted=Boolean(row.active_handover_id||row.accepted_at||row.vehicle_accepted_at);
+ const accepted=driverAcceptanceBelongsToAssignment(row,c);
  return{label:accepted?"Автомобиль принят":"Ожидает приёмки",cls:accepted?"accepted":"pending",vehicle}
 }
 function renderDriverPickerCards(query=""){
@@ -143,13 +164,15 @@ function renderDriverPickerCards(query=""){
  const q=String(query||"").trim().toLowerCase();
  const rows=(workspaceDriverDirectory||[]).filter(member=>{const text=`${workspaceDriverName(member)} ${workspaceDriverEmail(member)} ${workspaceDriverPhone(member)}`.toLowerCase();return !q||text.includes(q)});
  root.innerHTML=rows.map(member=>{const status=driverPickerStatus(member);const name=workspaceDriverName(member)||workspaceDriverEmail(member)||"Водитель";const email=workspaceDriverEmail(member);return `<button type="button" class="driver-picker-card" data-pick-driver="${member.user_id}"><span class="driver-picker-avatar">${String(name).trim().charAt(0).toUpperCase()}</span><span class="driver-picker-person"><strong>${name}</strong><small>${email||"Без e-mail"}</small>${status.vehicle?`<em>${status.vehicle}</em>`:""}</span><span class="driver-picker-status ${status.cls}">${status.label}</span></button>`}).join("")||'<div class="driver-picker-empty">Водители не найдены</div>';
- root.querySelectorAll('[data-pick-driver]').forEach(btn=>btn.onclick=()=>{const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(btn.dataset.pickDriver));if(!member)return;const input=$("#carTenant"),hidden=$("#carDriverUserId"),manual=$("#carDriverManualFields"),selected=$("#carDriverSelected");if(input)input.value=workspaceDriverName(member)||workspaceDriverEmail(member);if(hidden)hidden.value=member.user_id||"";const emailField=$("#carDriverEmail");if(emailField)emailField.value=workspaceDriverEmail(member)||"";if(manual)manual.hidden=true;if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(workspaceDriverName(member)||"D").charAt(0).toUpperCase()}</span><span><strong>${workspaceDriverName(member)||workspaceDriverEmail(member)}</strong><small>${workspaceDriverEmail(member)||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;$("#carDriverPickerPanel")?.removeAttribute("hidden")}}$("#carDriverPickerPanel")?.setAttribute("hidden","")});
+ root.querySelectorAll('[data-pick-driver]').forEach(btn=>btn.onclick=()=>{const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(btn.dataset.pickDriver));if(!member)return;const input=$("#carTenant"),hidden=$("#carDriverUserId"),manual=$("#carDriverManualFields"),selected=$("#carDriverSelected");if(input)input.value=workspaceDriverName(member)||workspaceDriverEmail(member);if(hidden)hidden.value=member.user_id||"";const emailField=$("#carDriverEmail");if(emailField)emailField.value=workspaceDriverEmail(member)||"";if(manual)manual.hidden=true;if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(workspaceDriverName(member)||"D").charAt(0).toUpperCase()}</span><span><strong>${workspaceDriverName(member)||workspaceDriverEmail(member)}</strong><small>${workspaceDriverEmail(member)||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;$("#carDriverPickerSearch")?.focus()}}const search=$("#carDriverPickerSearch"),results=$("#carDriverPickerResults");if(search)search.value="";if(results)results.hidden=true});
 }
 function ensureRichDriverPicker(){
  const input=$("#carTenant");if(!input||$("#carDriverPickerPanel"))return;
  input.type="hidden";
- input.insertAdjacentHTML("afterend",`<div class="rich-driver-picker"><div id="carDriverSelected" class="driver-picker-selected" hidden></div><div id="carDriverPickerPanel" class="driver-picker-panel"><div class="driver-picker-search-wrap"><span>⌕</span><input id="carDriverPickerSearch" type="search" placeholder="Найти по имени, фамилии или e-mail"></div><div id="carDriverPickerResults" class="driver-picker-results"></div><button type="button" id="carDriverManualToggle" class="driver-picker-manual-toggle">+ Ввести водителя вручную</button><div id="carDriverManualFields" class="driver-picker-manual-fields" hidden><input id="carDriverManualName" placeholder="Имя и фамилия"><input id="carDriverEmail" type="email" placeholder="E-mail (необязательно)"><input id="carDriverPhone" type="tel" placeholder="Телефон (необязательно)"></div></div><button type="button" id="carDriverUnlinkButton" class="driver-picker-unlink" hidden>Отвязать водителя</button></div>`);
- const search=$("#carDriverPickerSearch");if(search)search.oninput=()=>renderDriverPickerCards(search.value);
+ input.insertAdjacentHTML("afterend",`<div class="rich-driver-picker"><div id="carDriverSelected" class="driver-picker-selected" hidden></div><div id="carDriverPickerPanel" class="driver-picker-panel driver-picker-dropdown"><div class="driver-picker-search-wrap"><span>⌕</span><input id="carDriverPickerSearch" type="search" autocomplete="off" placeholder="Начните вводить имя, фамилию или e-mail"></div><div id="carDriverPickerResults" class="driver-picker-results" hidden></div><button type="button" id="carDriverManualToggle" class="driver-picker-manual-toggle">+ Ввести водителя вручную</button><div id="carDriverManualFields" class="driver-picker-manual-fields" hidden><input id="carDriverManualName" placeholder="Имя и фамилия"><input id="carDriverEmail" type="email" placeholder="E-mail (необязательно)"><input id="carDriverPhone" type="tel" placeholder="Телефон (необязательно)"></div></div><button type="button" id="carDriverUnlinkButton" class="driver-picker-unlink" hidden>Отвязать водителя</button></div>`);
+ const search=$("#carDriverPickerSearch"),results=$("#carDriverPickerResults");
+ const openResults=()=>{if(results){results.hidden=false;renderDriverPickerCards(search?.value||"")}};
+ if(search){search.onfocus=openResults;search.onclick=openResults;search.oninput=()=>{openResults()}};
  $("#carDriverManualToggle").onclick=()=>{const fields=$("#carDriverManualFields");fields.hidden=!fields.hidden;if(!fields.hidden){$("#carDriverUserId").value="";$("#carDriverSelected").hidden=true}};
  [$("#carDriverManualName"),$("#carDriverEmail")].filter(Boolean).forEach(el=>el.addEventListener("input",()=>{if(!$("#carDriverUserId").value)input.value=$("#carDriverManualName").value.trim()||$("#carDriverEmail").value.trim()}));
 }
@@ -159,7 +182,7 @@ function renderCarDriverPicker(c=null){
  const current=workspaceDriverForCar(c);hidden.value=current?.userId||"";input.value=current?.name||c?.tenant||"";
  renderDriverPickerCards("");
  const selected=$("#carDriverSelected"),panel=$("#carDriverPickerPanel"),manual=$("#carDriverManualFields");
- if(current?.userId){const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(current.userId));if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(current.name||"D").charAt(0).toUpperCase()}</span><span><strong>${current.name||current.email}</strong><small>${current.email||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;panel?.removeAttribute("hidden")}}panel?.setAttribute("hidden","");if(manual)manual.hidden=true}
+ if(current?.userId){const member=workspaceDriverDirectory.find(x=>String(x.user_id)===String(current.userId));if(selected){selected.hidden=false;selected.innerHTML=`<span class="driver-picker-avatar">${String(current.name||"D").charAt(0).toUpperCase()}</span><span><strong>${current.name||current.email}</strong><small>${current.email||""}</small></span><button type="button" id="clearCarDriverSelection">Изменить</button>`;selected.querySelector('#clearCarDriverSelection').onclick=()=>{hidden.value="";selected.hidden=true;panel?.removeAttribute("hidden")}}panel?.removeAttribute("hidden");const results=$("#carDriverPickerResults");if(results)results.hidden=true;if(manual)manual.hidden=true}
  else if(c?.tenant){if(manual){manual.hidden=false;$("#carDriverManualName").value=c.tenant||c.driverName||"";$("#carDriverEmail").value=c.driverEmail||"";$("#carDriverPhone").value=c.driverPhone||""}panel?.removeAttribute("hidden")}
  else{selected&&(selected.hidden=true);panel?.removeAttribute("hidden");manual&&(manual.hidden=true)}
  const unlink=$("#carDriverUnlinkButton");
@@ -170,7 +193,6 @@ function renderCarDriverPicker(c=null){
    try{
     if(current?.userId&&window.unassignVehicleDriverUnified)await window.unassignVehicleDriverUnified(current.userId,c.id);
     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignmentSource="";c.tenant="";
-    if(c.status==="active"||c.status==="repair")c.status="free";
     save?.();
     await loadWorkspaceDriverAssignments?.();
     renderFleet?.();
@@ -246,20 +268,18 @@ function removeHandoverPhoto(index){
 window.removeHandoverPhoto=removeHandoverPhoto;
 
 function driverVehicleIsAlreadyAccepted(){
- // V18.2: assignment itself is NOT acceptance. Acceptance exists only after the
- // driver completes handover with mileage + photo and the backend returns an active handover.
- const state=driverHandoverState||{};
- const ctx=driverPortalContext||{};
- const explicit=Boolean(
-  state.active_handover_id||state.accepted_at||state.vehicle_accepted_at||
-  ctx.active_handover_id||ctx.accepted_at||ctx.vehicle_accepted_at
- );
- if(explicit)return true;
- const issueMileage=Number(state.issue_mileage??ctx.issue_mileage);
- const photos=Number(state.issue_photos_count??ctx.issue_photos_count??0) ||
-  (Array.isArray(state.issue_photos)?state.issue_photos.length:0) ||
-  (Array.isArray(ctx.issue_photos)?ctx.issue_photos.length:0);
- return Boolean((state.status==="issued"||state.status==="active")&&Number.isFinite(issueMileage)&&issueMileage>=0&&photos>0&&!state.return_at)
+ // Acceptance must belong to THIS assignment cycle. Old handovers from a previous
+ // assignment of the same driver/car are deliberately ignored.
+ const state=driverHandoverState||{},ctx=driverPortalContext||{},assignedCar=driverAssignedCar();
+ const merged={...ctx,...state};
+ const evidence=Boolean(merged.active_handover_id||merged.handover_id||merged.accepted_at||merged.vehicle_accepted_at||((merged.status==="issued"||merged.status==="active")&&merged.issue_mileage!=null&&Number(merged.issue_photos_count||0)>0));
+ if(!evidence)return false;
+ const assignedValue=ctx.assigned_at||ctx.assignment_at||assignedCar?.driverAssignedAt||"";
+ const issueValue=state.accepted_at||state.vehicle_accepted_at||state.issue_at||ctx.accepted_at||ctx.vehicle_accepted_at||ctx.issue_at||"";
+ const assignedAt=assignedValue?Date.parse(assignedValue):0,issueAt=issueValue?Date.parse(issueValue):0;
+ if(assignedAt&&issueAt&&issueAt+1000<assignedAt)return false;
+ if(assignedCar?.driverAssignmentRevision&&assignedCar?.driverAcceptedRevision&&assignedCar.driverAcceptedRevision!==assignedCar.driverAssignmentRevision)return false;
+ return !state.return_at
 }
 
 async function loadDriverHandoverState(){
@@ -271,7 +291,7 @@ async function loadDriverHandoverState(){
   actions.hidden=!driverPortalContext?.car_id;
   const issued=driverVehicleIsAlreadyAccepted();
   const assignedCar=driverAssignedCar();
-  if(assignedCar&&issued&&!assignedCar.driverAcceptedAt){assignedCar.driverAcceptedAt=driverHandoverState?.issue_at||new Date().toISOString();save?.()}
+  if(assignedCar&&issued&&!assignedCar.driverAcceptedAt){assignedCar.driverAcceptedAt=driverHandoverState?.issue_at||new Date().toISOString();assignedCar.driverAcceptedRevision=assignedCar.driverAssignmentRevision||"";save?.()}
   actions.dataset.issued=issued?"1":"0";
   const issueButton=$("#startVehicleIssue"),returnButton=$("#startVehicleReturn");
   if(issueButton){issueButton.hidden=issued;issueButton.style.display=issued?"none":""}
@@ -845,11 +865,12 @@ async function loadWorkspaceDriverAssignments(){
     c.tenant=c.driverName||c.driverEmail||c.tenant||"";
     // V18.4: assignment/issue_at alone is NOT acceptance. Only an explicit
     // completed handover can activate the vehicle.
-    const accepted=Boolean(assignment.active_handover_id||assignment.handover_id||assignment.accepted_at||assignment.vehicle_accepted_at||(assignment.status==="issued"&&assignment.issue_mileage!=null&&Number(assignment.issue_photos_count||0)>0));
+    const accepted=driverAcceptanceBelongsToAssignment(assignment,c);
     c.driverAcceptedAt=accepted?(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString()):"";
+    if(accepted)c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";else c.driverAcceptedRevision="";
    }else if(c.driverUserId){
     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";
-    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource="";if(c.status==="active")c.status="free"}
+    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
    }
   })
  }catch(error){console.warn("Driver assignments",error);workspaceDriverAssignments={};workspaceDriverAssignmentRows=[]}

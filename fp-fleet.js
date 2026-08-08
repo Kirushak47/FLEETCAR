@@ -454,7 +454,7 @@ function renderFleet(){
  <div class="custom-photo-shade"></div>
  <div class="photo-service-task-badge">${fleetServiceBadgeMarkup(c.id)}</div>
  <div class="hero-top">
-  <div class="hero-status-row"><span class="status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-service-indicator ${serviceState}">${serviceState==="service"?"🔧 В сервисе":serviceState==="needed"?"🔧 Требует ремонта":"✓ Сервис OK"}</span><span class="vehicle-health-inline">${healthScore.score}/100</span></div>
+  <div class="hero-status-row"><span class="status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-health-inline">${healthScore.score}/100</span></div>
   <div class="hero-card-controls">
    <button class="favorite-button ${c.favorite?"active":""}" onclick="event.stopPropagation();toggleFavorite('${c.id}')" aria-label="Избранное">${c.favorite?"★":"☆"}</button>
    ${(()=>{
@@ -534,7 +534,7 @@ function renderFleet(){
   <div class="desktop-car-identity">
     <div class="desktop-car-title-line">
       <div><h3>${m.brand} ${m.model}</h3><p>${c.plate}${c.tenant?` · ${c.tenant}`:""}</p></div>
-      <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span><span class="vehicle-service-indicator ${serviceState}">${serviceState==="service"?"🔧 В сервисе":serviceState==="needed"?"🔧 Требует ремонта":"✓ Сервис OK"}</span>
+      <span class="desktop-status ${effectiveStatus}">${statusText(effectiveStatus)}</span>
     </div>
     ${(()=>{
       const gps=gpsStatusForCar(c);

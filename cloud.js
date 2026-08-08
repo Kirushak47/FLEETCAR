@@ -1117,11 +1117,10 @@ async function getDriverAssignments(){
 }
 async function assignDriverVehicle(driverUserId,carId){
  if(!client||!membership)throw new Error("Workspace недоступен");
- const {error}=await client.rpc("assign_driver_vehicle",{
-  driver_user_id_value:driverUserId,
-  car_id_value:carId||null
- });
- if(error)throw error
+ const call=async value=>{const {error}=await client.rpc("assign_driver_vehicle",{driver_user_id_value:driverUserId,car_id_value:value||null});if(error)throw error};
+ // A non-null assignment is a NEW acceptance cycle. Reset any previous link first,
+ // including the same driver + same car, so an old issued handover cannot be reused.
+ if(carId){try{await call(null)}catch(error){console.warn("Assignment reset",error)}await call(carId)}else await call(null)
 }
 
 async function getCloudFleetVersions(){

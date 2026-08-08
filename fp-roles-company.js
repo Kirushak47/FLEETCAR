@@ -5,7 +5,7 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="18.2";
+window.FLEETPILOT_BUILD="18.6";
 window.addEventListener("DOMContentLoaded",()=>{
  document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V18.2"));
  document.documentElement.dataset.fleetpilotBuild="18.2";
@@ -477,7 +477,7 @@ function driverRegistryAssignmentRow(userId){
  const c=fleetCars().find(c=>String(c.driverUserId||"")===String(userId||""));return c?{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}:null
 }
 function driverRegistryCarForRow(row){return row?.car_id?car(String(row.car_id)):null}
-function driverRegistryAccepted(row){return Boolean(row?.active_handover_id||row?.accepted_at||row?.vehicle_accepted_at||(row?.status==="issued"&&row?.issue_mileage!=null&&Number(row?.issue_photos_count||0)>0))}
+function driverRegistryAccepted(row){const c=driverRegistryCarForRow(row);return window.driverAcceptanceBelongsToAssignment?window.driverAcceptanceBelongsToAssignment(row,c):Boolean(c?.driverAcceptedAt)}
 async function renderDriversRegistry(){
  const root=$("#driversRegistryList");if(!root)return;
  root.innerHTML='<div class="owner-empty">Загрузка водителей…</div>';
@@ -493,8 +493,9 @@ async function renderDriversRegistry(){
    if(assignment?.car_id&&!accepted&&window.FleetPilotCloud?.getVehicleHandoverHistory){
     try{
      const history=await window.FleetPilotCloud.getVehicleHandoverHistory(assignment.car_id);
-     const active=[...(history||[])].reverse().find(row=>!row.return_at&&String(row.driver_user_id||member.user_id)===String(member.user_id));
-     if(active){accepted=true;assignment.issue_at=active.issue_at||new Date().toISOString();assignment.handover_id=active.id||assignment.handover_id;if(assignedCar)assignedCar.driverAcceptedAt=assignment.issue_at}
+     const assignmentStart=Date.parse(assignment?.assigned_at||assignment?.assignment_at||assignedCar?.driverAssignedAt||0)||0;
+     const active=[...(history||[])].reverse().find(row=>{const issue=Date.parse(row.issue_at||0)||0;return !row.return_at&&String(row.driver_user_id||member.user_id)===String(member.user_id)&&(!assignmentStart||!issue||issue+1000>=assignmentStart)});
+     if(active){accepted=true;assignment.issue_at=active.issue_at||new Date().toISOString();assignment.handover_id=active.id||assignment.handover_id;if(assignedCar){assignedCar.driverAcceptedAt=assignment.issue_at;assignedCar.driverAcceptedRevision=assignedCar.driverAssignmentRevision||""}}
     }catch(error){console.warn("Driver acceptance sync",error)}
    }
    return{type:"account",member,assignment,assignedCar,accepted,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}
