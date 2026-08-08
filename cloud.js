@@ -1162,16 +1162,60 @@ async function submitVehicleHandover(payload){
  if(!client||!membership)throw new Error("Workspace недоступен");
  if(enterpriseRole()!=="driver")throw new Error("Только водитель может подтвердить передачу");
  const normalizeMileage=value=>{const raw=String(value??"").replace(/\s+/g,"").replace(",",".").replace(/[^0-9.]/g,"");const n=Number(raw);return Number.isFinite(n)?Math.max(0,Math.round(n)):0};
- const {data,error}=await client.rpc("submit_vehicle_handover",{
+ const mileage=normalizeMileage(payload.mileage);
+ const photos=Array.isArray(payload.photos)?payload.photos:[];
+ const fuelRaw=Number(payload.fuelLevel);
+ const fuel=Number.isFinite(fuelRaw)?fuelRaw:0;
+ const args={
   handover_type_value:String(payload.type),
-  mileage_value:normalizeMileage(payload.mileage),
-  fuel_level_value:Number(payload.fuelLevel||0),
+  mileage_value:mileage,
+  fuel_level_value:fuel,
   equipment_value:payload.equipment||{},
-  photos_value:payload.photos||[],
+  photos_value:photos,
   notes_value:String(payload.notes||"").trim()||null
- });
- if(error)throw error;
- return Array.isArray(data)?data[0]||null:data||null
+ };
+ const {data,error}=await client.rpc("submit_vehicle_handover",args);
+ if(!error)return Array.isArray(data)?data[0]||null:data||null;
+
+ // Some backend versions mark the car as `issued` already when it is assigned.
+ // In that case a driver's explicit acceptance receives HTTP 400 / "already issued".
+ // Do not lose the driver's mileage/photos: verify that THIS driver really has an
+ // active issued assignment, then return a synthetic accepted row. The portal will
+ // persist driverAcceptedAt + assignment revision into the shared fleet state.
+ const errorText=[error.message,error.details,error.hint,error.code].filter(Boolean).join(" | ");
+ const lower=errorText.toLowerCase();
+ if(String(payload.type)==="issue"&&(lower.includes("already issued")||lower.includes("already been issued")||lower.includes("vehicle is already issued"))){
+  try{
+   const {data:state,error:stateError}=await client.rpc("get_driver_handover_state");
+   if(!stateError){
+    const row=Array.isArray(state)?state[0]||null:state||null;
+    const status=String(row?.status||row?.handover_status||"").toLowerCase();
+    const active=Boolean(row&&!row.return_at&&(row.car_id||row.vehicle_id)&&(row.issue_at||row.active_handover_id||row.handover_id||["issued","active","accepted"].includes(status)));
+    if(active){
+     const now=new Date().toISOString();
+     console.warn("submit_vehicle_handover: backend already issued; committing driver acceptance in fleet state",error);
+     return {
+      ...row,
+      status:"accepted",
+      accepted_at:now,
+      vehicle_accepted_at:now,
+      issue_at:row.issue_at||now,
+      issue_mileage:mileage,
+      issue_photos:photos,
+      issue_photos_count:photos.length,
+      fuel_level:fuel,
+      equipment:payload.equipment||{},
+      notes:String(payload.notes||"").trim()||null,
+      client_acceptance_commit:true
+     }
+    }
+   }
+  }catch(verifyError){console.warn("handover already-issued verification failed",verifyError)}
+ }
+
+ const enriched=new Error(`Не удалось подтвердить приём автомобиля: ${errorText||"Supabase RPC вернул ошибку 400"}`);
+ enriched.code=error.code||"";enriched.details=error.details||"";enriched.hint=error.hint||"";enriched.original=error;
+ throw enriched
 }
 async function getVehicleHandoverHistory(carId){
  if(!client||!membership)return[];
