@@ -112,8 +112,25 @@ function driverHandoverAcceptedAt(row){
  const value=row?.accepted_at||row?.vehicle_accepted_at||row?.issue_at||"";
  const t=value?Date.parse(value):NaN;return Number.isFinite(t)?t:0
 }
+function handoverIssueHasPhotoEvidence(row){
+ const count=Number(row?.issue_photos_count||0);
+ const photos=Array.isArray(row?.issue_photos)?row.issue_photos:(Array.isArray(row?.photos)?row.photos:[]);
+ return count>0||photos.length>0
+}
+function handoverRowIsIssued(row){
+ if(!row)return false;
+ const status=String(row.status||row.handover_status||"").toLowerCase();
+ const issuedStatus=["issued","active","accepted"].includes(status);
+ // Some RPC versions return issue_at + mileage/photos but do not return accepted_at.
+ // A successful issue row is still a completed acceptance.
+ return Boolean(
+  row.active_handover_id||row.handover_id||row.accepted_at||row.vehicle_accepted_at||
+  (row.issue_at&&issuedStatus)||
+  (issuedStatus&&row.issue_mileage!=null&&handoverIssueHasPhotoEvidence(row))
+ )&&!row.return_at
+}
 function driverAcceptanceBelongsToAssignment(row,c=null){
- const evidence=Boolean(row?.active_handover_id||row?.handover_id||row?.accepted_at||row?.vehicle_accepted_at||(row?.status==="issued"&&row?.issue_mileage!=null&&Number(row?.issue_photos_count||0)>0));
+ const evidence=handoverRowIsIssued(row);
  if(!evidence)return Boolean(c?.driverAcceptedAt&&(!c?.driverAssignmentRevision||c?.driverAcceptedRevision===c?.driverAssignmentRevision));
  const started=driverAssignmentStartedAt(row,c),accepted=driverHandoverAcceptedAt(row);
  if(started&&accepted&&accepted+1000<started)return false;
@@ -272,7 +289,7 @@ function driverVehicleIsAlreadyAccepted(){
  // assignment of the same driver/car are deliberately ignored.
  const state=driverHandoverState||{},ctx=driverPortalContext||{},assignedCar=driverAssignedCar();
  const merged={...ctx,...state};
- const evidence=Boolean(merged.active_handover_id||merged.handover_id||merged.accepted_at||merged.vehicle_accepted_at||((merged.status==="issued"||merged.status==="active")&&merged.issue_mileage!=null&&Number(merged.issue_photos_count||0)>0));
+ const evidence=handoverRowIsIssued(merged);
  if(!evidence)return false;
  const assignedValue=ctx.assigned_at||ctx.assignment_at||assignedCar?.driverAssignedAt||"";
  const issueValue=state.accepted_at||state.vehicle_accepted_at||state.issue_at||ctx.accepted_at||ctx.vehicle_accepted_at||ctx.issue_at||"";
@@ -1008,7 +1025,32 @@ async function submitVehicleHandoverFromPortal(event){
    if(state.type==="return"){assigned.driverAcceptedAt="";assigned.driverAcceptedRevision=""}
    save?.();
   }
-  driverHandoverState=result||await window.FleetPilotCloud.getDriverHandoverState?.();
+  // The RPC may return a compact row, while get_driver_handover_state may lag by one
+  // realtime tick. Verify against state/history before reopening the portal UI.
+  driverHandoverState=result||null;
+  if(state.type==="issue"){
+   let verified=handoverRowIsIssued(result);
+   let latest=result||null;
+   for(let attempt=0;!verified&&attempt<4;attempt++){
+    if(attempt)await new Promise(resolve=>setTimeout(resolve,250));
+    try{
+     latest=await window.FleetPilotCloud.getDriverHandoverState?.();
+     if(handoverRowIsIssued(latest)){verified=true;break}
+    }catch(error){console.warn("Handover verify state",error)}
+   }
+   if(!verified&&assigned?.id&&window.FleetPilotCloud.getVehicleHandoverHistory){
+    try{
+     const history=await window.FleetPilotCloud.getVehicleHandoverHistory(assigned.id);
+     const active=[...(history||[])].reverse().find(row=>handoverRowIsIssued(row));
+     if(active){latest={...(latest||{}),...active,status:"issued",car_id:assigned.id};verified=true}
+    }catch(error){console.warn("Handover verify history",error)}
+   }
+   if(!verified)throw new Error("Приёмка отправлена, но сервер не подтвердил её сохранение. Обновите страницу и повторите попытку.");
+   driverHandoverState=latest||result||{status:"issued",issue_at:new Date().toISOString(),issue_mileage:state.mileage,issue_photos:state.photos};
+   if(driverPortalContext)driverPortalContext={...driverPortalContext,...driverHandoverState,status:"issued",accepted_at:driverHandoverState.accepted_at||driverHandoverState.issue_at||new Date().toISOString()};
+  }else{
+   driverHandoverState=result||await window.FleetPilotCloud.getDriverHandoverState?.();
+  }
   $("#vehicleHandoverDialog")?.close();
   await loadDriverHandoverState?.();
   renderDriverVehicleCard?.();
