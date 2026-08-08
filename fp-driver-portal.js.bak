@@ -19,42 +19,6 @@ let workspaceDriverAssignments={};
 let workspaceDriverAssignmentRows=[];
 let workspaceDriverDirectory=[];
 
-/* =========================================================
-   V18.10 — Assignment-cycle acceptance + immutable handover audit
-   Keeps acceptance tied to the current assignment revision and records
-   forced detach/cancel events even when the backend handover row is stale.
-   ========================================================= */
-function ensureVehicleHandoverAudit(c){
- if(!c)return[];
- if(!Array.isArray(c.vehicleHandoverAudit))c.vehicleHandoverAudit=[];
- return c.vehicleHandoverAudit
-}
-function addVehicleHandoverAudit(c,type,details={}){
- if(!c)return null;
- const list=ensureVehicleHandoverAudit(c);
- const revision=String(details.revision||c.driverAssignmentRevision||"");
- const key=String(details.key||`${type}:${revision||Date.now()}`);
- if(list.some(x=>String(x.key||"")===key))return list.find(x=>String(x.key||"")===key)||null;
- const row={
-  id:`audit-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,key,type,revision,
-  at:details.at||new Date().toISOString(),driver_user_id:details.driverUserId||c.driverUserId||"",
-  driver_name:details.driverName||c.driverName||c.tenant||"",driver_email:details.driverEmail||c.driverEmail||"",
-  mileage:details.mileage!=null?Number(details.mileage):Number(c.mileage||0),
-  photos:Array.isArray(details.photos)?details.photos:[],notes:String(details.notes||"")
- };
- list.push(row);
- if(list.length>200)c.vehicleHandoverAudit=list.slice(-200);
- return row
-}
-function currentAssignmentAcceptedLocally(c){
- if(!c?.driverUserId||!c?.driverAssignmentRevision)return false;
- return Boolean(c.driverAcceptedAt&&c.driverAcceptedRevision===c.driverAssignmentRevision)
-}
-function currentAssignmentAcceptanceDate(c){
- return currentAssignmentAcceptedLocally(c)?c.driverAcceptedAt:""
-}
-window.addVehicleHandoverAudit=addVehicleHandoverAudit;
-
 
 /* =========================================================
    V18.4 — Single Driver Assignment Pipeline
@@ -99,10 +63,6 @@ async function assignVehicleDriverUnified(driverUserId,carId,options={}){
  target.driverAcceptedRevision="";
  target.driverAssignedAt=new Date().toISOString();
  target.driverAssignmentRevision=`${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
- addVehicleHandoverAudit(target,"assigned",{
-  key:`assigned:${target.driverAssignmentRevision}`,revision:target.driverAssignmentRevision,at:target.driverAssignedAt,
-  driverUserId:uid,driverName:target.driverName,driverEmail:target.driverEmail,mileage:target.mileage
- });
  save?.();
  await loadWorkspaceDriverAssignments?.();
  renderFleet?.();
@@ -113,21 +73,12 @@ async function assignVehicleDriverUnified(driverUserId,carId,options={}){
 }
 async function unassignVehicleDriverUnified(driverUserId,carId=""){
  const uid=String(driverUserId||"").trim();
- const targets=fleetCars().filter(c=>(uid&&String(c.driverUserId||"")===uid)||(carId&&String(c.id)===String(carId)));
- // Record the business event BEFORE clearing the assignment. If the current cycle
- // was accepted, this is a forced company repossession; otherwise it is a cancelled assignment.
- targets.forEach(c=>{
-  const accepted=currentAssignmentAcceptedLocally(c)||driverAcceptanceBelongsToAssignment(workspaceDriverAssignmentForCar(c.id),c);
-  addVehicleHandoverAudit(c,accepted?"forced_return":"assignment_cancelled",{
-   key:`${accepted?"forced_return":"assignment_cancelled"}:${c.driverAssignmentRevision||Date.now()}`,
-   revision:c.driverAssignmentRevision||"",driverUserId:c.driverUserId,driverName:c.driverName,driverEmail:c.driverEmail,
-   mileage:c.mileage,notes:accepted?"Автомобиль отобран компанией":"Назначение отменено компанией"
-  });
- });
  if(uid&&window.FleetPilotCloud?.assignDriverVehicle)await window.FleetPilotCloud.assignDriverVehicle(uid,null);
- targets.forEach(c=>{
-  c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAcceptedRevision="";c.driverAssignedAt="";
-  if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+ fleetCars().forEach(c=>{
+  if((uid&&String(c.driverUserId||"")===uid)||(carId&&String(c.id)===String(carId))){
+   c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";c.driverAssignedAt="";
+   if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+  }
  });
  save?.();
  await loadWorkspaceDriverAssignments?.();
@@ -179,9 +130,6 @@ function handoverRowIsIssued(row){
  )&&!row.return_at
 }
 function driverAcceptanceBelongsToAssignment(row,c=null){
- // A completed acceptance tied to the current assignment revision is authoritative.
- // A stale backend handover from an older issue must never turn it back into pending.
- if(currentAssignmentAcceptedLocally(c))return true;
  const evidence=handoverRowIsIssued(row);
  if(!evidence)return Boolean(c?.driverAcceptedAt&&(!c?.driverAssignmentRevision||c?.driverAcceptedRevision===c?.driverAssignmentRevision));
  const started=driverAssignmentStartedAt(row,c),accepted=driverHandoverAcceptedAt(row);
@@ -337,11 +285,9 @@ function removeHandoverPhoto(index){
 window.removeHandoverPhoto=removeHandoverPhoto;
 
 function driverVehicleIsAlreadyAccepted(){
- const assignedCar=driverAssignedCar();
- if(currentAssignmentAcceptedLocally(assignedCar))return true;
  // Acceptance must belong to THIS assignment cycle. Old handovers from a previous
  // assignment of the same driver/car are deliberately ignored.
- const state=driverHandoverState||{},ctx=driverPortalContext||{};
+ const state=driverHandoverState||{},ctx=driverPortalContext||{},assignedCar=driverAssignedCar();
  const merged={...ctx,...state};
  const evidence=handoverRowIsIssued(merged);
  if(!evidence)return false;
@@ -400,42 +346,32 @@ async function loadVehicleHandoverHistory(carId){
  const root=$("#vehicleHandoverHistory");if(!root)return;
  root.innerHTML='<div class="driver-empty-state">Загрузка истории передач…</div>';
  try{
-  const backendRows=await window.FleetPilotCloud.getVehicleHandoverHistory(carId).catch(()=>[]);
-  const c=car(carId);
-  const audit=Array.isArray(c?.vehicleHandoverAudit)?c.vehicleHandoverAudit:[];
-  const backendEvents=[];
-  (backendRows||[]).forEach((row,index)=>{
-   if(row.issue_at)backendEvents.push({source:"backend",type:"issued",at:row.issue_at,row,key:`b-issue-${row.id||row.handover_id||index}-${row.issue_at}`});
-   if(row.return_at)backendEvents.push({source:"backend",type:"returned",at:row.return_at,row,key:`b-return-${row.id||row.handover_id||index}-${row.return_at}`});
-  });
-  const auditEvents=audit.map((row,index)=>({source:"audit",type:row.type,at:row.at,row,key:row.key||`a-${index}`}));
-  const seen=new Set();
-  const events=[...backendEvents,...auditEvents].filter(ev=>{
-   // Deduplicate backend issue vs client accepted for same revision/time window only loosely;
-   // keep both when they describe different business actions.
-   const signature=`${ev.type}|${ev.at||""}|${ev.row?.driver_user_id||ev.row?.driver_email||""}`;
-   if(seen.has(signature))return false;seen.add(signature);return true
-  }).sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0));
-  const label={issued:"Выдан",accepted:"Принят водителем",returned:"Возвращён водителем",forced_return:"Автомобиль отобран компанией",assignment_cancelled:"Назначение отменено",assigned:"Назначен водителю"};
-  const cls={issued:"active",accepted:"active",returned:"completed",forced_return:"completed",assignment_cancelled:"completed",assigned:"active"};
-  root.innerHTML=events.map(ev=>{
-   const row=ev.row||{};
-   const name=row.driver_name||row.driver_email||"Водитель";
-   const mileage=ev.source==="audit"?row.mileage:(ev.type==="returned"?row.return_mileage:row.issue_mileage);
-   const photos=ev.source==="audit"?(row.photos||[]):((ev.type==="returned"?row.return_photos:row.issue_photos)||[]);
-   const notes=ev.source==="audit"?row.notes:(ev.type==="returned"?row.return_notes:row.issue_notes);
+  const rows=await window.FleetPilotCloud.getVehicleHandoverHistory(carId);
+  root.innerHTML=rows.map(row=>{
+   const issue=row.issue_at?new Date(row.issue_at).toLocaleString("ru-RU"):"—";
+   const returned=row.return_at?new Date(row.return_at).toLocaleString("ru-RU"):null;
+   const distance=row.return_mileage!=null?Math.max(0,row.return_mileage-row.issue_mileage):null;
    return `<article class="handover-history-row">
     <div class="handover-history-line"></div>
     <div class="handover-history-content">
-     <div class="handover-history-head"><strong>${name}</strong><span class="${cls[ev.type]||"completed"}">${label[ev.type]||ev.type}</span></div>
-     <div class="handover-history-grid">
-      <div><small>Дата</small><b>${ev.at?new Date(ev.at).toLocaleString("ru-RU"):"—"}</b></div>
-      <div><small>Пробег</small><b>${mileage!=null?km(mileage):"—"}</b></div>
-      <div><small>Фото</small><b>${photos.length}</b></div>
-      <div><small>Источник</small><b>${ev.source==="backend"?"Vehicle Handover":"FleetPilot"}</b></div>
+     <div class="handover-history-head">
+      <strong>${row.driver_name||row.driver_email||"Водитель"}</strong>
+      <span class="${returned?"completed":"active"}">${returned?"Возвращён":"Выдан"}</span>
      </div>
-     ${notes?`<p>${notes}</p>`:""}
-     <div class="handover-photo-history">${photos.slice(0,8).map(photo=>`<img src="${photo.data||photo}" alt="Фото передачи">`).join("")}</div>
+     <div class="handover-history-grid">
+      <div><small>Выдача</small><b>${issue}</b></div>
+      <div><small>Пробег при выдаче</small><b>${km(row.issue_mileage)}</b></div>
+      <div><small>Возврат</small><b>${returned||"Автомобиль у водителя"}</b></div>
+      <div><small>Пробег при возврате</small><b>${row.return_mileage!=null?km(row.return_mileage):"—"}</b></div>
+      <div><small>Пройдено</small><b>${distance!=null?km(distance):"—"}</b></div>
+      <div><small>Фото</small><b>${(row.issue_photos_count||0)+(row.return_photos_count||0)}</b></div>
+     </div>
+     ${row.issue_notes?`<p><strong>При выдаче:</strong> ${row.issue_notes}</p>`:""}
+     ${row.return_notes?`<p><strong>При возврате:</strong> ${row.return_notes}</p>`:""}
+     <div class="handover-photo-history">
+      ${(row.issue_photos||[]).slice(0,8).map(photo=>`<img src="${photo.data}" alt="Фото выдачи">`).join("")}
+      ${(row.return_photos||[]).slice(0,8).map(photo=>`<img src="${photo.data}" alt="Фото возврата">`).join("")}
+     </div>
     </div>
    </article>`
   }).join("")||'<div class="driver-empty-state">Передач автомобиля пока не было.</div>'
@@ -946,12 +882,9 @@ async function loadWorkspaceDriverAssignments(){
     c.tenant=c.driverName||c.driverEmail||c.tenant||"";
     // V18.4: assignment/issue_at alone is NOT acceptance. Only an explicit
     // completed handover can activate the vehicle.
-    const localAccepted=currentAssignmentAcceptedLocally(c);
-    const accepted=localAccepted||driverAcceptanceBelongsToAssignment(assignment,c);
-    if(accepted){
-     c.driverAcceptedAt=localAccepted?c.driverAcceptedAt:(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString());
-     c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";
-    }else{c.driverAcceptedAt="";c.driverAcceptedRevision=""}
+    const accepted=driverAcceptanceBelongsToAssignment(assignment,c);
+    c.driverAcceptedAt=accepted?(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString()):"";
+    if(accepted)c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";else c.driverAcceptedRevision="";
    }else if(c.driverUserId){
     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";
     if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
@@ -1088,23 +1021,8 @@ async function submitVehicleHandoverFromPortal(event){
   const assigned=driverAssignedCar();
   if(assigned){
    if(state.mileage>Number(assigned.mileage||0))assigned.mileage=state.mileage;
-   if(state.type==="issue"){
-    assigned.driverAcceptedAt=result?.accepted_at||result?.issue_at||new Date().toISOString();
-    assigned.driverAcceptedRevision=assigned.driverAssignmentRevision||"";
-    addVehicleHandoverAudit(assigned,"accepted",{
-     key:`accepted:${assigned.driverAssignmentRevision||assigned.driverAcceptedAt}`,revision:assigned.driverAssignmentRevision||"",
-     at:assigned.driverAcceptedAt,driverUserId:assigned.driverUserId,driverName:assigned.driverName,driverEmail:assigned.driverEmail,
-     mileage:state.mileage,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
-    });
-   }
-   if(state.type==="return"){
-    addVehicleHandoverAudit(assigned,"returned",{
-     key:`returned:${assigned.driverAssignmentRevision||Date.now()}`,revision:assigned.driverAssignmentRevision||"",
-     driverUserId:assigned.driverUserId,driverName:assigned.driverName,driverEmail:assigned.driverEmail,
-     mileage:state.mileage,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
-    });
-    assigned.driverAcceptedAt="";assigned.driverAcceptedRevision="";
-   }
+   if(state.type==="issue"){assigned.driverAcceptedAt=result?.accepted_at||result?.issue_at||new Date().toISOString();assigned.driverAcceptedRevision=assigned.driverAssignmentRevision||""}
+   if(state.type==="return"){assigned.driverAcceptedAt="";assigned.driverAcceptedRevision=""}
    save?.();
   }
   // The RPC may return a compact row, while get_driver_handover_state may lag by one
