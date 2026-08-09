@@ -164,7 +164,7 @@ function workspaceDriverMemberByEmail(email){
 }
 function workspaceDriverAssignmentForCar(carId){
  const id=String(carId||"");
- return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&String(row.status||"")!=="returned")||null
+ return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&!driverAssignmentStatusTerminal(row.status))||null
 }
 function driverAssignmentStartedAt(row,c=null){
  const value=row?.assigned_at||row?.assignment_at||row?.created_at||c?.driverAssignedAt||"";
@@ -205,19 +205,12 @@ function driverAcceptanceBelongsToAssignment(row,c=null){
 window.driverAcceptanceBelongsToAssignment=driverAcceptanceBelongsToAssignment;
 function workspaceDriverForCar(c){
  if(!c)return null;
- const localUserId=String(c.driverUserId||"");
  const row=workspaceDriverAssignmentForCar(c.id);
- // Only use the backend row to enrich a driver we already know is locally linked
- // to this car (c.driverUserId is authoritative). A non-"returned" row for this
- // car_id can be stale — e.g. right after "Отвязать" clears c.driverUserId
- // locally but the backend never flips the old handover to "returned" — and
- // must never resurrect a driver the local car record no longer has.
- const matchingRow=localUserId&&String(row?.driver_user_id||"")===localUserId?row:null;
- const userId=localUserId;
- const member=userId?workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null:null;
- const email=c.driverEmail||matchingRow?.driver_email||workspaceDriverEmail(member)||"";
- const name=c.driverName||matchingRow?.driver_name||workspaceDriverName(member)||"";
- const accepted=driverAcceptanceBelongsToAssignment(matchingRow,c);
+ const userId=String(c.driverUserId||row?.driver_user_id||"");
+ const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
+ const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
+ const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
+ const accepted=driverAcceptanceBelongsToAssignment(row,c);
  if(userId||email)return{userId,email,name:name||email,source:"account",accepted};
  if(c.tenant)return{userId:"",email:c.driverEmail||"",name:c.tenant,source:"manual",accepted:false};
  return null
@@ -242,11 +235,7 @@ async function loadWorkspaceDriverDirectory(){
  return workspaceDriverDirectory
 }
 function driverPickerStatus(member){
- const uid=String(member?.user_id||"");
- const localCar=fleetCars().find(c=>String(c.driverUserId||"")===uid)||null;
- // Same staleness guard as workspaceDriverForCar: ignore a non-"returned" backend
- // row if it points at a car this driver isn't actually linked to locally anymore.
- const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===uid&&String(x.status||"")!=="returned"&&(!localCar||String(x.car_id||"")===String(localCar.id)));
+ const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
  if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
  const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
  const accepted=driverAcceptanceBelongsToAssignment(row,c);
@@ -957,12 +946,37 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`
  }
 }
+function driverAssignmentStatusTerminal(status){
+ const value=String(status||"").toLowerCase();
+ return ["returned","cancelled","canceled","taken_by_company","forced_return","assignment_cancelled","closed","ended"].includes(value)
+}
+window.driverAssignmentStatusTerminal=driverAssignmentStatusTerminal;
+async function driverAssignmentIsClosedByHistory(row){
+ if(!row?.car_id)return false;
+ if(driverAssignmentStatusTerminal(row.status))return true;
+ if(!window.FleetPilotCloud?.getVehicleHandoverHistory)return false;
+ try{
+  const history=await window.FleetPilotCloud.getVehicleHandoverHistory(row.car_id);
+  if(!Array.isArray(history)||!history.length)return false;
+  const assignmentStarted=driverAssignmentStartedAt(row,null);
+  const sorted=[...history].sort((a,b)=>Math.max(Date.parse(a.issue_at||0)||0,Date.parse(a.return_at||0)||0)-Math.max(Date.parse(b.issue_at||0)||0,Date.parse(b.return_at||0)||0));
+  const latest=sorted[sorted.length-1];
+  if(!latest?.return_at)return false;
+  const returnedAt=Date.parse(latest.return_at||0)||0;
+  // A return that happened after this assignment started closes this assignment.
+  // If a genuinely newer assignment exists after that return, keep it pending/active.
+  return Boolean(returnedAt&&(!assignmentStarted||returnedAt+1000>=assignmentStarted))
+ }catch(error){console.warn("Driver assignment history reconcile",error);return false}
+}
 async function loadWorkspaceDriverAssignments(){
  try{
   const [rows]=await Promise.all([window.FleetPilotCloud.getDriverAssignments(),loadWorkspaceDriverDirectory()]);
-  workspaceDriverAssignmentRows=rows||[];
-  workspaceDriverAssignments=Object.fromEntries(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[row.driver_user_id,row.car_id]));
-  const activeByCar=new Map(rows.filter(row=>row.status!=="returned"&&row.car_id).map(row=>[String(row.car_id),row]));
+  const rawRows=rows||[];
+  const closureChecks=await Promise.all(rawRows.map(async row=>({row,closed:await driverAssignmentIsClosedByHistory(row)})));
+  const activeRows=closureChecks.filter(x=>!x.closed&&!driverAssignmentStatusTerminal(x.row.status)&&x.row.car_id).map(x=>x.row);
+  workspaceDriverAssignmentRows=activeRows;
+  workspaceDriverAssignments=Object.fromEntries(activeRows.map(row=>[row.driver_user_id,row.car_id]));
+  const activeByCar=new Map(activeRows.map(row=>[String(row.car_id),row]));
   fleetCars().forEach(c=>{
    const assignment=activeByCar.get(String(c.id));
    if(assignment){
@@ -989,7 +1003,7 @@ async function loadWorkspaceDriverAssignments(){
 }
 function driverAssignmentControl(member){
  if(member.role!=="driver")return"";
- const selected=workspaceDriverAssignments[member.user_id]||fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))?.id||"";
+ const selected=workspaceDriverAssignments[member.user_id]||"";
  return `<select data-driver-assignment="${member.user_id}">
   <option value="">Без автомобиля</option>
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
@@ -1132,6 +1146,11 @@ async function submitVehicleHandoverFromPortal(event){
      mileage:state.mileage,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
     });
     assigned.driverAcceptedAt="";assigned.driverAcceptedRevision="";
+    // V19.1: a completed return ends the LIVE driver↔vehicle relation immediately.
+    // History keeps the old revision, but current car fields must not resurrect it.
+    assigned.driverUserId="";assigned.driverEmail="";assigned.driverName="";assigned.driverPhone="";
+    assigned.driverAssignedAt="";assigned.driverAssignmentRevision="";
+    if(assigned.driverAssignmentSource==="account"){assigned.tenant="";assigned.driverAssignmentSource=""}
    }
    save?.();
   }
