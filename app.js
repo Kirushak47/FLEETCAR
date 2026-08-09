@@ -2723,7 +2723,7 @@ function endOfWeek(dateValue=new Date()){
 function isoDateFromDate(d){return d.toISOString().slice(0,10)}
 function weekPlanData(){
  const from=startOfWeek(),to=endOfWeek();
- const activeCars=cityFilteredCars().filter(c=>c.status==="active");
+ const activeCars=cityFilteredCars().filter(c=>c.status==="active"&&(c.driverUserId||c.driverName||c.tenant));
  const plannedRevenue=activeCars.reduce((sum,c)=>sum+Number(c.weeklyRent||0),0);
  const plannedExpenses=db.expenses.filter(x=>{
   if(x.status!=="planned"||!x.date)return false;

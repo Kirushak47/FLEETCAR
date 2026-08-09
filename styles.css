@@ -9516,3 +9516,4 @@ body[hidden]{display:none}
   .bottom-nav .mobile-nav-icon{display:block!important;font-size:16px!important;line-height:1!important;margin:0!important}
   .bottom-nav button[data-page] small{display:block!important;width:64px!important;max-width:64px!important;font-size:7.5px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-align:center!important;margin:0!important}
 }
+/* V19.0.7: command KPI wrapper is controlled by fp-desktop-gps.css */
