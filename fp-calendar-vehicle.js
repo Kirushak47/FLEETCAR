@@ -800,14 +800,19 @@ function createOrUpdateRepairFromExpense(expense){
  return repair
 }
 function syncLinkedExpenseFromRepair(repair){
- const amount=Number(repair.actual||0);
- const shouldCreate=repair.status==="done"&&amount>0&&["paid","partial","driver"].includes(repair.paymentStatus);
+ // One service task may own at most one finance row.
+ // Planned service cost becomes a planned expense immediately; once the job is
+ // completed, the same row is updated to the actual/paid amount instead of duplicated.
+ const plannedAmount=Math.max(0,Number(repair.planned||0));
+ const actualAmount=Math.max(0,Number(repair.actual||0));
+ const completed=repair.status==="done";
+ const excluded=["warranty","insurance"].includes(String(repair.paymentStatus||""));
+ const amount=completed?(actualAmount||plannedAmount):plannedAmount;
+ const shouldCreate=amount>0&&!excluded;
 
- let expense=repair.linkedExpenseId?db.expenses.find(x=>x.id===repair.linkedExpenseId):null;
+ let expense=repair.linkedExpenseId?db.expenses.find(x=>String(x.id)===String(repair.linkedExpenseId)):null;
  if(!expense)expense=db.expenses.find(x=>String(x.linkedRepairId)===String(repair.id))||null;
 
- // A service-generated expense follows the repair lifecycle. If the repair is reopened,
- // cancelled, or no longer has a billable amount, remove only the automatic finance row.
  if(!shouldCreate){
   if(expense&&expense.financeSource==="service"){
    db.expenses=db.expenses.filter(x=>String(x.id)!==String(expense.id));
@@ -821,18 +826,18 @@ function syncLinkedExpenseFromRepair(repair){
   expense={id:uid(),financeSource:"service"};
   db.expenses.push(expense)
  }
-
+ const paid=completed&&repair.paymentStatus==="paid";
  Object.assign(expense,{
   carId:repair.carId,
   title:repair.title,
   category:"repair",
-  date:repair.completedDate||repair.date||today(),
+  date:(completed?repair.completedDate:repair.date)||repair.date||today(),
   amount,
-  status:repair.paymentStatus==="paid"?"paid":"planned",
+  status:paid?"paid":"planned",
   note:repair.note||repair.problem||"",
-  linkedRepairId:repair.id
+  linkedRepairId:repair.id,
+  financeSource:"service"
  });
- if(!expense.financeSource)expense.financeSource="service";
  repair.linkedExpenseId=expense.id;
  return expense
 }

@@ -154,13 +154,10 @@ function weekPlanData(){
   const d=new Date(x.date+"T12:00:00");
   return d>=from&&d<=to
  }).reduce((sum,x)=>sum+Number(x.amount||0),0);
- const plannedRepairs=db.repairs.filter(r=>{
-  if(r.status==="done"||!r.date)return false;
-  if(selectedFleetCity!=="all"&&normalizedCity(car(r.carId)?.city)!==selectedFleetCity)return false;
-  const d=new Date(r.date+"T12:00:00");
-  return d>=from&&d<=to
- }).reduce((sum,r)=>sum+Number(r.planned||0),0);
- const totalPlannedCosts=plannedExpenses+plannedRepairs;
+ // Finance has one source of truth: db.expenses. Service tasks are mirrored there
+ // via linkedRepairId, so adding repair.planned here would count the same cost twice.
+ const plannedRepairs=0;
+ const totalPlannedCosts=plannedExpenses;
  return{
   from:isoDateFromDate(from),
   to:isoDateFromDate(to),
@@ -854,13 +851,31 @@ function currentMonthCashReceived(){
  }).reduce((sum,p)=>sum+Number(p.received||0),0)
 }
 
+function currentMonthAccruedRows(){
+ const month=fleetPilotCurrentMonth(),[yy,mm]=month.split("-").map(Number);
+ const monthStart=new Date(yy,mm-1,1,12),monthEnd=new Date(yy,mm,0,12);
+ const allowed=new Set(cityFilteredCars().map(c=>c.id));
+ const dayMs=86400000;
+ return (db.payments||[]).filter(p=>allowed.has(p.carId)).map(p=>{
+  const amount=Number(p.expected??p.received??0);
+  const fromRaw=p.periodFrom||p.from||p.date||"",toRaw=p.periodTo||p.to||p.date||fromRaw;
+  if(!fromRaw)return null;
+  const from=new Date(fromRaw+"T12:00:00"),to=new Date(toRaw+"T12:00:00");
+  if(Number.isNaN(from.getTime())||Number.isNaN(to.getTime())||to<monthStart||from>monthEnd)return null;
+  const overlapFrom=from>monthStart?from:monthStart,overlapTo=to<monthEnd?to:monthEnd;
+  const totalDays=Math.max(1,Math.round((to-from)/dayMs)+1),overlapDays=Math.max(0,Math.round((overlapTo-overlapFrom)/dayMs)+1);
+  return {payment:p,amount:amount*(overlapDays/totalDays),overlapDays,totalDays}
+ }).filter(Boolean)
+}
+function currentMonthAccruedIncome(){return currentMonthAccruedRows().reduce((s,x)=>s+x.amount,0)}
+
 function desktopMonthLabel(){
  return new Intl.DateTimeFormat("ru-RU",{month:"long",year:"numeric"}).format(new Date())
 }
 function desktopCommandKpis(){
  const cars=fleetCars(),active=cars.filter(c=>c.status==="active").length,repair=cars.filter(c=>c.status==="repair").length,free=cars.filter(c=>c.status==="free").length,attentionCount=cars.filter(attention).length;
  const month=financialDataForVisibleCars(fleetPilotCurrentMonth()),week=weekPlanData();
- const accruedMonthIncome=Number(month.expectedRevenue||0),paidCosts=Number(month.grossCosts||0),cashReceived=currentMonthCashReceived(),actualCash=cashReceived-paidCosts;
+ const accruedMonthIncome=currentMonthAccruedIncome(),paidCosts=Number(month.grossCosts||0),cashReceived=currentMonthCashReceived(),actualCash=cashReceived-paidCosts;
  return[
   ["Прибыль за "+new Intl.DateTimeFormat("ru-RU",{month:"long"}).format(new Date()),money(accruedMonthIncome),"Начислено за текущий месяц",accruedMonthIncome<0?"danger":"good","finance"],
   ["Плановый приход недели",money(week.plannedRevenue||0),`${week.activeCars} авто в активной аренде`,week.plannedRevenue?"primary":"good","finance"],
@@ -892,7 +907,7 @@ function desktopExpenseRows(mode){
 function openDesktopKpiDetails(index){
  const modal=desktopKpiModal(),body=$("#desktopKpiModalBody"),week=weekPlanData(),month=financialDataForVisibleCars(fleetPilotCurrentMonth()),monthLabel=desktopMonthLabel();
  let title="",subtitle="",rows=[],total=0,summary="";
- if(index===0){title="Прибыль месяца";subtitle=monthLabel;total=Number(month.expectedRevenue||0);rows=(db.payments||[]).filter(p=>String(p.date||p.periodFrom||"").slice(0,7)===fleetPilotCurrentMonth()).map(p=>({name:`${model(car(p.carId)||{}).brand||"Автомобиль"} ${model(car(p.carId)||{}).model||""}`.trim(),meta:p.date||p.periodFrom||"",amount:Number(p.expected||p.received||0)}));summary="Начисления, относящиеся только к текущему календарному месяцу"}
+ if(index===0){title="Прибыль месяца";subtitle=monthLabel;const accrued=currentMonthAccruedRows();rows=accrued.map(x=>{const p=x.payment;return{name:`${model(car(p.carId)||{}).brand||"Автомобиль"} ${model(car(p.carId)||{}).model||""}`.trim(),meta:`${p.periodFrom||p.date||""}${p.periodTo?` — ${p.periodTo}`:""} · ${x.overlapDays}/${x.totalDays} дн.`,amount:x.amount}});total=rows.reduce((s,x)=>s+x.amount,0);summary="Только часть начислений, которая относится к текущему календарному месяцу"}
  if(index===1){title="Плановый приход недели";subtitle=`${week.from} — ${week.to}`;rows=cityFilteredCars().filter(c=>c.status==="active"&&(c.driverUserId||c.driverName||c.tenant)).map(c=>({name:`${model(c).brand} ${model(c).model} · ${c.plate}`,meta:c.driverName||c.tenant||"Активная аренда",amount:Number(c.weeklyRent||0)}));total=rows.reduce((s,x)=>s+x.amount,0);summary="Только автомобили в активной аренде на текущей неделе"}
  if(index===2||index===3){const mode=index===2?"plan":"paid";title=index===2?"План расходов недели":"Оплаченные расходы";subtitle=index===2?`${week.from} — ${week.to}`:monthLabel;rows=desktopExpenseRows(mode).map(x=>({name:x.title||x.name||x.category||"Расход",meta:`${car(x.carId)?.plate||""}${x.date?` · ${x.date}`:""}`,amount:Number(x.amount||0)}));total=rows.reduce((s,x)=>s+x.amount,0);summary=index===2?"Только неоплаченные плановые расходы текущей недели":"Только фактически оплаченные расходы текущего месяца"}
  if(index===4){const received=currentMonthCashReceived(),paid=Number(month.grossCosts||0);title="Фактический результат";subtitle=monthLabel;total=received-paid;summary=`Получено ${money(received)} − оплачено расходов ${money(paid)} = ${money(total)}`;rows=[{name:"Фактически получено",meta:"Текущий месяц",amount:received},{name:"Оплаченные расходы",meta:"Текущий месяц",amount:-paid}]}
