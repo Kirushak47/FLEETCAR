@@ -205,12 +205,19 @@ function driverAcceptanceBelongsToAssignment(row,c=null){
 window.driverAcceptanceBelongsToAssignment=driverAcceptanceBelongsToAssignment;
 function workspaceDriverForCar(c){
  if(!c)return null;
+ const localUserId=String(c.driverUserId||"");
  const row=workspaceDriverAssignmentForCar(c.id);
- const userId=String(c.driverUserId||row?.driver_user_id||"");
- const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
- const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
- const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
- const accepted=driverAcceptanceBelongsToAssignment(row,c);
+ // Only use the backend row to enrich a driver we already know is locally linked
+ // to this car (c.driverUserId is authoritative). A non-"returned" row for this
+ // car_id can be stale — e.g. right after "Отвязать" clears c.driverUserId
+ // locally but the backend never flips the old handover to "returned" — and
+ // must never resurrect a driver the local car record no longer has.
+ const matchingRow=localUserId&&String(row?.driver_user_id||"")===localUserId?row:null;
+ const userId=localUserId;
+ const member=userId?workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null:null;
+ const email=c.driverEmail||matchingRow?.driver_email||workspaceDriverEmail(member)||"";
+ const name=c.driverName||matchingRow?.driver_name||workspaceDriverName(member)||"";
+ const accepted=driverAcceptanceBelongsToAssignment(matchingRow,c);
  if(userId||email)return{userId,email,name:name||email,source:"account",accepted};
  if(c.tenant)return{userId:"",email:c.driverEmail||"",name:c.tenant,source:"manual",accepted:false};
  return null
@@ -235,7 +242,11 @@ async function loadWorkspaceDriverDirectory(){
  return workspaceDriverDirectory
 }
 function driverPickerStatus(member){
- const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
+ const uid=String(member?.user_id||"");
+ const localCar=fleetCars().find(c=>String(c.driverUserId||"")===uid)||null;
+ // Same staleness guard as workspaceDriverForCar: ignore a non-"returned" backend
+ // row if it points at a car this driver isn't actually linked to locally anymore.
+ const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===uid&&String(x.status||"")!=="returned"&&(!localCar||String(x.car_id||"")===String(localCar.id)));
  if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
  const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
  const accepted=driverAcceptanceBelongsToAssignment(row,c);
