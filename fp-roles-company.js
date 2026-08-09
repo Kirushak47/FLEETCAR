@@ -473,8 +473,19 @@ async function renderCompanyActivity(){
 }
 
 function driverRegistryAssignmentRow(userId){
- const row=(workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||"")===String(userId||"")&&String(row.status||"")!=="returned");if(row)return row;
- const c=fleetCars().find(c=>String(c.driverUserId||"")===String(userId||""));return c?{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}:null
+ const uid=String(userId||"");
+ const c=fleetCars().find(c=>String(c.driverUserId||"")===uid)||null;
+ // A backend assignment row is only trustworthy while it still points at the car
+ // the driver is actually linked to locally. After "Отвязать" (or a repossession/
+ // reassignment) the local link is cleared immediately, but the backend does not
+ // always flip the old handover row's status to "returned" — trusting that row
+ // blindly left the driver card stuck on "Ожидает приёмки" forever, even though
+ // the vehicle handover history already showed it as returned. If we no longer
+ // have this driver linked to any car locally (or it's linked to a different
+ // car), a non-returned row for an unrelated/old car_id is stale and ignored.
+ const row=(workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||"")===uid&&String(row.status||"")!=="returned"&&(!c||String(row.car_id||"")===String(c.id)));
+ if(row)return row;
+ return c?{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}:null
 }
 function driverRegistryCarForRow(row){return row?.car_id?car(String(row.car_id)):null}
 function driverRegistryAccepted(row){const c=driverRegistryCarForRow(row);return window.driverAcceptanceBelongsToAssignment?window.driverAcceptanceBelongsToAssignment(row,c):Boolean(c?.driverAcceptedAt)}
