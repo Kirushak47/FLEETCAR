@@ -1,0 +1,7 @@
+FleetPilot V19.0.5 — Expense Status & Actual Earnings Fix
+
+- Linked repair expense status is derived from payment status.
+- Paid => actual/paid expense; unpaid/partial => planned; warranty/insurance => excluded as company expense.
+- Paid expenses disappear from planned weekly costs and enter actual costs.
+- Dashboard KPIs: Profit month (before actual expenses), Planned weekly expenses, Actual earnings = month profit - paid actual expenses.
+- Fleet/Service KPIs remain visible.

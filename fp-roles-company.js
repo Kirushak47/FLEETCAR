@@ -5,10 +5,10 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="19.0.4";
+window.FLEETPILOT_BUILD="19.0.5";
 window.addEventListener("DOMContentLoaded",()=>{
- document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V19.0.4"));
- document.documentElement.dataset.fleetpilotBuild="19.0.4";
+ document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V19.0.5"));
+ document.documentElement.dataset.fleetpilotBuild="19.0.5";
 });
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}

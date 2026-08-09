@@ -852,9 +852,13 @@ function desktopCommandKpis(){
  const attentionCount=cars.filter(attention).length;
  const month=financialData(fleetPilotCurrentMonth(),null);
  const week=weekPlanData();
+ const monthIncome=Number(month.grossRevenue||0);
+ const paidCosts=Number(month.grossCosts||0);
+ const actualEarnings=monthIncome-paidCosts;
  return[
-  ["Прибыль месяца",money(month.finalProfit||0),"Фактический результат",(month.finalProfit||0)<0?"danger":"good"],
-  ["План недели",money(week.plannedRevenue||0),`Ожидаемо ${money(week.expectedProfit||0)}`,"primary"],
+  ["Прибыль месяца",money(monthIncome),"До фактических расходов",monthIncome<0?"danger":"good"],
+  ["План расходов недели",money(week.totalPlannedCosts||0),"Ещё не оплачено",week.totalPlannedCosts?"warning":"primary"],
+  ["Фактический заработок",money(actualEarnings),`Оплачено расходов ${money(paidCosts)}`,actualEarnings<0?"danger":"good"],
   ["На линии",`${active} / ${cars.length}`,`Свободно ${free}`,"good"],
   ["Сервис и контроль",String(repair+attentionCount),`${repair} в ремонте · ${attentionCount} требуют внимания`,repair+attentionCount?"warning":"good"]
  ]
@@ -868,9 +872,9 @@ function renderDesktopCommandKpis(){
 
 function handleDesktopKpi(index){
  showPage("fleetPage");
- if(index===2){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
- else if(index===3){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
- else if(index===0||index===1)showPage("analyticsPage")
+ if(index===3){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===4){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===0||index===1||index===2)showPage("analyticsPage")
 }
 window.handleDesktopKpi=handleDesktopKpi;
 

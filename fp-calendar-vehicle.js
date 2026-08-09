@@ -738,7 +738,23 @@ function fixedContributionShare(carId,bounds){
  return eligible.length?total/eligible.length:total
 }
 
-function syncExpenseRepairFields(){const root=$("#expenseRepairFields");if(root)root.hidden=$("#expenseCategory")?.value!=="repair"}
+function syncExpenseRepairFields(){
+ const root=$("#expenseRepairFields"),isRepair=$("#expenseCategory")?.value==="repair";
+ if(root)root.hidden=!isRepair;
+ const status=$("#expenseStatus"),payment=$("#expensePaymentStatus");
+ if(status){
+  if(isRepair&&$("#expenseCreateRepair")?.checked){
+   const pay=payment?.value||"unpaid";
+   status.value=pay==="paid"?"paid":(["warranty","insurance"].includes(pay)?"cancelled":"planned");
+   status.disabled=true;
+   status.title="Статус расхода определяется статусом оплаты";
+  }else{
+   status.disabled=false;
+   status.title="";
+  }
+ }
+}
+document.addEventListener("change",e=>{if(e.target?.id==="expensePaymentStatus"||e.target?.id==="expenseCreateRepair"||e.target?.id==="expenseCategory")syncExpenseRepairFields()});
 function currentConfirmedMileage(carId){
  const c=car(carId),local=Number(c?.mileage||0);
  const values=db.repairs.filter(r=>r.carId===carId).map(r=>Number(r.mileage||0));
