@@ -1110,10 +1110,25 @@ async function getMyWorkspaceNotifications(){
  return data||[]
 }
 async function getDriverAssignments(){
- if(!client||!membership)return[];
- const {data,error}=await client.rpc("get_workspace_driver_assignments_v11");
- if(error)throw error;
- return data||[]
+ // V19.0.11 — current driver ↔ vehicle link comes from the shared fleet state.
+ // The old get_workspace_driver_assignments_v11 RPC is intentionally not called:
+ // it is absent in newer Supabase schemas and was producing PGRST202/404 errors.
+ // Handover/return history continues to use its dedicated RPC functions.
+ if(!membership)return[];
+ const payload=window.getFleetPilotDatabase?.()||{};
+ const cars=Array.isArray(payload.cars)?payload.cars:[];
+ return cars.filter(car=>car?.driverUserId).map(car=>({
+  workspace_id:membership.workspace_id||null,
+  driver_user_id:String(car.driverUserId||""),
+  car_id:String(car.id||""),
+  status:car.driverAcceptedAt?"accepted":"assigned",
+  assigned_at:car.driverAssignedAt||car.driverAssignmentAt||null,
+  assignment_at:car.driverAssignedAt||car.driverAssignmentAt||null,
+  accepted_at:car.driverAcceptedAt||null,
+  vehicle_accepted_at:car.driverAcceptedAt||null,
+  assignment_revision:car.driverAssignmentRevision||null,
+  source:"fleet_state"
+ }))
 }
 async function assignDriverVehicle(driverUserId,carId){
  if(!client||!membership)throw new Error("Workspace недоступен");
