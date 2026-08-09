@@ -1,0 +1,8 @@
+FleetPilot V19.0.9 — Top Command Strip Reset + Assigned Driver Rent Logic
+
+1. Restored the V19.0 four-card top command structure and replaced the broken narrow KPI strip with a new responsive wide design.
+2. Top cards: Monthly profit / Week plan / On line / Service & control.
+3. Weekly planned rental revenue now includes every vehicle with an assigned driver, regardless of vehicle operational/service-attention status.
+4. Service attention no longer suppresses rental revenue; service costs are handled separately in Expenses.
+5. Planned revenue drilldown follows the same assigned-driver rule.
+6. Existing service-expense single-source-of-truth protections from V19.0.8 remain intact.

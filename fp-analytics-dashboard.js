@@ -146,7 +146,7 @@ function endOfWeek(dateValue=new Date()){
 function isoDateFromDate(d){return d.toISOString().slice(0,10)}
 function weekPlanData(){
  const from=startOfWeek(),to=endOfWeek();
- const activeCars=cityFilteredCars().filter(c=>c.status==="active"&&(c.driverUserId||c.driverName||c.tenant));
+ const activeCars=cityFilteredCars().filter(c=>(c.driverUserId||c.driverName||c.tenant));
  const plannedRevenue=activeCars.reduce((sum,c)=>sum+Number(c.weeklyRent||0),0);
  const plannedExpenses=db.expenses.filter(x=>{
   if(x.status!=="planned"||!x.date)return false;
@@ -873,23 +873,24 @@ function desktopMonthLabel(){
  return new Intl.DateTimeFormat("ru-RU",{month:"long",year:"numeric"}).format(new Date())
 }
 function desktopCommandKpis(){
- const cars=fleetCars(),active=cars.filter(c=>c.status==="active").length,repair=cars.filter(c=>c.status==="repair").length,free=cars.filter(c=>c.status==="free").length,attentionCount=cars.filter(attention).length;
- const month=financialDataForVisibleCars(fleetPilotCurrentMonth()),week=weekPlanData();
- const accruedMonthIncome=currentMonthAccruedIncome(),paidCosts=Number(month.grossCosts||0),cashReceived=currentMonthCashReceived(),actualCash=cashReceived-paidCosts;
+ const cars=fleetCars();
+ const active=cars.filter(c=>c.status==="active").length;
+ const repair=cars.filter(c=>c.status==="repair").length;
+ const free=cars.filter(c=>c.status==="free").length;
+ const attentionCount=cars.filter(attention).length;
+ const week=weekPlanData();
+ const accruedMonthIncome=currentMonthAccruedIncome();
  return[
-  ["Прибыль за "+new Intl.DateTimeFormat("ru-RU",{month:"long"}).format(new Date()),money(accruedMonthIncome),"Начислено за текущий месяц",accruedMonthIncome<0?"danger":"good","finance"],
-  ["Плановый приход недели",money(week.plannedRevenue||0),`${week.activeCars} авто в активной аренде`,week.plannedRevenue?"primary":"good","finance"],
-  ["План расходов недели",money(week.totalPlannedCosts||0),"Ещё предстоит оплатить",week.totalPlannedCosts?"warning":"primary","finance"],
-  ["Оплаченные расходы",money(paidCosts),`Оплачено за ${new Intl.DateTimeFormat("ru-RU",{month:"long"}).format(new Date())}`,paidCosts?"warning":"good","finance"],
-  ["Фактический результат",money(actualCash),`${money(cashReceived)} получено − ${money(paidCosts)} расходов`,actualCash<0?"danger":"good","finance"],
-  ["На линии",`${active} / ${cars.length}`,free?`${free} свободно`:"Все заняты","good","ops"],
+  ["Прибыль месяца",money(accruedMonthIncome),"Начислено за текущий месяц",accruedMonthIncome<0?"danger":"good","finance"],
+  ["План недели",money(week.plannedRevenue||0),`${week.activeCars} авто с водителем`,"primary","finance"],
+  ["На линии",`${active} / ${cars.length}`,free?`Свободно ${free}`:"Свободных нет","good","ops"],
   ["Сервис и контроль",String(repair+attentionCount),`${repair} в ремонте · ${attentionCount} требуют внимания`,repair+attentionCount?"warning":"good","ops"]
  ]
 }
 function renderDesktopCommandKpis(){
  const root=$("#desktopCommandKpis");if(!root)return;
  const rows=desktopCommandKpis();
- root.innerHTML=`<div class="desktop-finance-kpis">${rows.slice(0,5).map(([label,value,hint,type],index)=>`<button type="button" class="desktop-command-kpi ${type}" onclick="handleDesktopKpi(${index})"><small>${label}</small><strong>${value}</strong><span>${hint}</span></button>`).join("")}</div><div class="desktop-ops-kpis">${rows.slice(5).map(([label,value,hint,type],i)=>`<button type="button" class="desktop-command-kpi desktop-ops-kpi ${type}" onclick="handleDesktopKpi(${i+5})"><small>${label}</small><strong>${value}</strong><span>${hint}</span><b>Открыть →</b></button>`).join("")}</div>`
+ root.innerHTML=`<div class="desktop-v1909-kpis">${rows.map(([label,value,hint,type],index)=>`<button type="button" class="desktop-command-kpi desktop-v1909-kpi ${type}" onclick="handleDesktopKpi(${index})"><span class="desktop-v1909-kpi-copy"><small>${label}</small><strong>${value}</strong><em>${hint}</em></span><span class="desktop-v1909-kpi-arrow">→</span></button>`).join("")}</div>`
 }
 function desktopKpiModal(){
  let modal=$("#desktopKpiModal");if(modal)return modal;
@@ -908,14 +909,17 @@ function openDesktopKpiDetails(index){
  const modal=desktopKpiModal(),body=$("#desktopKpiModalBody"),week=weekPlanData(),month=financialDataForVisibleCars(fleetPilotCurrentMonth()),monthLabel=desktopMonthLabel();
  let title="",subtitle="",rows=[],total=0,summary="";
  if(index===0){title="Прибыль месяца";subtitle=monthLabel;const accrued=currentMonthAccruedRows();rows=accrued.map(x=>{const p=x.payment;return{name:`${model(car(p.carId)||{}).brand||"Автомобиль"} ${model(car(p.carId)||{}).model||""}`.trim(),meta:`${p.periodFrom||p.date||""}${p.periodTo?` — ${p.periodTo}`:""} · ${x.overlapDays}/${x.totalDays} дн.`,amount:x.amount}});total=rows.reduce((s,x)=>s+x.amount,0);summary="Только часть начислений, которая относится к текущему календарному месяцу"}
- if(index===1){title="Плановый приход недели";subtitle=`${week.from} — ${week.to}`;rows=cityFilteredCars().filter(c=>c.status==="active"&&(c.driverUserId||c.driverName||c.tenant)).map(c=>({name:`${model(c).brand} ${model(c).model} · ${c.plate}`,meta:c.driverName||c.tenant||"Активная аренда",amount:Number(c.weeklyRent||0)}));total=rows.reduce((s,x)=>s+x.amount,0);summary="Только автомобили в активной аренде на текущей неделе"}
+ if(index===1){title="Плановый приход недели";subtitle=`${week.from} — ${week.to}`;rows=cityFilteredCars().filter(c=>(c.driverUserId||c.driverName||c.tenant)).map(c=>({name:`${model(c).brand} ${model(c).model} · ${c.plate}`,meta:c.driverName||c.tenant||"Автомобиль с водителем",amount:Number(c.weeklyRent||0)}));total=rows.reduce((s,x)=>s+x.amount,0);summary="Считаются все автомобили с назначенным водителем, даже если машине требуется сервис"}
  if(index===2||index===3){const mode=index===2?"plan":"paid";title=index===2?"План расходов недели":"Оплаченные расходы";subtitle=index===2?`${week.from} — ${week.to}`:monthLabel;rows=desktopExpenseRows(mode).map(x=>({name:x.title||x.name||x.category||"Расход",meta:`${car(x.carId)?.plate||""}${x.date?` · ${x.date}`:""}`,amount:Number(x.amount||0)}));total=rows.reduce((s,x)=>s+x.amount,0);summary=index===2?"Только неоплаченные плановые расходы текущей недели":"Только фактически оплаченные расходы текущего месяца"}
  if(index===4){const received=currentMonthCashReceived(),paid=Number(month.grossCosts||0);title="Фактический результат";subtitle=monthLabel;total=received-paid;summary=`Получено ${money(received)} − оплачено расходов ${money(paid)} = ${money(total)}`;rows=[{name:"Фактически получено",meta:"Текущий месяц",amount:received},{name:"Оплаченные расходы",meta:"Текущий месяц",amount:-paid}]}
  body.innerHTML=`<span class="eyebrow">Финансы</span><h2>${title}</h2><p class="desktop-kpi-period">${subtitle}</p><div class="desktop-kpi-summary">${summary}</div><div class="desktop-kpi-rows">${rows.length?rows.map(r=>`<div><span><strong>${r.name}</strong><small>${r.meta||""}</small></span><b class="${r.amount<0?"negative":""}">${money(r.amount)}</b></div>`).join(""):`<div class="desktop-kpi-empty">За этот период записей нет</div>`}</div><div class="desktop-kpi-total"><span>Итого</span><strong class="${total<0?"negative":""}">${money(total)}</strong></div>`;modal.hidden=false
 }
 function handleDesktopKpi(index){
- if(index<=4){openDesktopKpiDetails(index);return}
- showPage("fleetPage");if(index===5){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}else if(index===6){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ if(index===0){openDesktopKpiDetails(0);return}
+ if(index===1){openDesktopKpiDetails(1);return}
+ showPage("fleetPage");
+ if(index===2){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===3){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
 }
 window.handleDesktopKpi=handleDesktopKpi;window.openDesktopKpiDetails=openDesktopKpiDetails;
 
