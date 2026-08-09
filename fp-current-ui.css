@@ -842,3 +842,8 @@ strong,h1,h2,h3,h4{font-weight:650}
  .handover-equipment{grid-template-columns:repeat(2,minmax(0,1fr))!important}.handover-equipment label{font-size:12px!important;min-height:40px}
  .document-register-row{grid-template-columns:minmax(0,1fr) auto!important}.document-register-cell,.document-register-file-slot{display:none!important}.document-register-actions{grid-column:2;grid-row:1}.document-more-button{min-width:64px!important}
 }
+/* V19.0.6 service archive filters */
+.service-archive-filterbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.service-archive-filterbar .btn{min-height:34px;padding:7px 12px;border-radius:10px}
+.service-archive-filterbar .btn.active{background:#111827;color:#fff;border-color:#111827}
+.service-archive-request.internal{border-left:3px solid #64748b}

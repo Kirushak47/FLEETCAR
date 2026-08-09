@@ -844,21 +844,36 @@ function fleetPilotCurrentMonth(){
  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`
 }
 
+function currentMonthCashReceived(){
+ const month=fleetPilotCurrentMonth();
+ const allowed=new Set(cityFilteredCars().map(c=>c.id));
+ return (db.payments||[]).filter(p=>{
+  if(!allowed.has(p.carId))return false;
+  const cashDate=String(p.date||"");
+  return cashDate.slice(0,7)===month
+ }).reduce((sum,p)=>sum+Number(p.received||0),0)
+}
+
 function desktopCommandKpis(){
  const cars=fleetCars();
  const active=cars.filter(c=>c.status==="active").length;
  const repair=cars.filter(c=>c.status==="repair").length;
  const free=cars.filter(c=>c.status==="free").length;
  const attentionCount=cars.filter(attention).length;
- const month=financialData(fleetPilotCurrentMonth(),null);
+ const month=financialDataForVisibleCars(fleetPilotCurrentMonth());
  const week=weekPlanData();
- const monthIncome=Number(month.grossRevenue||0);
+ const accruedMonthIncome=Number(month.expectedRevenue||0);
+ const receivedForMonth=Number(month.grossRevenue||0);
+ const plannedIncome=Math.max(0,accruedMonthIncome-receivedForMonth);
  const paidCosts=Number(month.grossCosts||0);
- const actualEarnings=monthIncome-paidCosts;
+ const cashReceived=currentMonthCashReceived();
+ const actualCash=cashReceived-paidCosts;
  return[
-  ["Прибыль месяца",money(monthIncome),"До фактических расходов",monthIncome<0?"danger":"good"],
+  ["Прибыль месяца",money(accruedMonthIncome),"Начислено за текущий месяц",accruedMonthIncome<0?"danger":"good"],
+  ["Плановый приход",money(plannedIncome),"Ещё ожидаем получить",plannedIncome?"primary":"good"],
   ["План расходов недели",money(week.totalPlannedCosts||0),"Ещё не оплачено",week.totalPlannedCosts?"warning":"primary"],
-  ["Фактический заработок",money(actualEarnings),`Оплачено расходов ${money(paidCosts)}`,actualEarnings<0?"danger":"good"],
+  ["Оплаченные расходы",money(paidCosts),"Фактически оплачено",paidCosts?"warning":"good"],
+  ["Фактический заработок",money(actualCash),`Получено ${money(cashReceived)}`,actualCash<0?"danger":"good"],
   ["На линии",`${active} / ${cars.length}`,`Свободно ${free}`,"good"],
   ["Сервис и контроль",String(repair+attentionCount),`${repair} в ремонте · ${attentionCount} требуют внимания`,repair+attentionCount?"warning":"good"]
  ]
@@ -871,10 +886,10 @@ function renderDesktopCommandKpis(){
 
 
 function handleDesktopKpi(index){
+ if(index<=4){showPage("analyticsPage");return}
  showPage("fleetPage");
- if(index===3){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
- else if(index===4){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
- else if(index===0||index===1||index===2)showPage("analyticsPage")
+ if(index===5){$("#fleetFilter").value="active";$("#fleetFilter").dispatchEvent(new Event("change"))}
+ else if(index===6){$("#fleetFilter").value="attention";$("#fleetFilter").dispatchEvent(new Event("change"))}
 }
 window.handleDesktopKpi=handleDesktopKpi;
 

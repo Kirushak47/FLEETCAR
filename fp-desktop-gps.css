@@ -2764,3 +2764,4 @@ html[data-theme="dark"] #calendarPage input{
 
 @media(max-width:1250px){.desktop-command-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.desktop-command-kpis{grid-template-columns:1fr 1fr}}
+\n/* V19.0.6 financial KPI strip */\n@media(min-width:1251px){\n .desktop-command-kpis{grid-template-columns:repeat(5,minmax(0,1fr))!important}\n .desktop-command-kpi:nth-child(-n+5){min-width:0}\n}\n
