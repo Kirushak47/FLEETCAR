@@ -1,0 +1,8 @@
+FleetPilot V19.0.3 — Driver Status & Registry UI Fix
+
+- Driver Registry now uses backend handover evidence only for acceptance state, while vehicle profile remains the sole source of the current driver↔vehicle link.
+- Fixed ACTIVE in Driver Portal showing as PENDING in Drivers Registry.
+- Driver Portal no longer shows misleading Fleet Board status “Свободен”; it shows “Автомобиль принят” or “Ожидает приёмки”.
+- Removed “Автомобиль назначается в профиле автомобиля” helper text.
+- Driver Registry cards are more compact.
+- Removed/hid duplicate status near Back button in vehicle profile; main hero status remains.

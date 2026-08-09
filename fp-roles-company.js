@@ -491,8 +491,9 @@ async function renderDriversRegistry(){
   const filter=$("#driversRegistryFilter")?.value||"";
   const accountRows=members.map(member=>{
    const assignedCar=fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))||null;
-   const accepted=Boolean(assignedCar?.driverAcceptedAt);
-   return{type:"account",member,assignment:assignedCar?driverRegistryAssignmentRow(member.user_id):null,assignedCar,accepted,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}
+   const serverAssignment=assignedCar?(workspaceDriverAssignmentRows||[]).find(row=>String(row.driver_user_id||row.user_id||"")===String(member.user_id||"")&&String(row.car_id||row.vehicle_id||"")===String(assignedCar.id||""))||null:null;
+   const accepted=Boolean(assignedCar&&(window.driverAcceptanceBelongsToAssignment?window.driverAcceptanceBelongsToAssignment(serverAssignment||driverRegistryAssignmentRow(member.user_id),assignedCar):assignedCar.driverAcceptedAt));
+   return{type:"account",member,assignment:serverAssignment||assignedCar?driverRegistryAssignmentRow(member.user_id):null,assignedCar,accepted,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}
   });
   const knownEmails=new Set(accountRows.map(x=>normalizeDriverIdentity(x.email)).filter(Boolean));
   const manualRows=fleetCars().filter(c=>c.tenant&&!c.driverUserId&&!knownEmails.has(normalizeDriverIdentity(c.driverEmail))).map(c=>({type:"manual",member:null,assignment:null,assignedCar:c,accepted:false,name:c.tenant||c.driverName||"Водитель",email:c.driverEmail||""}));
@@ -521,7 +522,7 @@ async function renderDriversRegistry(){
       <div class="driver-registry-vehicle"><span>🚗</span><b>${vehicle}</b></div>
     </div>
     <span class="driver-registry-status ${cls}">${status}</span>
-    <div class="driver-registry-actions">${item.type==="account"?`<div class="driver-registry-readonly"><small>Автомобиль назначается в профиле автомобиля</small></div><button type="button" class="btn" data-edit-driver="${item.member.user_id}">Редактировать</button><button type="button" class="driver-delete-button" data-delete-driver="${item.member.user_id}">Удалить</button>`:`<span class="driver-registry-manual">Ручная запись</span><button type="button" class="driver-delete-button" data-delete-manual-driver="${c?.id||""}">Удалить</button>`}</div>
+    <div class="driver-registry-actions">${item.type==="account"?`<button type="button" class="btn" data-edit-driver="${item.member.user_id}">Редактировать</button><button type="button" class="driver-delete-button" data-delete-driver="${item.member.user_id}">Удалить</button>`:`<span class="driver-registry-manual">Ручная запись</span><button type="button" class="driver-delete-button" data-delete-manual-driver="${c?.id||""}">Удалить</button>`}</div>
    </article>`
   }).join("")||'<div class="owner-empty">Водители не найдены.</div>';
   root.querySelectorAll('[data-edit-driver]').forEach(button=>button.onclick=()=>openEditDriverProfile(button.dataset.editDriver));

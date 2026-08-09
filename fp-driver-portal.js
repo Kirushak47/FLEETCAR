@@ -471,7 +471,7 @@ function renderDriverVehicleCard(){
     <h3>${brand} ${modelName}</h3>
     <p>${plate} · ${displayCar.vin||"VIN не указан"}</p>
    </div>
-   <span class="driver-vehicle-status">${statusText(displayCar.status||"active")}</span>
+   <span class="driver-vehicle-status ${driverVehicleIsAlreadyAccepted()?"accepted":"pending"}">${driverVehicleIsAlreadyAccepted()?"Автомобиль принят":"Ожидает приёмки"}</span>
   </div>
   <div class="driver-vehicle-stats">
    <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
