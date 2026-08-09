@@ -5,10 +5,10 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="18.6";
+window.FLEETPILOT_BUILD="19.0.2";
 window.addEventListener("DOMContentLoaded",()=>{
- document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V18.2"));
- document.documentElement.dataset.fleetpilotBuild="18.2";
+ document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V19.0.2"));
+ document.documentElement.dataset.fleetpilotBuild="19.0.2";
 });
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
@@ -22,8 +22,8 @@ const ENTERPRISE_ROLE_LABELS={
  user:"Пользователь"
 };
 const ENTERPRISE_ROLE_ACCESS={
- owner:["dashboardPage","fleetPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","dataPage","morePage","mobileMapPage","searchPage","carPage"],
- coordinator:["dashboardPage","fleetPage","repairsPage","calendarPage","documentsPage","companyPage","dataPage","mobileMapPage","searchPage","carPage"],
+ owner:["dashboardPage","fleetPage","driversPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","dataPage","morePage","mobileMapPage","searchPage","carPage"],
+ coordinator:["dashboardPage","fleetPage","driversPage","repairsPage","calendarPage","documentsPage","companyPage","dataPage","mobileMapPage","searchPage","carPage"],
  accountant:["dashboardPage","paymentsPage","expensesPage","analyticsPage","documentsPage","calendarPage","searchPage"],
  mechanic:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","searchPage","carPage"],
  driver:["driverPortalPage","driverProfilePage"],
@@ -99,6 +99,7 @@ function applyEnterpriseAccess(){
 window.applyEnterpriseAccess=applyEnterpriseAccess;
 window.addEventListener("fleetpilot:access-ready",async()=>{
  fleetPilotEnterpriseAccessReady=true;
+ document.documentElement.classList.remove("fp-role-loading");
  try{
   companyPermissions=await window.FleetPilotCloud.getRolePermissions();
   fleetPilotPermissionsLoaded=true;

@@ -164,7 +164,9 @@ function workspaceDriverMemberByEmail(email){
 }
 function workspaceDriverAssignmentForCar(carId){
  const id=String(carId||"");
- return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&!driverAssignmentStatusTerminal(row.status))||null
+ const c=car(id);
+ if(!c?.driverUserId)return null;
+ return workspaceDriverAssignmentRows.find(row=>String(row.car_id||"")===id&&String(row.driver_user_id||"")===String(c.driverUserId||"")&&String(row.status||"")!=="returned")||null
 }
 function driverAssignmentStartedAt(row,c=null){
  const value=row?.assigned_at||row?.assignment_at||row?.created_at||c?.driverAssignedAt||"";
@@ -206,7 +208,7 @@ window.driverAcceptanceBelongsToAssignment=driverAcceptanceBelongsToAssignment;
 function workspaceDriverForCar(c){
  if(!c)return null;
  const row=workspaceDriverAssignmentForCar(c.id);
- const userId=String(c.driverUserId||row?.driver_user_id||"");
+ const userId=String(c.driverUserId||"");
  const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===userId)||null;
  const email=c.driverEmail||row?.driver_email||workspaceDriverEmail(member)||"";
  const name=c.driverName||row?.driver_name||workspaceDriverName(member)||"";
@@ -235,12 +237,13 @@ async function loadWorkspaceDriverDirectory(){
  return workspaceDriverDirectory
 }
 function driverPickerStatus(member){
- const row=(workspaceDriverAssignmentRows||[]).find(x=>String(x.driver_user_id||"")===String(member?.user_id||"")&&String(x.status||"")!=="returned");
- if(!row?.car_id)return{label:"Без автомобиля",cls:"free",vehicle:""};
- const c=car(String(row.car_id));const vehicle=c?`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`:"Автомобиль назначен";
- const accepted=driverAcceptanceBelongsToAssignment(row,c);
+ const c=fleetCars().find(car=>String(car.driverUserId||"")===String(member?.user_id||""))||null;
+ if(!c)return{label:"Без автомобиля",cls:"free",vehicle:""};
+ const vehicle=`${model(c).brand} ${model(c).model} · ${c.plate||"—"}`;
+ const accepted=currentAssignmentAcceptedLocally(c)||Boolean(c.driverAcceptedAt);
  return{label:accepted?"Автомобиль принят":"Ожидает приёмки",cls:accepted?"accepted":"pending",vehicle}
 }
+
 function renderDriverPickerCards(query=""){
  const root=$("#carDriverPickerResults");if(!root)return;
  const q=String(query||"").trim().toLowerCase();
@@ -409,55 +412,37 @@ function openVehicleHandover(type){
  handoverMessage("");
  $("#vehicleHandoverDialog").showModal()
 }
+let vehicleHandoverHistoryLimit=10;
+let vehicleHandoverHistoryPhotoMap={};
+let handoverViewerPhotos=[];let handoverViewerIndex=0;
+function openHandoverPhotoViewer(photos,index=0){
+ handoverViewerPhotos=Array.isArray(photos)?photos:[];handoverViewerIndex=Math.max(0,Math.min(Number(index)||0,handoverViewerPhotos.length-1));
+ const dialog=$("#handoverPhotoViewer"),img=$("#handoverPhotoViewerImage"),counter=$("#handoverPhotoViewerCounter");if(!dialog||!img||!handoverViewerPhotos.length)return;
+ const photo=handoverViewerPhotos[handoverViewerIndex];img.src=photo?.data||photo||"";if(counter)counter.textContent=`${handoverViewerIndex+1} / ${handoverViewerPhotos.length}`;if(!dialog.open)dialog.showModal();
+}
+function stepHandoverPhotoViewer(delta){if(!handoverViewerPhotos.length)return;handoverViewerIndex=(handoverViewerIndex+delta+handoverViewerPhotos.length)%handoverViewerPhotos.length;openHandoverPhotoViewer(handoverViewerPhotos,handoverViewerIndex)}
+window.openHandoverPhotoViewer=openHandoverPhotoViewer;
+function installHandoverPhotoViewer(){const d=$("#handoverPhotoViewer");if(!d||d.dataset.ready)return;d.dataset.ready="1";$("#closeHandoverPhotoViewer").onclick=()=>d.close();$("#handoverPhotoPrev").onclick=()=>stepHandoverPhotoViewer(-1);$("#handoverPhotoNext").onclick=()=>stepHandoverPhotoViewer(1);d.addEventListener("click",e=>{if(e.target===d)d.close()})}
 async function loadVehicleHandoverHistory(carId){
- const root=$("#vehicleHandoverHistory");if(!root)return;
+ const root=$("#vehicleHandoverHistory");if(!root)return;installHandoverPhotoViewer();
  root.innerHTML='<div class="driver-empty-state">Загрузка истории передач…</div>';
  try{
   const backendRows=await window.FleetPilotCloud.getVehicleHandoverHistory(carId).catch(()=>[]);
-  const c=car(carId);
-  const audit=Array.isArray(c?.vehicleHandoverAudit)?c.vehicleHandoverAudit:[];
-  const backendEvents=[];
-  (backendRows||[]).forEach((row,index)=>{
-   // V18.11: hide the technical close/reissue row used only to convert an
-   // assignment-time backend issue into a real driver-confirmed issue.
-   const systemReissue=String(row.return_notes||row.notes||"").includes("__FP_ACCEPTANCE_REISSUE__");
-   if(systemReissue)return;
-   if(row.issue_at)backendEvents.push({source:"backend",type:"issued",at:row.issue_at,row,key:`b-issue-${row.id||row.handover_id||index}-${row.issue_at}`});
-   if(row.return_at)backendEvents.push({source:"backend",type:"returned",at:row.return_at,row,key:`b-return-${row.id||row.handover_id||index}-${row.return_at}`});
-  });
-  const auditEvents=audit.map((row,index)=>({source:"audit",type:row.type,at:row.at,row,key:row.key||`a-${index}`}));
-  const seen=new Set();
-  const events=[...backendEvents,...auditEvents].filter(ev=>{
-   // Deduplicate backend issue vs client accepted for same revision/time window only loosely;
-   // keep both when they describe different business actions.
-   const signature=`${ev.type}|${ev.at||""}|${ev.row?.driver_user_id||ev.row?.driver_email||""}`;
-   if(seen.has(signature))return false;seen.add(signature);return true
-  }).sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0));
+  const c=car(carId),audit=Array.isArray(c?.vehicleHandoverAudit)?c.vehicleHandoverAudit:[],backendEvents=[];
+  (backendRows||[]).forEach((row,index)=>{const systemReissue=String(row.return_notes||row.notes||"").includes("__FP_ACCEPTANCE_REISSUE__");if(systemReissue)return;if(row.issue_at)backendEvents.push({source:"backend",type:"issued",at:row.issue_at,row,key:`b-issue-${row.id||row.handover_id||index}-${row.issue_at}`});if(row.return_at)backendEvents.push({source:"backend",type:"returned",at:row.return_at,row,key:`b-return-${row.id||row.handover_id||index}-${row.return_at}`})});
+  const auditEvents=audit.map((row,index)=>({source:"audit",type:row.type,at:row.at,row,key:row.key||`a-${index}`})),seen=new Set();
+  const events=[...backendEvents,...auditEvents].filter(ev=>{const signature=`${ev.type}|${ev.at||""}|${ev.row?.driver_user_id||ev.row?.driver_email||""}`;if(seen.has(signature))return false;seen.add(signature);return true}).sort((a,b)=>Date.parse(b.at||0)-Date.parse(a.at||0));
   const label={issued:"Выдан",accepted:"Принят водителем",returned:"Возвращён водителем",forced_return:"Автомобиль отобран компанией",assignment_cancelled:"Назначение отменено",assigned:"Назначен водителю"};
-  const cls={issued:"active",accepted:"active",returned:"completed",forced_return:"completed",assignment_cancelled:"completed",assigned:"active"};
-  root.innerHTML=events.map(ev=>{
-   const row=ev.row||{};
-   const name=row.driver_name||row.driver_email||"Водитель";
-   const mileage=ev.source==="audit"?row.mileage:(ev.type==="returned"?row.return_mileage:row.issue_mileage);
-   const photos=ev.source==="audit"?(row.photos||[]):((ev.type==="returned"?row.return_photos:row.issue_photos)||[]);
-   const notes=ev.source==="audit"?row.notes:(ev.type==="returned"?row.return_notes:row.issue_notes);
-   return `<article class="handover-history-row">
-    <div class="handover-history-line"></div>
-    <div class="handover-history-content">
-     <div class="handover-history-head"><strong>${name}</strong><span class="${cls[ev.type]||"completed"}">${label[ev.type]||ev.type}</span></div>
-     <div class="handover-history-grid">
-      <div><small>Дата</small><b>${ev.at?new Date(ev.at).toLocaleString("ru-RU"):"—"}</b></div>
-      <div><small>Пробег</small><b>${mileage!=null?km(mileage):"—"}</b></div>
-      <div><small>Фото</small><b>${photos.length}</b></div>
-      <div><small>Источник</small><b>${ev.source==="backend"?"Vehicle Handover":"FleetPilot"}</b></div>
-     </div>
-     ${notes?`<p>${notes}</p>`:""}
-     <div class="handover-photo-history">${photos.slice(0,8).map(photo=>`<img src="${photo.data||photo}" alt="Фото передачи">`).join("")}</div>
-    </div>
-   </article>`
-  }).join("")||'<div class="driver-empty-state">Передач автомобиля пока не было.</div>'
+  const icon={issued:"●",accepted:"✓",returned:"↩",forced_return:"!",assignment_cancelled:"×",assigned:"→"};
+  vehicleHandoverHistoryPhotoMap={};
+  const visible=events.slice(0,vehicleHandoverHistoryLimit);
+  root.innerHTML=`<div class="handover-compact-list">${visible.map((ev,i)=>{const row=ev.row||{},name=row.driver_name||row.driver_email||"Водитель",mileage=ev.source==="audit"?row.mileage:(ev.type==="returned"?row.return_mileage:row.issue_mileage),photos=ev.source==="audit"?(row.photos||[]):((ev.type==="returned"?row.return_photos:row.issue_photos)||[]),notes=ev.source==="audit"?row.notes:(ev.type==="returned"?row.return_notes:row.issue_notes),key=`h${i}-${Math.abs(String(ev.key||i).split("").reduce((a,ch)=>a+ch.charCodeAt(0),0))}`;vehicleHandoverHistoryPhotoMap[key]=photos;return `<article class="handover-compact-row" data-handover-event="${key}"><button type="button" class="handover-compact-summary" aria-expanded="false"><span class="handover-event-icon type-${ev.type}">${icon[ev.type]||"•"}</span><span class="handover-event-main"><strong>${label[ev.type]||ev.type}</strong><small>${name}${mileage!=null?` · ${km(mileage)}`:""}${photos.length?` · ${photos.length} фото`:""}</small></span><time>${ev.at?new Date(ev.at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</time><span class="handover-chevron">⌄</span></button><div class="handover-compact-details" hidden>${notes?`<p>${notes}</p>`:""}<div class="handover-photo-history">${photos.slice(0,8).map((photo,pi)=>`<button type="button" class="handover-photo-thumb" data-handover-photo-key="${key}" data-handover-photo-index="${pi}"><img src="${photo.data||photo}" alt="Фото передачи ${pi+1}"></button>`).join("")}</div></div></article>`}).join("")}</div>${events.length>visible.length?`<button type="button" class="btn handover-load-more" id="handoverHistoryMore">Показать ещё (${events.length-visible.length})</button>`:""}`||'<div class="driver-empty-state">Передач автомобиля пока не было.</div>';
+  root.querySelectorAll(".handover-compact-summary").forEach(btn=>btn.onclick=()=>{const row=btn.closest(".handover-compact-row"),details=row.querySelector(".handover-compact-details"),open=details.hidden;details.hidden=!open;btn.setAttribute("aria-expanded",String(open));row.classList.toggle("open",open)});
+  root.querySelectorAll("[data-handover-photo-key]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();openHandoverPhotoViewer(vehicleHandoverHistoryPhotoMap[btn.dataset.handoverPhotoKey]||[],Number(btn.dataset.handoverPhotoIndex||0))});
+  const more=$("#handoverHistoryMore");if(more)more.onclick=()=>{vehicleHandoverHistoryLimit+=10;loadVehicleHandoverHistory(carId)};
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
+
 function renderDriverVehicleCard(){
  const root=$("#driverVehicleCard");if(!root)return;
  const assigned=driverPortalContext;
@@ -466,7 +451,7 @@ function renderDriverVehicleCard(){
  if(!assigned?.car_id){
   root.innerHTML=`<div class="driver-empty-state">
    <strong>Автомобиль ещё не назначен</strong>
-   <span>Владелец или координатор должен назначить автомобиль в разделе «Компания → Водители».</span>
+   <span>Владелец или координатор должен назначить автомобиль в профиле автомобиля.</span>
   </div>`;
   return
  }
@@ -946,78 +931,19 @@ async function renderWorkspaceRepairRequests(){
   root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`
  }
 }
-function driverAssignmentStatusTerminal(status){
- const value=String(status||"").toLowerCase();
- return ["returned","cancelled","canceled","taken_by_company","forced_return","assignment_cancelled","closed","ended"].includes(value)
-}
-window.driverAssignmentStatusTerminal=driverAssignmentStatusTerminal;
-async function driverAssignmentIsClosedByHistory(row){
- if(!row?.car_id)return false;
- if(driverAssignmentStatusTerminal(row.status))return true;
- if(!window.FleetPilotCloud?.getVehicleHandoverHistory)return false;
- try{
-  const history=await window.FleetPilotCloud.getVehicleHandoverHistory(row.car_id);
-  if(!Array.isArray(history)||!history.length)return false;
-  const assignmentStarted=driverAssignmentStartedAt(row,null);
-  const sorted=[...history].sort((a,b)=>Math.max(Date.parse(a.issue_at||0)||0,Date.parse(a.return_at||0)||0)-Math.max(Date.parse(b.issue_at||0)||0,Date.parse(b.return_at||0)||0));
-  const latest=sorted[sorted.length-1];
-  if(!latest?.return_at)return false;
-  const returnedAt=Date.parse(latest.return_at||0)||0;
-  // A return that happened after this assignment started closes this assignment.
-  // If a genuinely newer assignment exists after that return, keep it pending/active.
-  return Boolean(returnedAt&&(!assignmentStarted||returnedAt+1000>=assignmentStarted))
- }catch(error){console.warn("Driver assignment history reconcile",error);return false}
-}
 async function loadWorkspaceDriverAssignments(){
  try{
   const [rows]=await Promise.all([window.FleetPilotCloud.getDriverAssignments(),loadWorkspaceDriverDirectory()]);
-  const rawRows=rows||[];
-  const closureChecks=await Promise.all(rawRows.map(async row=>({row,closed:await driverAssignmentIsClosedByHistory(row)})));
-  const activeRows=closureChecks.filter(x=>!x.closed&&!driverAssignmentStatusTerminal(x.row.status)&&x.row.car_id).map(x=>x.row);
-  workspaceDriverAssignmentRows=activeRows;
-  workspaceDriverAssignments=Object.fromEntries(activeRows.map(row=>[row.driver_user_id,row.car_id]));
-  const activeByCar=new Map(activeRows.map(row=>[String(row.car_id),row]));
-  fleetCars().forEach(c=>{
-   const assignment=activeByCar.get(String(c.id));
-   if(assignment){
-    const member=workspaceDriverDirectory.find(x=>String(x.user_id||"")===String(assignment.driver_user_id||""));
-    c.driverUserId=assignment.driver_user_id||c.driverUserId||"";
-    c.driverEmail=assignment.driver_email||workspaceDriverEmail(member)||c.driverEmail||"";
-    c.driverName=assignment.driver_name||workspaceDriverName(member)||c.driverName||"";
-    c.driverAssignmentSource="account";
-    c.tenant=c.driverName||c.driverEmail||c.tenant||"";
-    // V18.4: assignment/issue_at alone is NOT acceptance. Only an explicit
-    // completed handover can activate the vehicle.
-    const localAccepted=currentAssignmentAcceptedLocally(c);
-    const accepted=localAccepted||driverAcceptanceBelongsToAssignment(assignment,c);
-    if(accepted){
-     c.driverAcceptedAt=currentAssignmentAcceptanceDate(c)||(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString());
-     c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";
-    }else{c.driverAcceptedAt="";c.driverAcceptedRevision=""}
-   }else{
-    // V19.2: no active assignment means no account driver may survive on the car.
-    // Older builds sometimes cleared driverUserId but left tenant/name behind, which
-    // made the Driver Picker resurrect the returned account driver as a manual driver.
-    const oldUserId=String(c.driverUserId||"");
-    const oldEmail=normalizeDriverIdentity(c.driverEmail||"");
-    const oldName=String(c.driverName||c.tenant||"").trim().toLowerCase();
-    const knownAccountDriver=(workspaceDriverDirectory||[]).some(member=>{
-     const email=normalizeDriverIdentity(workspaceDriverEmail(member)||"");
-     const name=String(workspaceDriverName(member)||"").trim().toLowerCase();
-     return (oldUserId&&String(member.user_id||"")===oldUserId)||(oldEmail&&email===oldEmail)||(oldName&&name===oldName);
-    });
-    if(oldUserId||c.driverAssignmentSource==="account"||knownAccountDriver){
-     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";
-     c.driverAcceptedRevision="";c.driverAssignedAt="";c.driverAssignmentRevision="";
-     c.tenant="";c.driverAssignmentSource="";
-    }
-   }
-  })
+  workspaceDriverAssignmentRows=rows||[];
+  // V19.0.2: vehicle profile is the ONLY current-link source of truth.
+  // Cloud assignment rows are retained only as backend context and must never resurrect a returned/unlinked driver.
+  workspaceDriverAssignments=Object.fromEntries(fleetCars().filter(c=>c.driverUserId).map(c=>[String(c.driverUserId),String(c.id)]));
  }catch(error){console.warn("Driver assignments",error);workspaceDriverAssignments={};workspaceDriverAssignmentRows=[]}
 }
+
 function driverAssignmentControl(member){
  if(member.role!=="driver")return"";
- const selected=workspaceDriverAssignments[member.user_id]||"";
+ const selected=workspaceDriverAssignments[member.user_id]||fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))?.id||"";
  return `<select data-driver-assignment="${member.user_id}">
   <option value="">Без автомобиля</option>
   ${fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
@@ -1154,18 +1080,18 @@ async function submitVehicleHandoverFromPortal(event){
     });
    }
    if(state.type==="return"){
+    const returnedDriver={userId:assigned.driverUserId,name:assigned.driverName||assigned.tenant,email:assigned.driverEmail,revision:assigned.driverAssignmentRevision};
     addVehicleHandoverAudit(assigned,"returned",{
      key:`returned:${assigned.driverAssignmentRevision||Date.now()}`,revision:assigned.driverAssignmentRevision||"",
-     driverUserId:assigned.driverUserId,driverName:assigned.driverName,driverEmail:assigned.driverEmail,
+     driverUserId:returnedDriver.userId,driverName:returnedDriver.name,driverEmail:returnedDriver.email,
      mileage:state.mileage,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
     });
-    assigned.driverAcceptedAt="";assigned.driverAcceptedRevision="";
-    // V19.1: a completed return ends the LIVE driver↔vehicle relation immediately.
-    // History keeps the old revision, but current car fields must not resurrect it.
-    const returnedAccountDriver=Boolean(assigned.driverUserId||assigned.driverEmail||assigned.driverAssignmentSource==="account");
+    // Successful return must atomically remove the CURRENT relationship from the vehicle profile.
     assigned.driverUserId="";assigned.driverEmail="";assigned.driverName="";assigned.driverPhone="";
-    assigned.driverAssignedAt="";assigned.driverAssignmentRevision="";
-    if(returnedAccountDriver){assigned.tenant="";assigned.driverAssignmentSource=""}
+    assigned.driverAcceptedAt="";assigned.driverAcceptedRevision="";assigned.driverAssignedAt="";assigned.driverAssignmentRevision="";
+    if(assigned.driverAssignmentSource==="account"||returnedDriver.userId){assigned.tenant="";assigned.driverAssignmentSource=""}
+    if(returnedDriver.userId)delete workspaceDriverAssignments[String(returnedDriver.userId)];
+    if(driverPortalContext)driverPortalContext={...driverPortalContext,car_id:null,vehicle_snapshot:null,status:"returned",return_at:result?.return_at||new Date().toISOString()};
    }
    save?.();
   }
@@ -1193,10 +1119,10 @@ async function submitVehicleHandoverFromPortal(event){
    driverHandoverState=latest||result||{status:"issued",issue_at:new Date().toISOString(),issue_mileage:state.mileage,issue_photos:state.photos};
    if(driverPortalContext)driverPortalContext={...driverPortalContext,...driverHandoverState,status:"issued",accepted_at:driverHandoverState.accepted_at||driverHandoverState.issue_at||new Date().toISOString()};
   }else{
-   driverHandoverState=result||await window.FleetPilotCloud.getDriverHandoverState?.();
+   driverHandoverState=result||{status:"returned",return_at:new Date().toISOString()};
   }
   $("#vehicleHandoverDialog")?.close();
-  await loadDriverHandoverState?.();
+  if(state.type==="issue")await loadDriverHandoverState?.();
   renderDriverVehicleCard?.();
   renderDriversRegistry?.();
   renderFleet?.();

@@ -127,6 +127,7 @@ window.addEventListener("hashchange",()=>{
 });
 
 function showPage(id){
+ if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady){return}
  applyEnterpriseAccess();
  const resolvedRole=enterpriseCurrentRole();
  // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
@@ -144,7 +145,7 @@ function showPage(id){
  }
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
- const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadWorkspaceDriverAssignments().then(()=>renderEnterprisePage());loadRolePermissions();}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
+ const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadRolePermissions();}if(id==="driversPage"){loadWorkspaceDriverAssignments().then(()=>renderDriversRegistry());}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
 $("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
@@ -596,7 +597,7 @@ window.addEventListener("load",()=>{
  }
 });
 
-$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={dashboardPage:"Главная",fleetPage:"Автопарк",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",mobileMapPage:"Карта",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage"||!enterpriseCan("cars.create");if(id==="dashboardPage")renderOwnerDashboard();if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="mobileMapPage"){
+$$(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));$("#pageTitle").textContent={dashboardPage:"Главная",fleetPage:"Автопарк",driversPage:"Водители",repairsPage:"Ремонты",paymentsPage:"Оплаты аренды",expensesPage:"Плановые расходы",documentsPage:"Документы",calendarPage:"Календарь",analyticsPage:"Аналитика",dataPage:"Данные",attentionPage:"Внимание",morePage:"Ещё",mobileMapPage:"Карта",searchPage:"Поиск",carPage:"Автомобиль"}[id];$("#headerAdd").hidden=id!=="fleetPage"||!enterpriseCan("cars.create");if(id==="dashboardPage")renderOwnerDashboard();if(id==="fleetPage")renderFleet();if(id==="repairsPage")renderRepairs();if(id==="paymentsPage")renderPayments();if(id==="expensesPage")renderExpenses();if(id==="documentsPage")renderDocuments();if(id==="calendarPage")renderCalendar();if(id==="analyticsPage")renderAnalytics();if(id==="dataPage")renderDataPage();if(id==="attentionPage")renderAttention();if(id==="morePage")renderMorePage();if(id==="mobileMapPage"){
  renderMobileGpsMap({fit:true});
  updateGpsCountdownUi();
  requestAnimationFrame(()=>{

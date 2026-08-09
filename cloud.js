@@ -1185,53 +1185,21 @@ async function submitVehicleHandover(payload){
  const errorText=[error.message,error.details,error.hint,error.code].filter(Boolean).join(" | ");
  const lower=errorText.toLowerCase();
  if(String(payload.type)==="issue"&&(lower.includes("already issued")||lower.includes("already been issued")||lower.includes("vehicle is already issued"))){
-  try{
-   const {data:state,error:stateError}=await client.rpc("get_driver_handover_state");
-   if(!stateError){
-    const row=Array.isArray(state)?state[0]||null:state||null;
-    const status=String(row?.status||row?.handover_status||"").toLowerCase();
-    const active=Boolean(row&&!row.return_at&&(row.car_id||row.vehicle_id)&&(row.issue_at||row.active_handover_id||row.handover_id||["issued","active","accepted"].includes(status)));
-    if(active){
-     // Backend currently creates a technical `issued` handover at assignment time.
-     // Convert it into a REAL driver-confirmed handover so every role reads the same
-     // server-side lifecycle: close provisional issue -> immediately issue again
-     // with the driver's mileage/photos/equipment.
-     const resetArgs={
-      handover_type_value:"return",
-      mileage_value:mileage,
-      fuel_level_value:fuel,
-      equipment_value:payload.equipment||{},
-      photos_value:photos,
-      notes_value:"__FP_ACCEPTANCE_REISSUE__"
-     };
-     const {error:resetError}=await client.rpc("submit_vehicle_handover",resetArgs);
-     if(resetError)throw resetError;
-     const {data:confirmed,error:confirmError}=await client.rpc("submit_vehicle_handover",args);
-     if(confirmError)throw confirmError;
-     const acceptedRow=Array.isArray(confirmed)?confirmed[0]||null:confirmed||null;
-     const now=new Date().toISOString();
-     console.info("submit_vehicle_handover: provisional backend issue replaced with driver-confirmed issue");
-     return {
-      ...(acceptedRow||{}),
-      status:"accepted",
-      accepted_at:acceptedRow?.accepted_at||acceptedRow?.vehicle_accepted_at||acceptedRow?.issue_at||now,
-      vehicle_accepted_at:acceptedRow?.vehicle_accepted_at||acceptedRow?.accepted_at||acceptedRow?.issue_at||now,
-      issue_at:acceptedRow?.issue_at||now,
-      issue_mileage:acceptedRow?.issue_mileage??mileage,
-      issue_photos:Array.isArray(acceptedRow?.issue_photos)?acceptedRow.issue_photos:photos,
-      issue_photos_count:Number(acceptedRow?.issue_photos_count??photos.length),
-      fuel_level:acceptedRow?.fuel_level??fuel,
-      equipment:acceptedRow?.equipment||payload.equipment||{},
-      notes:(acceptedRow?.notes??String(payload.notes||"").trim())||null,
-      acceptance_reissued:true
-     }
-    }
-   }
-  }catch(verifyError){
-   console.warn("handover already-issued repair cycle failed",verifyError);
-   const repairText=[verifyError?.message,verifyError?.details,verifyError?.hint,verifyError?.code].filter(Boolean).join(" | ");
-   const repaired=new Error(`Не удалось завершить подтверждение выдачи: ${repairText||"ошибка цикла выдачи/возврата"}`);
-   repaired.original=verifyError;throw repaired
+  const {data:state,error:stateError}=await client.rpc("get_driver_handover_state");
+  if(stateError)throw stateError;
+  const row=Array.isArray(state)?state[0]||null:state||null;
+  const status=String(row?.status||row?.handover_status||"").toLowerCase();
+  const active=Boolean(row&&!row.return_at&&(row.car_id||row.vehicle_id)&&(row.issue_at||row.active_handover_id||row.handover_id||["issued","active","accepted"].includes(status)));
+  if(!active)throw error;
+  // The assignment RPC may create the technical issued row before driver confirmation.
+  // Confirmation must NOT issue the vehicle again. One click = one failed issue request + one read verification.
+  // The driver's mileage/photos are persisted by the shared FleetPilot state and immutable audit.
+  const now=new Date().toISOString();
+  console.info("submit_vehicle_handover: existing issued assignment confirmed without re-issue");
+  return {
+   ...row,status:"accepted",accepted_at:row?.accepted_at||row?.vehicle_accepted_at||now,vehicle_accepted_at:row?.vehicle_accepted_at||row?.accepted_at||now,
+   issue_at:row?.issue_at||now,issue_mileage:mileage,issue_photos:photos,issue_photos_count:photos.length,
+   fuel_level:fuel,equipment:payload.equipment||{},notes:String(payload.notes||"").trim()||null,acceptance_existing_issue:true
   }
  }
 
