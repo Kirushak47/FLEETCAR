@@ -994,9 +994,23 @@ async function loadWorkspaceDriverAssignments(){
      c.driverAcceptedAt=currentAssignmentAcceptanceDate(c)||(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString());
      c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";
     }else{c.driverAcceptedAt="";c.driverAcceptedRevision=""}
-   }else if(c.driverUserId){
-    c.driverUserId="";c.driverEmail="";c.driverName="";c.driverAcceptedAt="";
-    if(c.driverAssignmentSource==="account"){c.tenant="";c.driverAssignmentSource=""}
+   }else{
+    // V19.2: no active assignment means no account driver may survive on the car.
+    // Older builds sometimes cleared driverUserId but left tenant/name behind, which
+    // made the Driver Picker resurrect the returned account driver as a manual driver.
+    const oldUserId=String(c.driverUserId||"");
+    const oldEmail=normalizeDriverIdentity(c.driverEmail||"");
+    const oldName=String(c.driverName||c.tenant||"").trim().toLowerCase();
+    const knownAccountDriver=(workspaceDriverDirectory||[]).some(member=>{
+     const email=normalizeDriverIdentity(workspaceDriverEmail(member)||"");
+     const name=String(workspaceDriverName(member)||"").trim().toLowerCase();
+     return (oldUserId&&String(member.user_id||"")===oldUserId)||(oldEmail&&email===oldEmail)||(oldName&&name===oldName);
+    });
+    if(oldUserId||c.driverAssignmentSource==="account"||knownAccountDriver){
+     c.driverUserId="";c.driverEmail="";c.driverName="";c.driverPhone="";c.driverAcceptedAt="";
+     c.driverAcceptedRevision="";c.driverAssignedAt="";c.driverAssignmentRevision="";
+     c.tenant="";c.driverAssignmentSource="";
+    }
    }
   })
  }catch(error){console.warn("Driver assignments",error);workspaceDriverAssignments={};workspaceDriverAssignmentRows=[]}
@@ -1148,9 +1162,10 @@ async function submitVehicleHandoverFromPortal(event){
     assigned.driverAcceptedAt="";assigned.driverAcceptedRevision="";
     // V19.1: a completed return ends the LIVE driver↔vehicle relation immediately.
     // History keeps the old revision, but current car fields must not resurrect it.
+    const returnedAccountDriver=Boolean(assigned.driverUserId||assigned.driverEmail||assigned.driverAssignmentSource==="account");
     assigned.driverUserId="";assigned.driverEmail="";assigned.driverName="";assigned.driverPhone="";
     assigned.driverAssignedAt="";assigned.driverAssignmentRevision="";
-    if(assigned.driverAssignmentSource==="account"){assigned.tenant="";assigned.driverAssignmentSource=""}
+    if(returnedAccountDriver){assigned.tenant="";assigned.driverAssignmentSource=""}
    }
    save?.();
   }

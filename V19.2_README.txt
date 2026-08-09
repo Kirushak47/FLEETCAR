@@ -1,0 +1,6 @@
+FleetPilot V19.2 — Returned Driver Ghost Cleanup
+
+- Fixes returned account driver still appearing in Add/Edit Car Driver Picker.
+- Return now clears tenant/name/email even when old driverAssignmentSource metadata is missing.
+- Startup assignment reconciliation detects orphaned tenant/name values matching known account drivers and clears them when no active assignment exists.
+- History is preserved; only the current live driver relation is removed.
