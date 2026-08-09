@@ -1,35 +1,30 @@
-FleetPilot V18.10 — Handover Lifecycle & Sync Fix
+FleetPilot V18.11 — Handover Backend Lifecycle Fix
 
 WHAT IS FIXED
 
-1. ACCEPTANCE NO LONGER RETURNS TO PENDING
-- Driver acceptance is now tied to the exact driverAssignmentRevision.
-- A stale backend handover/old issue_at can no longer overwrite a completed current acceptance.
-- Driver Portal stops showing “Принять автомобиль” after successful acceptance.
-- Company → Drivers stops showing “Ожидает приёмки” after successful acceptance.
+1. REAL SERVER-SIDE DRIVER ACCEPTANCE
+- Fixed the root cause of Driver Portal showing accepted while Company → Drivers remained pending.
+- Some Supabase versions create an `issued` handover immediately when a car is assigned.
+- When the driver confirms the vehicle, FleetPilot now closes that provisional technical issue and immediately creates the real issue with the driver's mileage, photos, equipment and notes.
+- Acceptance therefore exists in Supabase, not only in the driver's local UI.
 
-2. HANDOVER HISTORY / AUDIT
-FleetPilot now keeps an immutable workspace-synced audit trail for:
-- Назначен водителю
-- Принят водителем
-- Возвращён водителем
-- Автомобиль отобран компанией
-- Назначение отменено
+2. COMPANY → DRIVERS SYNC
+- After confirmation, the driver status becomes “Автомобиль принят” instead of returning to “Ожидает приёмки”.
+- Acceptance is additionally recoverable from the immutable assignment audit for the current assignment revision.
 
-Vehicle Handover history merges backend RPC history with this FleetPilot audit, so a forced detach can no longer disappear from history.
+3. VEHICLE HANDOVER HISTORY
+- The real confirmed issue is visible in Vehicle Handover history with mileage/photos.
+- The internal technical close/reissue operation is hidden from the business history.
+- Forced company detach remains recorded as “Автомобиль отобран компанией”.
+- Cancellation before acceptance remains “Назначение отменено”.
 
-3. FORCED DETACH LOGIC
-- If an accepted vehicle is detached by company, history records “Автомобиль отобран компанией”.
-- If the driver had not accepted yet, history records “Назначение отменено”.
-- Driver fields are cleared only after the audit event is written.
+4. RETURN FLOW
+- Driver return now targets the real server-side active issue created after confirmation.
+- This removes the lifecycle mismatch that previously caused return confirmation to fail or reopen the acceptance state.
 
-4. NEW ASSIGNMENT CYCLE
-- Every new assignment retains its own revision.
-- Confirmation from an older assignment cannot activate a new assignment.
-- Reassigning the same car to the same driver still requires a new acceptance.
-
-5. RETURN HISTORY
-- Normal driver return writes a “Возвращён водителем” audit event with mileage/photos/notes.
+5. ASSIGNMENT REVISION SAFETY
+- Reassigning the same vehicle to the same driver is still a new cycle and requires new mileage + photos.
+- Old acceptance cannot activate a new assignment.
 
 FILES TO REPLACE
 - index.html
@@ -37,4 +32,5 @@ FILES TO REPLACE
 - cloud.js
 - fp-driver-portal.js
 
-Important: hard refresh / service-worker refresh after upload.
+IMPORTANT
+After uploading, hard refresh the page / clear the old Service Worker cache.

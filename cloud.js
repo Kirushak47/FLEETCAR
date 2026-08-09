@@ -1192,25 +1192,47 @@ async function submitVehicleHandover(payload){
     const status=String(row?.status||row?.handover_status||"").toLowerCase();
     const active=Boolean(row&&!row.return_at&&(row.car_id||row.vehicle_id)&&(row.issue_at||row.active_handover_id||row.handover_id||["issued","active","accepted"].includes(status)));
     if(active){
+     // Backend currently creates a technical `issued` handover at assignment time.
+     // Convert it into a REAL driver-confirmed handover so every role reads the same
+     // server-side lifecycle: close provisional issue -> immediately issue again
+     // with the driver's mileage/photos/equipment.
+     const resetArgs={
+      handover_type_value:"return",
+      mileage_value:mileage,
+      fuel_level_value:fuel,
+      equipment_value:payload.equipment||{},
+      photos_value:photos,
+      notes_value:"__FP_ACCEPTANCE_REISSUE__"
+     };
+     const {error:resetError}=await client.rpc("submit_vehicle_handover",resetArgs);
+     if(resetError)throw resetError;
+     const {data:confirmed,error:confirmError}=await client.rpc("submit_vehicle_handover",args);
+     if(confirmError)throw confirmError;
+     const acceptedRow=Array.isArray(confirmed)?confirmed[0]||null:confirmed||null;
      const now=new Date().toISOString();
-     console.warn("submit_vehicle_handover: backend already issued; committing driver acceptance in fleet state",error);
+     console.info("submit_vehicle_handover: provisional backend issue replaced with driver-confirmed issue");
      return {
-      ...row,
+      ...(acceptedRow||{}),
       status:"accepted",
-      accepted_at:now,
-      vehicle_accepted_at:now,
-      issue_at:row.issue_at||now,
-      issue_mileage:mileage,
-      issue_photos:photos,
-      issue_photos_count:photos.length,
-      fuel_level:fuel,
-      equipment:payload.equipment||{},
-      notes:String(payload.notes||"").trim()||null,
-      client_acceptance_commit:true
+      accepted_at:acceptedRow?.accepted_at||acceptedRow?.vehicle_accepted_at||acceptedRow?.issue_at||now,
+      vehicle_accepted_at:acceptedRow?.vehicle_accepted_at||acceptedRow?.accepted_at||acceptedRow?.issue_at||now,
+      issue_at:acceptedRow?.issue_at||now,
+      issue_mileage:acceptedRow?.issue_mileage??mileage,
+      issue_photos:Array.isArray(acceptedRow?.issue_photos)?acceptedRow.issue_photos:photos,
+      issue_photos_count:Number(acceptedRow?.issue_photos_count??photos.length),
+      fuel_level:acceptedRow?.fuel_level??fuel,
+      equipment:acceptedRow?.equipment||payload.equipment||{},
+      notes:(acceptedRow?.notes??String(payload.notes||"").trim())||null,
+      acceptance_reissued:true
      }
     }
    }
-  }catch(verifyError){console.warn("handover already-issued verification failed",verifyError)}
+  }catch(verifyError){
+   console.warn("handover already-issued repair cycle failed",verifyError);
+   const repairText=[verifyError?.message,verifyError?.details,verifyError?.hint,verifyError?.code].filter(Boolean).join(" | ");
+   const repaired=new Error(`Не удалось завершить подтверждение выдачи: ${repairText||"ошибка цикла выдачи/возврата"}`);
+   repaired.original=verifyError;throw repaired
+  }
  }
 
  const enriched=new Error(`Не удалось подтвердить приём автомобиля: ${errorText||"Supabase RPC вернул ошибку 400"}`);

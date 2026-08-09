@@ -46,12 +46,25 @@ function addVehicleHandoverAudit(c,type,details={}){
  if(list.length>200)c.vehicleHandoverAudit=list.slice(-200);
  return row
 }
+function currentAssignmentAuditState(c){
+ if(!c?.driverAssignmentRevision)return{accepted:false,acceptedAt:"",closed:false};
+ const revision=String(c.driverAssignmentRevision||"");
+ const events=ensureVehicleHandoverAudit(c).filter(row=>String(row.revision||"")===revision).sort((a,b)=>Date.parse(a.at||0)-Date.parse(b.at||0));
+ let acceptedAt="",closed=false;
+ for(const row of events){
+  if(row.type==="accepted"){acceptedAt=row.at||acceptedAt;closed=false}
+  if(["returned","forced_return","assignment_cancelled"].includes(row.type)){closed=true}
+ }
+ return{accepted:Boolean(acceptedAt&&!closed),acceptedAt,closed}
+}
 function currentAssignmentAcceptedLocally(c){
  if(!c?.driverUserId||!c?.driverAssignmentRevision)return false;
- return Boolean(c.driverAcceptedAt&&c.driverAcceptedRevision===c.driverAssignmentRevision)
+ if(Boolean(c.driverAcceptedAt&&c.driverAcceptedRevision===c.driverAssignmentRevision))return true;
+ return currentAssignmentAuditState(c).accepted
 }
 function currentAssignmentAcceptanceDate(c){
- return currentAssignmentAcceptedLocally(c)?c.driverAcceptedAt:""
+ if(c?.driverAcceptedAt&&c.driverAcceptedRevision===c.driverAssignmentRevision)return c.driverAcceptedAt;
+ return currentAssignmentAuditState(c).acceptedAt||""
 }
 window.addVehicleHandoverAudit=addVehicleHandoverAudit;
 
@@ -405,6 +418,10 @@ async function loadVehicleHandoverHistory(carId){
   const audit=Array.isArray(c?.vehicleHandoverAudit)?c.vehicleHandoverAudit:[];
   const backendEvents=[];
   (backendRows||[]).forEach((row,index)=>{
+   // V18.11: hide the technical close/reissue row used only to convert an
+   // assignment-time backend issue into a real driver-confirmed issue.
+   const systemReissue=String(row.return_notes||row.notes||"").includes("__FP_ACCEPTANCE_REISSUE__");
+   if(systemReissue)return;
    if(row.issue_at)backendEvents.push({source:"backend",type:"issued",at:row.issue_at,row,key:`b-issue-${row.id||row.handover_id||index}-${row.issue_at}`});
    if(row.return_at)backendEvents.push({source:"backend",type:"returned",at:row.return_at,row,key:`b-return-${row.id||row.handover_id||index}-${row.return_at}`});
   });
@@ -949,7 +966,7 @@ async function loadWorkspaceDriverAssignments(){
     const localAccepted=currentAssignmentAcceptedLocally(c);
     const accepted=localAccepted||driverAcceptanceBelongsToAssignment(assignment,c);
     if(accepted){
-     c.driverAcceptedAt=localAccepted?c.driverAcceptedAt:(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString());
+     c.driverAcceptedAt=currentAssignmentAcceptanceDate(c)||(assignment.accepted_at||assignment.vehicle_accepted_at||assignment.issue_at||c.driverAcceptedAt||new Date().toISOString());
      c.driverAcceptedRevision=c.driverAssignmentRevision||c.driverAcceptedRevision||"";
     }else{c.driverAcceptedAt="";c.driverAcceptedRevision=""}
    }else if(c.driverUserId){
