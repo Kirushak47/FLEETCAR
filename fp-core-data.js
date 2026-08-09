@@ -313,7 +313,7 @@ function vehicleHealthScore(c){
  if(oilLeft<=0){score-=30;reasons.push("масло просрочено")}else if(oilLeft<=1500){score-=12;reasons.push("скоро масло")};
  if(insuranceDays<0){score-=25;reasons.push("страховка просрочена")}else if(insuranceDays<=30){score-=10;reasons.push("страховка заканчивается")};
  if(inspectionDays<0){score-=25;reasons.push("ТО просрочено")}else if(inspectionDays<=30){score-=10;reasons.push("ТО заканчивается")};
- const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled"].includes(String(r.status||"")));
+ const active=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!["done","cancelled","canceled","rejected","archived","closed"].includes(String(r.status||"").toLowerCase()));
  if(active.some(r=>r.priority==="critical")){score-=20;reasons.push("срочный ремонт")}else if(active.length){score-=Math.min(15,active.length*4);reasons.push(`${active.length} активн. задач`)}
  return{score:Math.max(0,Math.round(score)),reasons}
 }

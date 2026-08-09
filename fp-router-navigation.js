@@ -134,7 +134,7 @@ function showPage(id){
  // V18.3: Driver Portal is a dedicated shell. Never run CRM access denial against its own pages.
  const driverOwnPage=resolvedRole==="driver"&&['driverPortalPage','driverProfilePage'].includes(id);
  if(!driverOwnPage&&!enterpriseCanOpen(id)){
-  if(fleetPilotEnterpriseAccessReady)toast("У вашей роли нет доступа к этому разделу");
+  if(fleetPilotEnterpriseAccessReady&&resolvedRole!=="driver")toast("У вашей роли нет доступа к этому разделу");
   const role=enterpriseCurrentRole();
   id=role==="driver"?"driverPortalPage":"dashboardPage"
  }
@@ -339,80 +339,9 @@ if(vehicleHandoverPhotos)vehicleHandoverPhotos.onchange=async event=>{
  }catch(error){handoverMessage(error.message||String(error),"error")}
 };
 
-let vehicleHandoverSubmitting=false;
-const vehicleHandoverForm=$("#vehicleHandoverForm");
-if(vehicleHandoverForm)vehicleHandoverForm.onsubmit=async event=>{
- event.preventDefault();
- if(vehicleHandoverSubmitting)return;
- if(vehicleHandoverPhotoData.length<1)return handoverMessage("Добавьте хотя бы одну фотографию.","error");
- const equipment={};
- $$("[data-handover-equipment]").forEach(input=>equipment[input.dataset.handoverEquipment]=input.checked);
- const submitButton=$("#vehicleHandoverSubmit");
- const originalSubmitText=submitButton?.textContent||"Подтвердить";
- vehicleHandoverSubmitting=true;
- if(submitButton){submitButton.disabled=true;submitButton.textContent="Сохраняем…"}
- handoverMessage("Сохраняем передачу автомобиля…");
- try{
-  const type=$("#vehicleHandoverType").value;
-  const normalizeMileageValue=value=>{
-   const raw=String(value??"").replace(/\s+/g,"").replace(",",".").replace(/[^0-9.]/g,"");
-   const parsed=Number(raw);
-   return Number.isFinite(parsed)?Math.max(0,Math.round(parsed)):0
-  };
-  const enteredMileage=normalizeMileageValue($("#vehicleHandoverMileage").value);
-  const assignedBeforeSubmit=driverAssignedCar();
-  const currentMileage=normalizeMileageValue(assignedBeforeSubmit?.mileage||driverPortalContext?.mileage||0);
-  const issueMileage=normalizeMileageValue(driverHandoverState?.issue_mileage||driverHandoverState?.mileage||0);
-  const minimumMileage=type==="return"?Math.max(currentMileage,issueMileage):currentMileage;
-  if(type==="return"&&enteredMileage<minimumMileage){
-   throw new Error(`Пробег при возврате не может быть меньше ${minimumMileage.toLocaleString("ru-RU")} км`)
-  }
-  let result;
-  try{
-   result=await window.FleetPilotCloud.submitVehicleHandover({
-    type,
-    mileage:enteredMileage,
-    fuelLevel:$("#vehicleHandoverFuel").value,
-    equipment,
-    photos:vehicleHandoverPhotoData,
-    notes:$("#vehicleHandoverNotes").value
-   });
-  }catch(error){
-   const message=String(error?.message||error||"").toLowerCase();
-   const alreadyIssued=type==="issue"&&(message.includes("already issued")||message.includes("vehicle is already issued"));
-   if(!alreadyIssued)throw error;
-   const state=await window.FleetPilotCloud.getDriverHandoverState?.();
-   const proofMileage=Number(state?.issue_mileage);
-   const proofPhotos=Number(state?.issue_photos_count||0)||(Array.isArray(state?.issue_photos)?state.issue_photos.length:0);
-   if(!state?.active_handover_id||!Number.isFinite(proofMileage)||proofPhotos<1)throw new Error("Автомобиль назначен, но ещё не подтверждён водителем. Добавьте пробег и фото, затем подтвердите приём.");
-   result=state;
-  }
-
-  const assignedCar=driverAssignedCar();
-  if(assignedCar){
-   const savedMileage=Number(result?.mileage??enteredMileage);
-   if(Number.isFinite(savedMileage))assignedCar.mileage=Math.max(Number(assignedCar.mileage||0),savedMileage);
-   if(type==="issue"){
-    assignedCar.driverAcceptedAt=result?.issue_at||driverHandoverState?.issue_at||new Date().toISOString();
-    if(String(assignedCar.status||"")!=="repair")assignedCar.status="active";
-   }
-   if(type==="return"){
-    assignedCar.driverAcceptedAt="";
-    if(String(assignedCar.status||"")!=="repair")assignedCar.status="free";
-   }
-   save?.();renderFleet?.();renderDriversRegistry?.()
-  }
-  $("#vehicleHandoverDialog").close();
-  toast(type==="issue"?"Автомобиль принят":"Автомобиль возвращён");
-  await window.FleetPilotCloud.checkCloudForUpdates?.();
-  await renderDriverPortal()
- }catch(error){
-  handoverMessage(error.message||String(error),"error")
- }finally{
-  vehicleHandoverSubmitting=false;
-  if(submitButton){submitButton.disabled=false;submitButton.textContent=originalSubmitText}
- }
-};
+/* V19.0 — Vehicle Handover is owned exclusively by fp-driver-portal.js.
+   The old router submit handler was removed because it caused two independent
+   submit flows to run for one click and overwrite acceptance/return state. */
 
 const openDriverRepairRequest=$("#openDriverRepairRequest");
 if(openDriverRepairRequest)openDriverRepairRequest.onclick=openDriverRepairDialog;

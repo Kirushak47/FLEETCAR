@@ -1,0 +1,10 @@
+FleetPilot V19.0 — Handover Controller Reset + Driver Routing + Health Fix
+
+1. Removed duplicate Vehicle Handover submit controller from fp-router-navigation.js.
+   fp-driver-portal.js is now the only owner of accept/return submission.
+2. Driver protected-route redirects are silent; no “У вашей роли нет доступа” toast.
+3. Vehicle health ignores terminal service records: done/cancelled/canceled/rejected/archived/closed.
+4. Fleet cards no longer become red because of old cancelled/closed service records.
+5. Cache/build bumped to 19.0 / 1900000.
+
+Important: this release intentionally stops layering another handover handler on top of the old one.

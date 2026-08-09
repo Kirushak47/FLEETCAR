@@ -1,4 +1,4 @@
-const CACHE="fleetpilot-v18-10-handover-lifecycle-sync-fix";
+const CACHE="fleetpilot-v19-0";
 const ASSETS=[
   "./","./index.html","./manifest.webmanifest",
   "./fp-base.css?v=180000","./fp-service-layout.css?v=180000","./fp-desktop-gps.css?v=180000","./fp-cloud-roles.css?v=180000","./fp-driver.css?v=180000","./fp-crm-service.css?v=180000","./fp-current-ui.css?v=187000","./fp-mobile-v17.css?v=180000",

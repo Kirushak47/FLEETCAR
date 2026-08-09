@@ -108,7 +108,8 @@ function recalculateExpectedPayment(){
 }
 function healthDetails(c){
  const oilLeft=oil(c),insuranceDays=days(c.insurance),inspectionDays=days(c.inspection);
- const repairs=db.repairs.filter(r=>r.carId===c.id&&r.status!=="done"),items=[];
+ const terminalRepairStatuses=new Set(["done","cancelled","canceled","rejected","archived","closed"]);
+ const repairs=(db.repairs||[]).filter(r=>String(r.carId)===String(c.id)&&!terminalRepairStatuses.has(String(r.status||"").toLowerCase())),items=[];
  if(oilLeft<=0)items.push({type:"oil",level:"danger",title:"ТО просрочено",value:`${Math.abs(oilLeft)} км`});
  else if(oilLeft<=1500)items.push({type:"oil",level:"warning",title:"Скоро ТО",value:`${oilLeft} км`});
  if(insuranceDays<0)items.push({type:"insurance",level:"danger",title:"Страховка просрочена",value:`${Math.abs(insuranceDays)} дн.`});
