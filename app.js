@@ -6674,9 +6674,16 @@ function safeLocalDate(value){
  const date=new Date(`${value}T12:00:00`);
  return Number.isNaN(date.getTime())?null:date
 }
+function calendarDayNumber(value){
+ if(!value)return null;
+ const d=value instanceof Date?value:new Date(value);
+ if(Number.isNaN(d.getTime()))return null;
+ return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000
+}
 function inclusiveDays(from,to){
- if(!from||!to)return 0;
- return Math.max(0,Math.round((to-from)/86400000)+1)
+ const a=calendarDayNumber(from),b=calendarDayNumber(to);
+ if(a==null||b==null)return 0;
+ return Math.max(0,b-a+1)
 }
 function paymentPeriod(payment){
  let from=safeLocalDate(payment.from),to=safeLocalDate(payment.to);

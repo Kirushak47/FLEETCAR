@@ -1,0 +1,8 @@
+FleetPilot V19.0.12 — Calendar allocation core fix
+
+Fixed the shared inclusive-day calculation used by rental payments.
+Root cause: payment dates were normalized to 12:00 while month boundaries were 00:00; Math.round(milliseconds/day)+1 could turn 01.08–02.08 into 3 days.
+Now all calculations compare calendar Y/M/D via UTC day numbers, so 13.07–02.08 = 21 days = 19 July + 2 August.
+This affects the shared payment allocation used by: Rental payment history, Analytics, Dashboard monthly income, vehicle monthly profit, and finance drilldowns.
+Example: 1950 PLN / 21 * 2 = 185.71 PLN; 2100 PLN / 21 * 2 = 200.00 PLN; August total = 385.71 PLN.
+Driver assignments RPC fix from V19.0.11 remains included.
