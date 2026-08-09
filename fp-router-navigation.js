@@ -26,6 +26,11 @@ const FLEETPILOT_ROUTES={
 const FLEETPILOT_ROUTE_PAGES=Object.fromEntries(
  Object.entries(FLEETPILOT_ROUTES).map(([page,route])=>[route,page])
 );
+function fleetPilotDefaultCrmPage(){
+ const candidates=["fleetPage","paymentsPage","expensesPage","repairsPage","documentsPage","analyticsPage","calendarPage"];
+ for(const pageId of candidates){try{if(enterpriseCanOpen(pageId))return pageId}catch{}}
+ return "fleetPage"
+}
 const FLEETPILOT_CAR_TABS=new Set(["info","service","finance","history","documents","damages"]);
 let fleetPilotRouteReady=false;
 let fleetPilotApplyingRoute=false;
@@ -66,8 +71,9 @@ function fleetPilotApplyRoute({replaceInvalid=true}={}){
  const route=fleetPilotCurrentRoute();
  if(!route){
   fleetPilotApplyingRoute=true;
-  try{showPage("dashboardPage")}finally{fleetPilotApplyingRoute=false}
-  fleetPilotSetRoute("dashboard",{replace:true});
+  const landing=enterpriseCurrentRole()==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage();
+  try{showPage(landing)}finally{fleetPilotApplyingRoute=false}
+  fleetPilotSetRoute(fleetPilotRouteForPage(landing),{replace:true});
   return
  }
 
@@ -89,14 +95,16 @@ function fleetPilotApplyRoute({replaceInvalid=true}={}){
    return
   }
 
-  const pageId=FLEETPILOT_ROUTE_PAGES[root];
+  let pageId=FLEETPILOT_ROUTE_PAGES[root];
+  if(pageId==="dashboardPage"&&enterpriseCurrentRole()!=="driver")pageId=fleetPilotDefaultCrmPage();
   if(pageId&&document.getElementById(pageId)){
    showPage(pageId);
+   if(root==="dashboard"&&replaceInvalid)setTimeout(()=>fleetPilotSetRoute(fleetPilotRouteForPage(pageId),{replace:true}),0);
    return
   }
-
-  showPage("dashboardPage");
-  if(replaceInvalid)setTimeout(()=>fleetPilotSetRoute("dashboard",{replace:true}),0)
+  const landing=enterpriseCurrentRole()==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage();
+  showPage(landing);
+  if(replaceInvalid)setTimeout(()=>fleetPilotSetRoute(fleetPilotRouteForPage(landing),{replace:true}),0)
  }finally{
   fleetPilotApplyingRoute=false
  }
@@ -130,6 +138,7 @@ function showPage(id){
  if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady){return}
  applyEnterpriseAccess();
  const resolvedRole=enterpriseCurrentRole();
+ if(id==="dashboardPage"&&resolvedRole!=="driver")id=fleetPilotDefaultCrmPage();
  // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
  if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";
  // V18.3: Driver Portal is a dedicated shell. Never run CRM access denial against its own pages.
@@ -137,9 +146,9 @@ function showPage(id){
  if(!driverOwnPage&&!enterpriseCanOpen(id)){
   if(fleetPilotEnterpriseAccessReady&&resolvedRole!=="driver")toast("У вашей роли нет доступа к этому разделу");
   const role=enterpriseCurrentRole();
-  id=role==="driver"?"driverPortalPage":"dashboardPage"
+  id=role==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage()
  }
- if(enterpriseCurrentRole()!=="driver"&&window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id="dashboardPage";
+ if(enterpriseCurrentRole()!=="driver"&&window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id=fleetPilotDefaultCrmPage();
  if(id!=="carPage"&&fleetPilotRouteReady&&!fleetPilotApplyingRoute){
   fleetPilotSetRoute(fleetPilotRouteForPage(id))
  }
@@ -147,7 +156,7 @@ function showPage(id){
  syncDesktopNavigation(id);
  const incoming=$("#"+id);if(incoming&&incoming!==previous){incoming.classList.remove("page-enter");void incoming.offsetWidth;incoming.classList.add("page-enter")}if(id==="companyPage"){loadRolePermissions();}if(id==="driversPage"){loadWorkspaceDriverAssignments().then(()=>renderDriversRegistry());}if(id==="driverPortalPage"){renderDriverPortal();setDriverBottomNavActive("vehicle")}if(id==="driverProfilePage"){renderDriverProfile();setDriverBottomNavActive("profile")}if(id==="fleetPage")loadFleetServiceAlerts();if(id==="repairsPage")renderWorkspaceRepairRequests();
 $("#globalSearchButton").onclick=()=>{showPage("searchPage");setTimeout(()=>$("#globalSearchInput").focus(),50)};
-$("#closeGlobalSearch").onclick=()=>showPage("dashboardPage");$("#globalSearchInput").oninput=renderGlobalSearch;
+$("#closeGlobalSearch").onclick=()=>showPage(fleetPilotDefaultCrmPage());$("#globalSearchInput").oninput=renderGlobalSearch;
 $("#exportActivityLog").onclick=exportActivityCsv;
 ["activitySearch","activityTypeFilter","activityPeriodFilter"].forEach(id=>{
  const element=$("#"+id);
@@ -175,6 +184,8 @@ $("#resetDashboardSettings").onclick=()=>{localStorage.removeItem(UX_KEY);render
 
 
 
+const desktopBrand=document.querySelector(".desktop-brand");
+if(desktopBrand){desktopBrand.setAttribute("role","button");desktopBrand.setAttribute("tabindex","0");desktopBrand.onclick=()=>showPage(enterpriseCurrentRole()==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage());}
 const dashboardOpenFleet=$("#dashboardOpenFleet");
 if(dashboardOpenFleet)dashboardOpenFleet.onclick=()=>showPage("fleetPage");
 $$('[data-dashboard-go]').forEach(button=>button.onclick=()=>showPage(button.dataset.dashboardGo));

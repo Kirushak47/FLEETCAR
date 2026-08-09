@@ -110,7 +110,7 @@ window.addEventListener("fleetpilot:access-ready",async()=>{
  applyEnterpriseAccess();
 
  const role=enterpriseCurrentRole();
- const defaultPage=role==="driver"?"driverPortalPage":"dashboardPage";
+ const defaultPage=role==="driver"?"driverPortalPage":(enterpriseCanOpen("fleetPage")?"fleetPage":enterpriseCanOpen("paymentsPage")?"paymentsPage":enterpriseCanOpen("expensesPage")?"expensesPage":enterpriseCanOpen("repairsPage")?"repairsPage":enterpriseCanOpen("documentsPage")?"documentsPage":"fleetPage");
 
  // The URL/deep-link wins after role and membership are known.
  const currentRoute=fleetPilotCurrentRoute();

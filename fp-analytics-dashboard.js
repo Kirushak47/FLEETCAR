@@ -842,13 +842,7 @@ function fleetPilotCurrentMonth(){
 }
 
 function currentMonthCashReceived(){
- const month=fleetPilotCurrentMonth();
- const allowed=new Set(cityFilteredCars().map(c=>c.id));
- return (db.payments||[]).filter(p=>{
-  if(!allowed.has(p.carId))return false;
-  const cashDate=String(p.date||"");
-  return cashDate.slice(0,7)===month
- }).reduce((sum,p)=>sum+Number(p.received||0),0)
+ return currentMonthAccruedIncome()
 }
 
 function currentMonthAccruedRows(){
