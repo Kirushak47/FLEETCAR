@@ -785,12 +785,60 @@ body[hidden]{display:none}
 .handover-photo-viewer{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100vw;height:100vh}.handover-photo-viewer::backdrop{background:rgba(2,6,23,.92)}.handover-photo-viewer-shell{width:100%;height:100%;display:grid;place-items:center;position:relative;background:rgba(2,6,23,.92)}.handover-photo-viewer img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:10px}.handover-photo-viewer-close,.handover-photo-viewer-nav{position:absolute;border:0;background:rgba(255,255,255,.14);color:#fff;width:44px;height:44px;border-radius:50%;font-size:28px;cursor:pointer}.handover-photo-viewer-close{right:22px;top:22px}.handover-photo-viewer-nav.prev{left:20px;top:50%}.handover-photo-viewer-nav.next{right:20px;top:50%}.handover-photo-viewer-counter{position:absolute;bottom:22px;color:#fff;background:rgba(0,0,0,.45);padding:7px 12px;border-radius:999px;font-size:12px}
 @media(max-width:700px){.drivers-management-page{padding:14px}.drivers-management-page .company-section-head{align-items:stretch;flex-direction:column}.handover-compact-summary{grid-template-columns:30px minmax(0,1fr) 22px}.handover-compact-summary time{display:none}.handover-compact-details{padding:10px 12px 12px}.handover-photo-thumb img{width:68px;height:54px}.handover-photo-viewer-nav{width:38px;height:38px}.handover-photo-viewer-nav.prev{left:8px}.handover-photo-viewer-nav.next{right:8px}}
 
-/* V19.0.3 — registry/status cleanup */
-.driver-registry-card{grid-template-columns:42px minmax(0,1fr) auto auto!important;gap:12px!important;padding:11px 14px!important;min-height:76px!important;border-radius:15px!important}
-.driver-registry-avatar{width:42px!important;height:42px!important;border-radius:12px!important}
-.driver-registry-main{gap:2px!important}.driver-registry-vehicle{margin-top:2px!important}.driver-registry-actions{align-items:center!important;justify-content:flex-end!important;flex-wrap:nowrap!important}.driver-registry-actions .btn,.driver-delete-button{padding:8px 11px!important;min-height:36px!important}.driver-registry-readonly{display:none!important}
-.driver-vehicle-status.accepted{background:#e8f8ef!important;color:#158447!important}.driver-vehicle-status.pending{background:#fff4df!important;color:#9b6200!important}
-#carPage>#backToFleet{font-size:0!important;display:inline-flex!important;align-items:center!important;min-width:28px!important}
-#carPage>#backToFleet::before{content:"←";font-size:16px!important;line-height:1}
-#carPage>#backToFleet .status,#carPage>.status,#carPage>.vehicle-status-pair{display:none!important}
-@media(max-width:700px){.driver-registry-card{grid-template-columns:40px minmax(0,1fr) auto!important}.driver-registry-status{grid-column:2/3;justify-self:start}.driver-registry-actions{grid-column:2/4;justify-self:end}.driver-registry-actions .btn,.driver-delete-button{padding:7px 9px!important}}
+/* FleetPilot V19.0.4 — typography, registry and layout polish */
+:root{--fp-body-font-size:14px;--fp-text:#172033;--fp-muted:#667085}
+body,button,input,select,textarea{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-size:var(--fp-body-font-size);color:var(--fp-text)}
+small,.muted,.eyebrow{letter-spacing:.01em}
+input,select,textarea,button{font-size:13px}
+input,select,textarea{color:#172033}
+strong,h1,h2,h3,h4{font-weight:650}
+.metric strong,.owner-kpi-card strong,.professional-kpi strong,.document-register-cell strong,.driver-registry-phone{font-variant-numeric:tabular-nums}
+
+/* Drivers: dense professional registry, same actions on the right. */
+#driversRegistryList{display:grid;gap:0;border:1px solid #e5eaf1;border-radius:16px;overflow:hidden;background:#fff}
+.driver-registry-card{display:grid!important;grid-template-columns:44px minmax(180px,1.35fr) minmax(120px,.8fr) minmax(190px,1.25fr) minmax(100px,.7fr) minmax(130px,.8fr) auto;align-items:center;gap:12px;min-height:68px!important;padding:9px 14px!important;margin:0!important;border:0!important;border-bottom:1px solid #edf0f4!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+.driver-registry-card:last-child{border-bottom:0!important}.driver-registry-card:hover{background:#fbfcfe!important}
+.driver-registry-avatar{width:38px!important;height:38px!important;border-radius:11px!important;font-size:13px!important}
+.driver-registry-main{display:grid;gap:2px;min-width:0}.driver-registry-main strong{font-size:14px!important;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.driver-registry-main small{font-size:12px!important;color:#667085;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.driver-registry-phone,.driver-registry-city{font-size:13px;color:#344054;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.driver-registry-vehicle{margin:0!important;display:block!important;min-width:0}.driver-vehicle-link{border:0;background:transparent;padding:0;text-align:left;color:#3157c8;font-weight:650;cursor:pointer;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.driver-vehicle-link:hover{text-decoration:underline}.driver-vehicle-link small{display:block;color:#667085;font-size:11px;font-weight:500;margin-top:2px}.driver-no-car{font-size:12px;color:#98a2b3}
+.driver-registry-status{justify-self:start;font-size:11px!important;white-space:nowrap}.driver-registry-actions{display:flex!important;align-items:center;justify-content:flex-end;gap:8px!important;white-space:nowrap}.driver-registry-actions .btn,.driver-delete-button{min-height:34px!important;padding:7px 10px!important;font-size:12px!important}.driver-registry-readonly,.driver-registry-manual{display:none!important}
+
+/* Vehicle edit form: each grid item keeps its own height. */
+#carForm .grid2{align-items:start!important;grid-auto-rows:auto}
+#carForm .grid2>label{align-self:start;min-height:0!important}
+#carForm #carStatus{height:46px!important;min-height:46px!important}
+#carForm .car-driver-picker-field{align-self:start!important}
+#carForm .driver-picker-manual-fields{margin-bottom:0}
+
+/* Handover equipment: compact, readable and aligned. */
+.handover-equipment{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:12px!important}
+.handover-equipment label{display:flex!important;align-items:center!important;gap:9px!important;min-height:42px;margin:0!important;padding:8px 10px;border:1px solid #e8ecf2;border-radius:11px;background:#fbfcfe;color:#344054!important;font-size:12px!important;font-weight:600!important;line-height:1.25!important}
+.handover-equipment input[type="checkbox"]{width:17px;height:17px;flex:0 0 17px;margin:0}
+.handover-equipment legend{font-size:13px!important;color:#172033}
+
+/* Driver portal lists stay useful even with a lot of data. */
+.driver-service-plan-row{padding:11px!important;gap:10px!important}.driver-service-plan-title strong{font-size:13px!important}.driver-service-plan-main p,.driver-service-plan-meta{font-size:12px!important}.driver-notifications-more{width:100%;margin-top:8px}
+
+/* Document registry: stable columns and explicit delete action. */
+.document-register-row{grid-template-columns:minmax(260px,1.5fr) minmax(130px,.7fr) minmax(145px,.75fr) minmax(170px,.85fr) 38px 78px!important;align-items:center!important;column-gap:14px!important}
+.document-register-main,.document-register-cell{min-width:0}.document-register-actions{display:flex;justify-content:flex-end}.document-more-button{width:auto!important;min-width:70px!important;height:34px!important;padding:6px 10px!important;color:#b42318!important;background:#fff7f7!important;border-color:#fecaca!important;font-size:11px!important;font-weight:700!important}
+
+/* Keep the only vehicle status inside the hero, never floating by Back. */
+#carPage>#backToFleet{display:inline-flex!important;position:relative!important;z-index:3;margin-bottom:12px!important}
+.detail-summary .vehicle-status-pair,.detail-summary .status{position:static!important;inset:auto!important;transform:none!important}
+.detail-summary .vehicle-status-pair{margin:0 0 12px!important}
+
+@media(max-width:1100px){
+ .driver-registry-card{grid-template-columns:40px minmax(160px,1.2fr) minmax(170px,1fr) minmax(125px,.8fr) auto}.driver-registry-phone,.driver-registry-city{display:none}
+ .document-register-row{grid-template-columns:minmax(220px,1.4fr) minmax(120px,.7fr) minmax(150px,.8fr) 34px 76px!important}.document-register-row>.document-register-cell:nth-of-type(2){display:none}
+}
+@media(max-width:760px){
+ body{font-size:14px}.drivers-management-page{padding:12px!important}#driversRegistryList{border-radius:14px;gap:8px;border:0;background:transparent;overflow:visible}
+ .driver-registry-card{grid-template-columns:38px minmax(0,1fr) auto!important;gap:8px 10px!important;min-height:0!important;padding:11px 12px!important;border:1px solid #e5eaf1!important;border-radius:14px!important}
+ .driver-registry-main{grid-column:2}.driver-registry-vehicle{grid-column:2;grid-row:2}.driver-registry-status{grid-column:3;grid-row:1}.driver-registry-actions{grid-column:2/4;grid-row:3;justify-content:flex-end!important;border-top:1px solid #eef1f5;padding-top:8px}.driver-registry-phone,.driver-registry-city{display:none}
+ .driver-vehicle-link{font-size:12px}.driver-registry-actions .btn,.driver-delete-button{min-height:32px!important}
+ .handover-equipment{grid-template-columns:repeat(2,minmax(0,1fr))!important}.handover-equipment label{font-size:12px!important;min-height:40px}
+ .document-register-row{grid-template-columns:minmax(0,1fr) auto!important}.document-register-cell,.document-register-file-slot{display:none!important}.document-register-actions{grid-column:2;grid-row:1}.document-more-button{min-width:64px!important}
+}

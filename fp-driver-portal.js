@@ -471,7 +471,7 @@ function renderDriverVehicleCard(){
     <h3>${brand} ${modelName}</h3>
     <p>${plate} · ${displayCar.vin||"VIN не указан"}</p>
    </div>
-   <span class="driver-vehicle-status ${driverVehicleIsAlreadyAccepted()?"accepted":"pending"}">${driverVehicleIsAlreadyAccepted()?"Автомобиль принят":"Ожидает приёмки"}</span>
+   <span class="driver-vehicle-status">${statusText(displayCar.status||"active")}</span>
   </div>
   <div class="driver-vehicle-stats">
    <div><small>Пробег</small><strong>${km(mileage)}</strong></div>
@@ -527,7 +527,7 @@ async function renderDriverServiceFeed(){
  try{
   const rows=await window.FleetPilotCloud.getDriverServiceFeed();
   driverServiceFeedRows=rows;
-  const visibleRows=rows.filter(row=>row.status==="done"||row.driver_action_required===true||row.requires_driver===true||row.driver_message||row.appointment_at||row.scheduled_at);
+  const visibleRows=rows.filter(row=>row.status!=="done"&&(row.driver_action_required===true||row.requires_driver===true||row.driver_message||row.appointment_at||row.scheduled_at||row.date));
   if(count)count.textContent=String(visibleRows.filter(row=>row.status!=="done").length);
   root.innerHTML=visibleRows.map(row=>{
    const due=row.date?days(row.date):null;
@@ -552,16 +552,18 @@ async function renderDriverServiceFeed(){
   root.innerHTML=`<div class="driver-empty-state">${error.message||"Не удалось загрузить сервисный план"}</div>`
  }
 }
+let driverNotificationsVisible=7;
 async function renderDriverNotifications(){
  const root=$("#driverNotificationsList");if(!root)return;
  try{
   const rows=await window.FleetPilotCloud.getMyWorkspaceNotifications();
-  root.innerHTML=rows.map(row=>`
+  const visible=rows.slice(0,driverNotificationsVisible);
+  root.innerHTML=visible.map(row=>`
    <article class="driver-notification-row ${row.read_at?"read":""}">
     <span>${row.type==="repair"?"🔧":"🔔"}</span>
-    <div><strong>${row.title}</strong><small>${row.message||""}</small>
-    <em>${new Date(row.created_at).toLocaleString("ru-RU")}</em></div>
-   </article>`).join("")||'<div class="driver-empty-state">Новых уведомлений нет.</div>'
+    <div><strong>${row.title}</strong><small>${row.message||""}</small><em>${new Date(row.created_at).toLocaleString("ru-RU")}</em></div>
+   </article>`).join("")||'<div class="driver-empty-state">Новых уведомлений нет.</div>';
+  if(rows.length>visible.length){const b=document.createElement("button");b.type="button";b.className="btn driver-notifications-more";b.textContent=`Показать ещё (${rows.length-visible.length})`;b.onclick=()=>{driverNotificationsVisible+=7;renderDriverNotifications()};root.appendChild(b)}
  }catch(error){root.innerHTML='<div class="driver-empty-state">Не удалось загрузить уведомления.</div>'}
 }
 async function renderDriverPortal(){
