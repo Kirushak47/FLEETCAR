@@ -145,7 +145,8 @@ function showPage(id){
  const driverOwnPage=resolvedRole==="driver"&&['driverPortalPage','driverProfilePage'].includes(id);
  const notificationCenterPage=id==="attentionPage"&&resolvedRole!=="driver";
  if(!driverOwnPage&&!notificationCenterPage&&!enterpriseCanOpen(id)){
-  if(fleetPilotEnterpriseAccessReady&&resolvedRole!=="driver")toast("У вашей роли нет доступа к этому разделу");
+  // V19.0.29: inaccessible sections are already hidden by role permissions.
+  // If a stale URL/hash points to one, redirect silently instead of showing a redundant access warning.
   const role=enterpriseCurrentRole();
   id=role==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage()
  }

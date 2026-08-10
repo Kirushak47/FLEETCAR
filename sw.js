@@ -1,9 +1,9 @@
 const CACHE="fleetpilot-v19-0-25";
 const ASSETS=[
   "./","./index.html","./manifest.webmanifest",
-  "./fp-base.css?v=1902800","./fp-service-layout.css?v=1902800","./fp-desktop-gps.css?v=1902800","./fp-cloud-roles.css?v=1902800","./fp-driver.css?v=1902800","./fp-crm-service.css?v=1902800","./fp-current-ui.css?v=1902800","./fp-mobile-v17.css?v=1902800","./fp-mobile-audit-v1916.css?v=1902800",
-  "./cloud-config.js?v=1902800","./cloud.js?v=1902800",
-  "./fp-core-data.js?v=1902800","./fp-roles-company.js?v=1902800","./fp-driver-portal.js?v=1902800","./fp-router-navigation.js?v=1902800","./fp-files-backups.js?v=1902800","./fp-analytics-dashboard.js?v=1902800","./fp-gps-map.js?v=1902800","./fp-fleet.js?v=1902800","./fp-service-finance.js?v=1902800","./fp-calendar-vehicle.js?v=1902800","./fp-actions-documents.js?v=1902800","./fp-boot-hotfixes.js?v=1902800"
+  "./fp-base.css?v=1902900","./fp-service-layout.css?v=1902900","./fp-desktop-gps.css?v=1902900","./fp-cloud-roles.css?v=1902900","./fp-driver.css?v=1902900","./fp-crm-service.css?v=1902900","./fp-current-ui.css?v=1902900","./fp-mobile-v17.css?v=1902900","./fp-mobile-audit-v1916.css?v=1902900",
+  "./cloud-config.js?v=1902900","./cloud.js?v=1902900",
+  "./fp-core-data.js?v=1902900","./fp-roles-company.js?v=1902900","./fp-driver-portal.js?v=1902900","./fp-router-navigation.js?v=1902900","./fp-files-backups.js?v=1902900","./fp-analytics-dashboard.js?v=1902900","./fp-gps-map.js?v=1902900","./fp-fleet.js?v=1902900","./fp-service-finance.js?v=1902900","./fp-calendar-vehicle.js?v=1902900","./fp-actions-documents.js?v=1902900","./fp-boot-hotfixes.js?v=1902900"
 ];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

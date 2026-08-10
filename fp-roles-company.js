@@ -479,10 +479,17 @@ async function renderCompanyActivity(){
 }
 
 function driverRegistryAssignmentRow(userId){
- // V19.0.1: Company → Drivers is read-only. The vehicle profile is the only
- // source of truth for the current driver ↔ vehicle link.
+ // V19.0.29: the vehicle profile remains the source of truth for WHO is assigned,
+ // but acceptance evidence must come from the real current handover row when available.
+ // Previously this function fabricated an "assigned" row from the car and discarded
+ // accepted_at / issue_at, which could make an already accepted car look pending.
  const c=fleetCars().find(c=>String(c.driverUserId||"")===String(userId||""));
- return c?{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}:null
+ if(!c)return null;
+ const cloud=(workspaceDriverAssignmentRows||[]).find(row=>
+  String(row.driver_user_id||row.user_id||"")===String(userId||"")&&
+  String(row.car_id||row.vehicle_id||"")===String(c.id||"")
+ );
+ return cloud||{driver_user_id:userId,car_id:c.id,status:c.driverAcceptedAt?"issued":"assigned",issue_at:c.driverAcceptedAt||null,accepted_at:c.driverAcceptedAt||null,driver_email:c.driverEmail||"",driver_name:c.driverName||c.tenant||""}
 }
 function driverRegistryCarForRow(row){return row?.car_id?car(String(row.car_id)):null}
 function driverRegistryAccepted(row){const c=driverRegistryCarForRow(row);return window.driverAcceptanceBelongsToAssignment?window.driverAcceptanceBelongsToAssignment(row,c):Boolean(c?.driverAcceptedAt)}
