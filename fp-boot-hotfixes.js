@@ -228,8 +228,20 @@ function syncServiceRelations(repair,previous=null){
  if(!repair)return;
  repair.serviceType=repair.serviceType||inferRepairServiceType(repair);
  syncLinkedExpenseFromRepair(repair);
- const c=car(repair.carId);
- if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
+ // V19.0.28: service/history rows never act as a background MAX() odometer source.
+ // Only an explicit completion (or editing the mileage of an already completed job)
+ // may publish the staff-entered value to the vehicle.
+ const completed=String(repair.status||"")==="done";
+ const becameDone=completed&&String(previous?.status||"")!=="done";
+ const doneMileageChanged=completed&&previous&&Number(previous.mileage||0)!==Number(repair.mileage||0);
+ if(completed&&(becameDone||doneMileageChanged||!previous)){
+  const c=car(repair.carId),value=Number(repair.mileage||0);
+  if(c&&Number.isFinite(value)&&value>=0){
+   c.mileage=value;
+   c.mileageUpdatedAt=new Date().toISOString();
+   c.mileageSource="service_done";
+  }
+ }
  applyCompletedServiceToVehicle(repair,previous);
  recalculateVehicleMaintenance(repair.carId);
  syncCarServiceStatus(repair.carId)

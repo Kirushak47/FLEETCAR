@@ -222,7 +222,23 @@ $("#quickServiceForm").onsubmit=e=>{
  serviceSuccessAnimation(carId,type,type==="oil"?"Масло заменено":type==="insurance"?"Страховка обновлена":"Техосмотр обновлён")
 };
 
-$("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value),confirmed=currentConfirmedMileage(c.id);if(v<confirmed)return toast(`Новый пробег меньше подтверждённого: ${km(confirmed)}`);c.mileage=v;c.history=Array.isArray(c.history)?c.history:[];c.history.push({date:$("#mileageDate").value,value:v,source:"staff_manual"});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
+$("#mileageForm").onsubmit=e=>{
+ e.preventDefault();
+ const c=car($("#mileageCarId").value),v=Number($("#newMileage").value),previous=Number(c?.mileage||0);
+ if(!c||!Number.isFinite(v)||v<0)return toast("Укажите корректный пробег");
+ if(v<previous&&!confirm(`Пробег уменьшается с ${km(previous)} до ${km(v)}. Подтвердить исправление?`))return;
+ c.mileage=v;
+ c.mileageUpdatedAt=new Date().toISOString();
+ c.mileageSource="staff_manual";
+ c.history=Array.isArray(c.history)?c.history:[];
+ c.history.push({date:$("#mileageDate").value,value:v,source:"staff_manual",at:new Date().toISOString(),previousValue:previous});
+ addTimeline(c.id,"mileage",v<previous?"Исправлен пробег":"Обновлён пробег",0,$("#mileageDate").value,`${km(previous)} → ${km(v)}`);
+ logActivity(v<previous?"Исправлен пробег":"Обновлён пробег","Автомобиль",`${km(previous)} → ${km(v)}`,c.id);
+ save();
+ $("#mileageDialog").close();
+ selectedCarId===c.id?openCar(c.id):renderFleet();
+ toast(v<previous?"Пробег исправлен":"Пробег обновлён")
+};
 $("#expenseCategory").onchange=syncExpenseRepairFields;
 $("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
 $("#repairCarId").onchange=()=>{$("#repairMileage").value=currentConfirmedMileage($("#repairCarId").value);updateRepairCarMeta()};
@@ -266,8 +282,8 @@ $("#repairForm").onsubmit=async e=>{
    $("#repairDate")?.focus();
    return
   }
-  if(mileage<minimum){
-   toast(`Пробег не может быть меньше ${km(minimum)}`);
+  if(!Number.isFinite(mileage)||mileage<0){
+   toast("Укажите корректный пробег");
    $("#repairMileage")?.focus();
    return
   }
@@ -297,7 +313,7 @@ $("#repairForm").onsubmit=async e=>{
   // Mileage attached to a driver's incoming request is informational until the
   // service is actually completed. Creating/accepting the task must not move the
   // vehicle odometer.
-  const shouldCommitVehicleMileage=!obj.linkedRequestId||status==="done";
+  const shouldCommitVehicleMileage=status==="done";
   // If an old build poisoned the car with the original driver's reported value,
   // correct/quarantine it before any validation/sync can reuse that value.
   if(obj.linkedRequestId)cleanupLegacyRequestMileage(carId,obj.linkedRequestId,mileage,status==="done");
@@ -329,9 +345,13 @@ $("#repairForm").onsubmit=async e=>{
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
   if(c&&shouldCommitVehicleMileage){
-   const baseline=currentConfirmedMileage(carId);
-   if(obj.linkedRequestId&&status==="done")c.mileage=Math.max(baseline,mileage);
-   else if(mileage>Number(c.mileage||0))c.mileage=mileage
+   const previousMileage=Number(c.mileage||0);
+   if(mileage<previousMileage&&!confirm(`Пробег уменьшается с ${km(previousMileage)} до ${km(mileage)}. Подтвердить исправление?`))return;
+   c.mileage=mileage;
+   c.mileageUpdatedAt=new Date().toISOString();
+   c.mileageSource=obj.linkedRequestId?"driver_request_service_done":"service_done";
+   c.history=Array.isArray(c.history)?c.history:[];
+   c.history.push({date:obj.completedDate||today(),value:mileage,source:"service_done",at:new Date().toISOString(),previousValue:previousMileage});
   }
   syncServiceRelations(obj,previous);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
