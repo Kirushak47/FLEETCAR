@@ -1,0 +1,15 @@
+FleetPilot V19.0.19 — Driver service request mileage fix
+
+Root cause:
+currentConfirmedMileage() treated mileage from ALL service tasks as confirmed,
+including future/planned repairs. Therefore a valid mileage submitted by a driver
+could be considered "too low"; Save focused the mileage field and silently stopped.
+
+Fix:
+- Planned/future service mileage no longer counts as confirmed odometer.
+- Driver service request validates against the vehicle's actual current mileage.
+- A valid driver-request mileage can advance the vehicle odometer.
+- Planned service tasks can no longer advance the vehicle odometer.
+- In-progress/completed service can still advance mileage.
+- Same rule patched in duplicated runtime modules and service hotfixes.
+- PWA cache/version bumped to V19.0.19.
