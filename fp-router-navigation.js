@@ -437,11 +437,9 @@ if(driverRepairForm)driverRepairForm.onsubmit=async event=>{
    description:$("#driverRepairDescription").value,
    dashboardWarning:$("#driverRepairDashboardWarning").checked
   });
-  if(assignedCar&&reportMileage>currentMileage){
-   assignedCar.mileage=reportMileage;
-   save?.();
-   try{await window.FleetPilotCloud.updateDriverMileage?.(reportMileage,"driver_repair_request")}catch(error){console.warn("Driver mileage sync",error)}
-  }
+  // A service request records the mileage reported by the driver, but it is not
+  // an authoritative odometer update. The vehicle mileage changes only through
+  // an explicit mileage action / handover / confirmed completed service.
   $("#driverRepairDialog").close();
   driverRepairForm.reset();
   toast("Заявка отправлена");

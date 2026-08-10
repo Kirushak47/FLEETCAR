@@ -231,7 +231,19 @@ async function loadWorkspaceDriverDirectory(){
   const result=await window.FleetPilotCloud?.enterpriseList?.();
   workspaceDriverDirectory=(result?.members||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
   const api=window.FleetPilotDriverMeta,store=api?.load?.()||{};
-  for(const member of workspaceDriverDirectory){const email=normalizeDriverIdentity(workspaceDriverEmail(member));const meta=store[String(member.user_id)]||store[email];if(meta&&email&&!store[String(member.user_id)])store[String(member.user_id)]=meta;if(meta?.pendingCarId&&!workspaceDriverAssignmentRows.some(r=>String(r.driver_user_id)===String(member.user_id)&&String(r.status)!=="returned")){try{await window.FleetPilotCloud.assignDriverVehicle(member.user_id,meta.pendingCarId);meta.pendingCarId="";store[String(member.user_id)]=meta;store[email]=meta}catch(error){console.warn("Pending driver assignment",error)}}}
+  for(const member of workspaceDriverDirectory){
+   const email=normalizeDriverIdentity(workspaceDriverEmail(member));
+   const meta=store[String(member.user_id)]||store[email];
+   if(meta&&email&&!store[String(member.user_id)])store[String(member.user_id)]=meta;
+   // Directory loading is read-only. Never call assignDriverVehicle() while refreshing
+   // members/assignments: that RPC starts a fresh assignment cycle and used to reset
+   // an already accepted vehicle just by opening/refreshing the app.
+   if(meta?.pendingCarId){
+    meta.pendingCarId="";
+    store[String(member.user_id)]=meta;
+    if(email)store[email]=meta;
+   }
+  }
   api?.save?.(store);
  }catch(error){console.warn("Driver directory",error);workspaceDriverDirectory=[]}
  return workspaceDriverDirectory

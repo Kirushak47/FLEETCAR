@@ -293,23 +293,28 @@ $("#repairForm").onsubmit=async e=>{
    linkedExpenseId:$("#repairLinkedExpenseId").value
   };
 
-  // Cloud mileage update must never freeze or block the local repair.
+  // Mileage attached to a driver's incoming request is informational until the
+  // service is actually completed. Creating/accepting the task must not move the
+  // vehicle odometer.
+  const shouldCommitVehicleMileage=!obj.linkedRequestId||status==="done";
   let mileageCloudWarning="";
-  try{
-   const cloudUpdate=window.FleetPilotCloud?.updateStaffVehicleMileage
-    ?window.FleetPilotCloud.updateStaffVehicleMileage(
-      carId,mileage,
-      obj.linkedRequestId?"driver_request_service":obj.title.toLowerCase().includes("масл")?"oil_service":"service"
-     )
-    :Promise.resolve();
+  if(shouldCommitVehicleMileage){
+   try{
+    const cloudUpdate=window.FleetPilotCloud?.updateStaffVehicleMileage
+     ?window.FleetPilotCloud.updateStaffVehicleMileage(
+       carId,mileage,
+       obj.linkedRequestId?"driver_request_service_done":obj.title.toLowerCase().includes("масл")?"oil_service":"service"
+      )
+     :Promise.resolve();
 
-   await Promise.race([
-    cloudUpdate,
-    new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),4500))
-   ])
-  }catch(error){
-   mileageCloudWarning="Пробег сохранён локально, облако обновится позже";
-   console.warn("Vehicle mileage cloud update skipped",error)
+    await Promise.race([
+     cloudUpdate,
+     new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),4500))
+    ])
+   }catch(error){
+    mileageCloudWarning="Пробег сохранён локально, облако обновится позже";
+    console.warn("Vehicle mileage cloud update skipped",error)
+   }
   }
 
   const previous=old?structuredClone(old):null;
@@ -319,7 +324,7 @@ $("#repairForm").onsubmit=async e=>{
   obj.history=history.slice(-60);obj.updatedAt=new Date().toISOString();
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
-  if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
+  if(c&&shouldCommitVehicleMileage&&mileage>Number(c.mileage||0))c.mileage=mileage;
   syncServiceRelations(obj,previous);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
   logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);

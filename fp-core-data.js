@@ -236,6 +236,33 @@ window.clearFleetPilotLocalDatabase=()=>{
 window.getFleetPilotMeta=()=>readJsonStorage(META_KEY)||{};
 window.replaceFleetPilotDatabase=payload=>{
  if(!isFleetDatabase(payload))throw new Error("Некорректная облачная база");
+ // Preserve a driver's completed acceptance when a remote fleet-state update
+ // arrives for the SAME assignment cycle. Driver accounts cannot publish the
+ // whole fleet payload, so without this merge an owner/coordinator sync could
+ // overwrite driverAcceptedAt and make the portal ask to accept the same car again.
+ const current=readJsonStorage(DATA_KEY);
+ if(isFleetDatabase(current)&&Array.isArray(payload.cars)){
+  const localById=new Map((current.cars||[]).map(c=>[String(c.id),c]));
+  payload=structuredClone(payload);
+  payload.cars.forEach(incoming=>{
+   const local=localById.get(String(incoming.id));
+   if(!local)return;
+   const sameDriver=String(local.driverUserId||"")&&String(local.driverUserId||"")===String(incoming.driverUserId||"");
+   const localRev=String(local.driverAssignmentRevision||"");
+   const incomingRev=String(incoming.driverAssignmentRevision||"");
+   const sameCycle=sameDriver&&localRev&&incomingRev&&localRev===incomingRev;
+   if(sameCycle&&local.driverAcceptedAt){
+    incoming.driverAcceptedAt=local.driverAcceptedAt;
+    incoming.driverAcceptedRevision=local.driverAcceptedRevision||localRev;
+    if(Array.isArray(local.vehicleHandoverAudit)){
+     const merged=[...(Array.isArray(incoming.vehicleHandoverAudit)?incoming.vehicleHandoverAudit:[])];
+     const keys=new Set(merged.map(x=>String(x.key||x.id||"")));
+     for(const row of local.vehicleHandoverAudit){const key=String(row.key||row.id||"");if(!keys.has(key)){merged.push(row);keys.add(key)}}
+     incoming.vehicleHandoverAudit=merged.slice(-200);
+    }
+   }
+  });
+ }
  localStorage.setItem(DATA_KEY,JSON.stringify(payload));
  localStorage.setItem(META_KEY,JSON.stringify({lastSaved:new Date().toISOString(),source:"cloud"}));
 };
