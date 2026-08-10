@@ -427,7 +427,7 @@ if(driverRepairForm)driverRepairForm.onsubmit=async event=>{
    const parsed=Number(raw);
    return Number.isFinite(parsed)?Math.max(0,Math.round(parsed)):0
   };
-  const currentMileage=normalizeMileageValue(assignedCar?.id&&typeof currentConfirmedMileage==="function"?currentConfirmedMileage(assignedCar.id):(assignedCar?.mileage||0));
+  const currentMileage=normalizeMileageValue(assignedCar?.mileage ?? driverPortalContext?.vehicle_snapshot?.mileage ?? driverPortalContext?.mileage ?? 0);
   const reportMileage=normalizeMileageValue($("#driverRepairMileage").value);
   if(reportMileage<currentMileage)throw new Error(`Пробег не может быть меньше текущего: ${currentMileage.toLocaleString("ru-RU")} км`);
   await window.FleetPilotCloud.submitDriverRepairRequest({

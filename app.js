@@ -1449,21 +1449,43 @@ function serviceArchiveRows(){
  const internal=(db.repairs||[]).filter(r=>["done","cancelled"].includes(String(r.status||""))).map(row=>({source:"internal",row,when:row.completedDate||row.date||""}));
  return [...driver,...internal].sort((a,b)=>String(b.when).localeCompare(String(a.when)))
 }
+function serviceArchiveAdminCanDelete(){
+ return enterpriseCurrentRole()==="owner"||Boolean(window.FleetPilotCloud?.isWorkspaceOwner)||Boolean(window.FleetPilotCloud?.isPlatformAdmin)
+}
+async function deleteArchivedServiceRequest(source,id){
+ if(!serviceArchiveAdminCanDelete())return toast("Удалять заявки из архива может только администратор");
+ if(!confirm("Удалить эту заявку из архива без возможности восстановления?"))return;
+ try{
+  if(source==="driver"){
+   await window.FleetPilotCloud.deleteDriverRepairRequest(id);
+   workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>String(row.id)!==String(id));
+   if(Array.isArray(db.serviceRequests))db.serviceRequests=db.serviceRequests.filter(row=>String(row.id)!==String(id));
+  }else{
+   db.repairs=(db.repairs||[]).filter(row=>String(row.id)!==String(id));
+  }
+  save();
+  toast("Заявка удалена из архива");
+  renderServiceRequestArchive();
+  renderRepairs();
+ }catch(error){toast(error.message||"Не удалось удалить заявку")}
+}
+window.deleteArchivedServiceRequest=deleteArchivedServiceRequest;
 function renderServiceRequestArchive(){
  const panel=$("#serviceRequestArchivePanel"),root=$("#serviceRequestArchiveList");if(!panel||!root)return;
  const all=serviceArchiveRows();
  const rows=all.filter(x=>serviceArchiveFilter==="all"||x.source===serviceArchiveFilter);
  const count=$("#serviceArchivedRequestCount");if(count)count.textContent=String(rows.length);
+ const canDelete=serviceArchiveAdminCanDelete();
  root.innerHTML=rows.map(item=>{
   if(item.source==="driver"){
    const row=item.row,localCar=car(row.car_id),carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.car_id||"Автомобиль"),category=DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category||"Неисправность";
-   return `<article class="workspace-request-row service-archive-request" data-archived-request-id="${row.id}"><div><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong><span class="service-inbox-request-badge rejected">Водитель</span></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${item.when?new Date(item.when).toLocaleString("ru-RU"):"—"} · ${km(row.mileage)}</small></div><div class="service-archive-actions"><button type="button" class="btn primary" data-restore-request="${row.id}">Вернуть в работу</button></div></article>`
+   return `<article class="workspace-request-row service-archive-request" data-archived-request-id="${row.id}"><div><div class="service-inbox-request-heading"><strong>${category} · ${carName}</strong><span class="service-inbox-request-badge rejected">Водитель</span></div><span>${row.description||"Без описания"}</span><small>${row.driver_email||"Водитель"} · ${item.when?new Date(item.when).toLocaleString("ru-RU"):"—"} · ${km(row.mileage)}</small></div><div class="service-archive-actions"><button type="button" class="btn primary" data-restore-request="${row.id}">Вернуть в работу</button>${canDelete?`<button type="button" class="btn danger" onclick="deleteArchivedServiceRequest('driver','${row.id}')">Удалить</button>`:""}</div></article>`
   }
   const row=item.row,localCar=car(row.carId),carName=localCar?`${model(localCar).brand} ${model(localCar).model} · ${localCar.plate}`:(row.carId||"Автомобиль");
-  return `<article class="workspace-request-row service-archive-request internal"><div><div class="service-inbox-request-heading"><strong>${row.title||"Сервисная работа"} · ${carName}</strong><span class="service-inbox-request-badge ${row.status==="done"?"accepted":"rejected"}">Сервис</span></div><span>${row.note||row.service||"Внутренняя заявка сервиса"}</span><small>${row.mechanic||"Сервисмен"} · ${item.when?date(item.when):"—"} · ${repairStatusText(row.status)} · ${money(row.actual||row.planned||0)}</small></div><div class="service-archive-actions"><button type="button" class="btn" onclick="openSmartEntity('repair','${row.id}','${row.carId}')">Открыть</button></div></article>`
+  return `<article class="workspace-request-row service-archive-request internal"><div><div class="service-inbox-request-heading"><strong>${row.title||"Сервисная работа"} · ${carName}</strong><span class="service-inbox-request-badge ${row.status==="done"?"accepted":"rejected"}">Сервис</span></div><span>${row.note||row.service||"Внутренняя заявка сервиса"}</span><small>${row.mechanic||"Сервисмен"} · ${item.when?date(item.when):"—"} · ${repairStatusText(row.status)} · ${money(row.actual||row.planned||0)}</small></div><div class="service-archive-actions"><button type="button" class="btn" onclick="openSmartEntity('repair','${row.id}','${row.carId}')">Открыть</button>${canDelete?`<button type="button" class="btn danger" onclick="deleteArchivedServiceRequest('internal','${row.id}')">Удалить</button>`:""}</div></article>`
  }).join("")||'<div class="driver-empty-state service-inbox-empty">Архив заявок пуст.</div>';
- $$("[data-service-archive-filter]").forEach(button=>{button.classList.toggle("active",button.dataset.serviceArchiveFilter===serviceArchiveFilter);button.onclick=()=>{serviceArchiveFilter=button.dataset.serviceArchiveFilter;renderServiceRequestArchive()}});
- $$("[data-restore-request]").forEach(button=>button.onclick=async()=>{const requestId=button.dataset.restoreRequest,request=workspaceRepairAlerts.find(row=>String(row.id)===String(requestId));button.disabled=true;const oldText=button.textContent;button.textContent="Возвращаю…";try{await window.FleetPilotCloud.updateDriverRepairRequest(requestId,"accepted","Возвращено из архива");if(request)request.status="accepted";toast("Заявка возвращена в работу");renderServiceRequestArchive();renderFleetDriverRequestsPanel();await renderWorkspaceRepairRequests()}catch(error){toast(error.message||"Не удалось вернуть заявку")}finally{button.disabled=false;button.textContent=oldText}})
+ $$('[data-service-archive-filter]').forEach(button=>{button.classList.toggle("active",button.dataset.serviceArchiveFilter===serviceArchiveFilter);button.onclick=()=>{serviceArchiveFilter=button.dataset.serviceArchiveFilter;renderServiceRequestArchive()}});
+ $$('[data-restore-request]').forEach(button=>button.onclick=async()=>{const requestId=button.dataset.restoreRequest,request=workspaceRepairAlerts.find(row=>String(row.id)===String(requestId));button.disabled=true;const oldText=button.textContent;button.textContent="Возвращаю…";try{await window.FleetPilotCloud.updateDriverRepairRequest(requestId,"accepted","Возвращено из архива");if(request)request.status="accepted";toast("Заявка возвращена в работу");renderServiceRequestArchive();renderFleetDriverRequestsPanel();await renderWorkspaceRepairRequests()}catch(error){toast(error.message||"Не удалось вернуть заявку")}finally{button.disabled=false;button.textContent=oldText}})
 }
 
 function setServiceRequestArchiveVisible(visible){

@@ -5,7 +5,7 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="19.0.15";
+window.FLEETPILOT_BUILD="19.0.25";
 window.addEventListener("DOMContentLoaded",()=>{
  document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode(`FleetPilot V${window.FLEETPILOT_BUILD}`));
  document.documentElement.dataset.fleetpilotBuild=window.FLEETPILOT_BUILD;
