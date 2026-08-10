@@ -5,10 +5,10 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="19.0.6";
+window.FLEETPILOT_BUILD="19.0.15";
 window.addEventListener("DOMContentLoaded",()=>{
- document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode("FleetPilot V19.0.6"));
- document.documentElement.dataset.fleetpilotBuild="19.0.6";
+ document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode(`FleetPilot V${window.FLEETPILOT_BUILD}`));
+ document.documentElement.dataset.fleetpilotBuild=window.FLEETPILOT_BUILD;
 });
 
 function toggleQuickActions(force){const menu=$("#quickActionMenu"),open=typeof force==="boolean"?force:menu.hidden;menu.hidden=!open;$("#quickActionButton").classList.toggle("active",open)}
@@ -22,7 +22,7 @@ const ENTERPRISE_ROLE_LABELS={
  user:"Пользователь"
 };
 const ENTERPRISE_ROLE_ACCESS={
- owner:["dashboardPage","fleetPage","driversPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","dataPage","morePage","mobileMapPage","searchPage","carPage"],
+ owner:["dashboardPage","fleetPage","driversPage","repairsPage","paymentsPage","expensesPage","calendarPage","analyticsPage","documentsPage","companyPage","dataPage","attentionPage","morePage","mobileMapPage","searchPage","carPage"],
  coordinator:["dashboardPage","fleetPage","driversPage","repairsPage","calendarPage","documentsPage","companyPage","dataPage","mobileMapPage","searchPage","carPage"],
  accountant:["dashboardPage","paymentsPage","expensesPage","analyticsPage","documentsPage","calendarPage","searchPage"],
  mechanic:["dashboardPage","fleetPage","repairsPage","documentsPage","calendarPage","searchPage","carPage"],
@@ -40,6 +40,10 @@ function enterpriseCanOpen(pageId){
  if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady)return true;
  if(window.FleetPilotCloud?.session&&!window.FleetPilotCloud?.membership)return false;
  const role=enterpriseCurrentRole();
+ // V19.0.15: Attention/Notification Center is a shell-level CRM page.
+ // CEO/owner must always see it; other non-driver staff may open it and
+ // the content itself is filtered by their role/permissions. Drivers use Driver Portal.
+ if(pageId==="attentionPage"&&role!=="driver")return true;
  const legacy=(ENTERPRISE_ROLE_ACCESS[role]||ENTERPRISE_ROLE_ACCESS.user).includes(pageId);
  if(role==="driver"&&["driverPortalPage","driverProfilePage"].includes(pageId))return true;
  if(role==="owner"||window.FleetPilotCloud?.isWorkspaceOwner)return legacy;

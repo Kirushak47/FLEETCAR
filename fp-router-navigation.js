@@ -143,7 +143,8 @@ function showPage(id){
  if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";
  // V18.3: Driver Portal is a dedicated shell. Never run CRM access denial against its own pages.
  const driverOwnPage=resolvedRole==="driver"&&['driverPortalPage','driverProfilePage'].includes(id);
- if(!driverOwnPage&&!enterpriseCanOpen(id)){
+ const notificationCenterPage=id==="attentionPage"&&resolvedRole!=="driver";
+ if(!driverOwnPage&&!notificationCenterPage&&!enterpriseCanOpen(id)){
   if(fleetPilotEnterpriseAccessReady&&resolvedRole!=="driver")toast("У вашей роли нет доступа к этому разделу");
   const role=enterpriseCurrentRole();
   id=role==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage()

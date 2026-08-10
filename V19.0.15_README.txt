@@ -1,0 +1,10 @@
+FleetPilot V19.0.15 — Notification Center / CEO Access Fix
+
+- Fixed bell/Attention Center access for CEO/owner on desktop and mobile.
+- attentionPage is now a shell-level CRM page for all non-driver staff; content can still be role-filtered.
+- Drivers continue to use Driver Portal notifications.
+- CEO/owner role access list now explicitly includes attentionPage.
+- Router no longer shows the false “У вашей роли нет доступа к этому разделу” toast when opening the bell.
+- Mobile/header build label is updated from hardcoded V19.0.6 to V19.0.15 and reads from FLEETPILOT_BUILD.
+- Service Worker cache bumped to fleetpilot-v19-0-15 so installed mobile/PWA clients load the new code.
+- All V19.0.14 mileage/oil and earlier finance/RPC fixes are preserved.
