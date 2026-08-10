@@ -1,0 +1,1 @@
+V19.0.17: fixed root mobile Drivers wrapper. Generic mobile CSS forced .desktop-fleet-page-head to flex, placing controls left and registry right. Drivers wrapper is now block, controls and list are full-width rows, cards use dedicated mobile layout. PWA cache bumped.
