@@ -1,0 +1,42 @@
+@media(max-width:1099px){
+html,body,.app,main,.page{max-width:100%!important;overflow-x:hidden!important}
+body:not(.driver-only-ui) main{display:block!important;width:100%!important;margin:0!important}
+body:not(.driver-only-ui) main>.page{width:100%!important;max-width:100%!important;margin:0!important;justify-self:stretch!important}
+.page>*{max-width:100%!important}
+#driversPage,.drivers-management-page,#driversRegistryList,.drivers-registry-list{width:100%!important;max-width:100%!important;min-width:0!important}
+#driversRegistryList,.drivers-registry-list{display:grid!important;grid-template-columns:minmax(0,1fr)!important;justify-items:stretch!important}
+.driver-registry-card{width:100%!important;max-width:100%!important;min-width:0!important;justify-self:stretch!important;margin:0!important}
+#fleetPage,#fleetGrid,#desktopFleetList,.fleet-grid,.mobile-fleet-list,#paymentsPage,#expensesPage,#repairsPage,#documentsPage,#calendarPage,#analyticsPage,#companyPage,#dataPage,#attentionPage{width:100%!important;max-width:100%!important;min-width:0!important}
+.owner-dashboard-grid,.analytics-grid,.detail-tab-grid,.documents-layout,.finance-layout,.service-layout,.company-layout,.intelligence-grid,.company-overview-grid,.workspace-settings-grid,.role-permissions-layout{grid-template-columns:minmax(0,1fr)!important;width:100%!important}
+.toolbar,.desktop-fleet-toolbar,.document-register-toolbar,.service-toolbar,.calendar-toolbar,.analytics-toolbar,.drivers-registry-toolbar,.enterprise-toolbar{width:100%!important;max-width:100%!important;min-width:0!important}
+#fleetPage .desktop-car-kpis{min-width:0!important;max-width:100%!important;width:100%!important}
+.document-register-row,.service-request-row,.service-task-row,.workspace-request-row,.repair-card{max-width:100%!important;min-width:0!important}
+dialog,.modal,.cloud-shell,.profile-dialog-shell{max-width:calc(100vw - 18px)!important}
+}
+@media(max-width:760px){
+.drivers-management-page{padding:10px!important}
+.drivers-management-page .company-section-head{width:100%!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important}
+.drivers-registry-head-actions{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important}
+.drivers-registry-toolbar{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+#driversRegistryList{gap:9px!important;border:0!important;background:transparent!important;overflow:visible!important}
+.driver-registry-card{display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important;grid-template-rows:auto auto auto!important;column-gap:10px!important;row-gap:7px!important;padding:12px!important;border:1px solid var(--m-line,#e3e8ef)!important;border-radius:15px!important;background:var(--m-surface,#fff)!important}
+.driver-registry-avatar{grid-column:1!important;grid-row:1/3!important;width:42px!important;height:42px!important;border-radius:12px!important}
+.driver-registry-main{grid-column:2!important;grid-row:1!important;min-width:0!important;align-self:center!important}
+.driver-registry-main strong{font-size:14px!important}.driver-registry-main small{font-size:11px!important}
+.driver-registry-status{grid-column:3!important;grid-row:1!important;align-self:center!important;justify-self:end!important;max-width:118px!important;overflow:hidden!important;text-overflow:ellipsis!important;padding:6px 8px!important;font-size:10px!important}
+.driver-registry-vehicle{grid-column:2/4!important;grid-row:2!important;width:100%!important;min-width:0!important;margin:0!important}
+.driver-vehicle-link{display:block!important;width:100%!important;max-width:100%!important;font-size:12px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.driver-registry-actions{grid-column:1/4!important;grid-row:3!important;display:flex!important;width:100%!important;justify-content:flex-end!important;align-items:center!important;gap:7px!important;padding-top:9px!important;border-top:1px solid var(--m-line,#eef1f5)!important}
+.driver-registry-actions .btn,.driver-delete-button{width:auto!important;min-width:0!important;min-height:34px!important;padding:0 11px!important;font-size:11px!important}
+.driver-registry-phone,.driver-registry-city,.driver-registry-manual,.driver-registry-readonly{display:none!important}
+.service-request-row,.service-task-row,.repair-card,.workspace-request-row{grid-template-columns:minmax(0,1fr)!important}
+.document-register-row{width:100%!important;grid-template-columns:minmax(0,1fr) auto!important;column-gap:8px!important;padding-inline:10px!important}
+.company-tabs{overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
+}
+@media(max-width:520px){
+.drivers-registry-head-actions{grid-template-columns:1fr!important}
+.driver-registry-card{grid-template-columns:40px minmax(0,1fr)!important}
+.driver-registry-status{grid-column:2!important;grid-row:2!important;justify-self:start!important;max-width:100%!important}
+.driver-registry-vehicle{grid-column:2!important;grid-row:3!important}
+.driver-registry-actions{grid-column:1/3!important;grid-row:4!important}
+}

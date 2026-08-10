@@ -1,0 +1,1 @@
+FleetPilot V19.0.16 — full mobile layout audit. Drivers, fleet, service, expenses, payments, documents, calendar, analytics, company, data/attention and dialogs normalized for mobile. Drivers registry forced to full width with dedicated compact mobile card. Runtime version and service-worker cache updated.
