@@ -222,7 +222,7 @@ $("#quickServiceForm").onsubmit=e=>{
  serviceSuccessAnimation(carId,type,type==="oil"?"Масло заменено":type==="insurance"?"Страховка обновлена":"Техосмотр обновлён")
 };
 
-$("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value);if(v<c.mileage)return toast("Новый пробег меньше текущего");c.mileage=v;c.history.push({date:$("#mileageDate").value,value:v});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
+$("#mileageForm").onsubmit=e=>{e.preventDefault();const c=car($("#mileageCarId").value),v=Number($("#newMileage").value),confirmed=currentConfirmedMileage(c.id);if(v<confirmed)return toast(`Новый пробег меньше подтверждённого: ${km(confirmed)}`);c.mileage=v;c.history=Array.isArray(c.history)?c.history:[];c.history.push({date:$("#mileageDate").value,value:v,source:"staff_manual"});addTimeline(c.id,"mileage","Обновлён пробег",0,$("#mileageDate").value,km(v));logActivity("Обновлён пробег","Автомобиль",`${km(v)}`,c.id);save();$("#mileageDialog").close();selectedCarId===c.id?openCar(c.id):renderFleet();toast("Пробег обновлён")};
 $("#expenseCategory").onchange=syncExpenseRepairFields;
 $("#expenseCarId").onchange=()=>{$("#expenseRepairMileage").value=currentConfirmedMileage($("#expenseCarId").value)};
 $("#repairCarId").onchange=()=>{$("#repairMileage").value=currentConfirmedMileage($("#repairCarId").value);updateRepairCarMeta()};
@@ -249,7 +249,8 @@ $("#repairForm").onsubmit=async e=>{
   const old=db.repairs.find(x=>x.id===id);
   const carId=$("#repairCarId").value;
   const mileage=Number($("#repairMileage").value||0);
-  const minimum=currentConfirmedMileage(carId);
+  const linkedRequestId=$("#repairLinkedRequestId").value;
+  const minimum=repairLinkedRequestMinimum(carId,linkedRequestId);
 
   if(!carId){
    toast("Выберите автомобиль");
@@ -297,6 +298,9 @@ $("#repairForm").onsubmit=async e=>{
   // service is actually completed. Creating/accepting the task must not move the
   // vehicle odometer.
   const shouldCommitVehicleMileage=!obj.linkedRequestId||status==="done";
+  // If an old build poisoned the car with the original driver's reported value,
+  // correct/quarantine it before any validation/sync can reuse that value.
+  if(obj.linkedRequestId)cleanupLegacyRequestMileage(carId,obj.linkedRequestId,mileage,status==="done");
   let mileageCloudWarning="";
   if(shouldCommitVehicleMileage){
    try{
@@ -324,7 +328,11 @@ $("#repairForm").onsubmit=async e=>{
   obj.history=history.slice(-60);obj.updatedAt=new Date().toISOString();
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
-  if(c&&shouldCommitVehicleMileage&&mileage>Number(c.mileage||0))c.mileage=mileage;
+  if(c&&shouldCommitVehicleMileage){
+   const baseline=currentConfirmedMileage(carId);
+   if(obj.linkedRequestId&&status==="done")c.mileage=Math.max(baseline,mileage);
+   else if(mileage>Number(c.mileage||0))c.mileage=mileage
+  }
   syncServiceRelations(obj,previous);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
   logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);

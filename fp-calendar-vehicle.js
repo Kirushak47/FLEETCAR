@@ -765,21 +765,66 @@ document.addEventListener("change",e=>{if(e.target?.id==="expensePaymentStatus"|
 function currentConfirmedMileage(carId){
  const c=car(carId);
  if(!c)return 0;
- // Driver repair requests and unfinished service tasks are NOT odometer sources.
- // Build the trusted baseline from explicit mileage history + completed service only.
- const historyValues=(Array.isArray(c.history)?c.history:[]).map(x=>Number(x?.value||0)).filter(Number.isFinite);
- const completedValues=db.repairs.filter(r=>r.carId===carId&&String(r.status||"")==="done").map(r=>Number(r.mileage||0)).filter(Number.isFinite);
+ // A driver request is NEVER a confirmed odometer source. Older builds could copy
+ // request mileage into c.mileage/history; quarantine those values here as well.
+ const requestRows=[
+  ...(Array.isArray(db.serviceRequests)?db.serviceRequests:[]),
+  ...(typeof workspaceRepairAlerts!=="undefined"&&Array.isArray(workspaceRepairAlerts)?workspaceRepairAlerts:[])
+ ].filter(r=>String(r?.car_id||r?.carId||"")===String(carId));
+ const requestValues=new Set(requestRows.map(r=>Number(r?.mileage||0)).filter(v=>Number.isFinite(v)&&v>0));
+ const explicitlyTrustedSources=new Set(["manual","staff_manual","vehicle_issue","vehicle_return","service_done","oil_service","mileage_manual","handover"]);
+ const historyValues=(Array.isArray(c.history)?c.history:[]).map(x=>({value:Number(x?.value||0),source:String(x?.source||"")})).filter(x=>{
+  if(!Number.isFinite(x.value)||x.value<0)return false;
+  if(explicitlyTrustedSources.has(x.source))return true;
+  if(/driver.*request|repair_request|reported/i.test(x.source))return false;
+  // Legacy contaminated history usually has no source. Ignore an exact request
+  // value only when it is a huge jump over the other known vehicle records.
+  if(requestValues.has(x.value)){
+   const peers=(Array.isArray(c.history)?c.history:[]).map(h=>Number(h?.value||0)).filter(v=>Number.isFinite(v)&&v>=0&&v!==x.value);
+   const peerMax=Math.max(...peers,0);
+   if(x.value>2147483647||(peerMax>0&&x.value-peerMax>500000))return false;
+  }
+  return true
+ }).map(x=>x.value);
+ const completedValues=db.repairs.filter(r=>String(r.carId)===String(carId)&&String(r.status||"")==="done").map(r=>Number(r.mileage||0)).filter(Number.isFinite);
  const trustedRecorded=Math.max(...historyValues,...completedValues,0);
  const local=Number(c.mileage||0);
- // Recover old poisoned values created by the pre-19.0.23 driver-request bug.
- // If the live odometer jumped far beyond every confirmed record, use the confirmed record.
- const poisoned=!Number.isFinite(local)||local>2147483647||(trustedRecorded>0&&local-trustedRecorded>500000);
+ const localMatchesRequest=requestValues.has(local);
+ const poisoned=!Number.isFinite(local)||local>2147483647||(trustedRecorded>0&&local-trustedRecorded>500000)||(localMatchesRequest&&trustedRecorded>0&&local-trustedRecorded>500000);
  if(poisoned&&trustedRecorded>0){
-  console.warn("FleetPilot: ignored poisoned vehicle mileage",local,"trusted",trustedRecorded);
+  console.warn("FleetPilot: ignored request-contaminated vehicle mileage",local,"trusted",trustedRecorded);
   return trustedRecorded
  }
  return Math.max(local,trustedRecorded,0)
 }
+function findDriverRequestById(requestId){
+ if(!requestId)return null;
+ const pools=[Array.isArray(db.serviceRequests)?db.serviceRequests:[],typeof workspaceRepairAlerts!=="undefined"&&Array.isArray(workspaceRepairAlerts)?workspaceRepairAlerts:[]];
+ for(const pool of pools){const row=pool.find(r=>String(r?.id)===String(requestId));if(row)return row}
+ return null
+}
+function repairLinkedRequestMinimum(carId,requestId){
+ // Staff may correct a driver's wrong reported mileage to the real odometer.
+ // Therefore the incoming request must never become the lower bound of this form.
+ return requestId?0:currentConfirmedMileage(carId)
+}
+function cleanupLegacyRequestMileage(carId,requestId,correctedMileage,commit=false){
+ const c=car(carId),request=findDriverRequestById(requestId);if(!c||!request)return;
+ const reported=Number(request.mileage||0),corrected=Number(correctedMileage||0);if(!Number.isFinite(reported)||reported<=0)return;
+ const before=Array.isArray(c.history)?c.history:[];
+ const peers=before.map(h=>Number(h?.value||0)).filter(v=>Number.isFinite(v)&&v>=0&&v!==reported);
+ const peerMax=Math.max(...peers,0);
+ const suspicious=reported>2147483647||(peerMax>0&&reported-peerMax>500000)||Number(c.mileage||0)===reported;
+ if(!suspicious)return;
+ c.history=before.filter(h=>{
+  const value=Number(h?.value||0),source=String(h?.source||"");
+  if(value!==reported)return true;
+  return explicitlyTrustedMileageSource(source)
+ });
+ const restored=Math.max(...c.history.map(h=>Number(h?.value||0)).filter(Number.isFinite),...db.repairs.filter(r=>String(r.carId)===String(carId)&&String(r.status||"")==="done"&&String(r.linkedRequestId||"")!==String(requestId)).map(r=>Number(r.mileage||0)).filter(Number.isFinite),0);
+ if(Number(c.mileage||0)===reported||Number(c.mileage||0)>2147483647)c.mileage=commit?Math.max(restored,corrected):restored;
+}
+function explicitlyTrustedMileageSource(source){return new Set(["manual","staff_manual","vehicle_issue","vehicle_return","service_done","oil_service","mileage_manual","handover"]).has(String(source||""))}
 function createOrUpdateRepairFromExpense(expense){
  if(expense.category!=="repair"||!$("#expenseCreateRepair")?.checked)return null;
 

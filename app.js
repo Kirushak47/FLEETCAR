@@ -7087,7 +7087,8 @@ $("#repairForm").onsubmit=async e=>{
   const old=db.repairs.find(x=>x.id===id);
   const carId=$("#repairCarId").value;
   const mileage=Number($("#repairMileage").value||0);
-  const minimum=currentConfirmedMileage(carId);
+  const linkedRequestId=$("#repairLinkedRequestId").value;
+  const minimum=linkedRequestId?0:currentConfirmedMileage(carId);
 
   if(!carId){
    toast("Выберите автомобиль");
