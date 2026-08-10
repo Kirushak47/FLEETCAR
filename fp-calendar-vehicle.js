@@ -763,9 +763,22 @@ function syncExpenseRepairFields(){
 }
 document.addEventListener("change",e=>{if(e.target?.id==="expensePaymentStatus"||e.target?.id==="expenseCreateRepair"||e.target?.id==="expenseCategory")syncExpenseRepairFields()});
 function currentConfirmedMileage(carId){
- const c=car(carId),local=Number(c?.mileage||0);
- const values=db.repairs.filter(r=>r.carId===carId).map(r=>Number(r.mileage||0));
- return Math.max(local,...values,0)
+ const c=car(carId);
+ if(!c)return 0;
+ // Driver repair requests and unfinished service tasks are NOT odometer sources.
+ // Build the trusted baseline from explicit mileage history + completed service only.
+ const historyValues=(Array.isArray(c.history)?c.history:[]).map(x=>Number(x?.value||0)).filter(Number.isFinite);
+ const completedValues=db.repairs.filter(r=>r.carId===carId&&String(r.status||"")==="done").map(r=>Number(r.mileage||0)).filter(Number.isFinite);
+ const trustedRecorded=Math.max(...historyValues,...completedValues,0);
+ const local=Number(c.mileage||0);
+ // Recover old poisoned values created by the pre-19.0.23 driver-request bug.
+ // If the live odometer jumped far beyond every confirmed record, use the confirmed record.
+ const poisoned=!Number.isFinite(local)||local>2147483647||(trustedRecorded>0&&local-trustedRecorded>500000);
+ if(poisoned&&trustedRecorded>0){
+  console.warn("FleetPilot: ignored poisoned vehicle mileage",local,"trusted",trustedRecorded);
+  return trustedRecorded
+ }
+ return Math.max(local,trustedRecorded,0)
 }
 function createOrUpdateRepairFromExpense(expense){
  if(expense.category!=="repair"||!$("#expenseCreateRepair")?.checked)return null;
@@ -851,6 +864,9 @@ function syncLinkedExpenseFromRepair(repair){
 function syncServiceRelations(repair){
  if(!repair)return;
  syncLinkedExpenseFromRepair(repair);
+ // Only a COMPLETED service may confirm a vehicle odometer. Incoming/accepted/
+ // in-repair driver requests must never mutate the car mileage.
+ if(String(repair.status||"")!=="done")return;
  const c=car(repair.carId);
  if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
 }
@@ -860,7 +876,7 @@ function openRepairFromDriverRequest(request){
  $("#repairTitle").value=DRIVER_REPAIR_CATEGORY_LABELS[request.category]||"Ремонт по заявке";
  if($("#repairServiceType"))$("#repairServiceType").value={engine:"engine",suspension:"suspension",brakes:"brakes",electric:"electrical",body:"body",tires:"tires"}[request.category]||"other";
  $("#repairDate").value=today();
- $("#repairMileage").value=Math.max(Number(c.mileage||0),Number(request.mileage||0));
+ $("#repairMileage").value=Number(request.mileage||currentConfirmedMileage(c.id)||0);
  $("#repairStatus").value="repair";
  $("#repairPaymentStatus").value="unpaid";
  $("#repairLinkedRequestId").value=request.id;
