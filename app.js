@@ -1397,6 +1397,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  {const deleted=permanentlyDeletedArchiveRequestIds();workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>!deleted.has(String(row.id)));}
   renderFleetDriverRequestsPanel();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
@@ -1444,9 +1445,17 @@ window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
 
 let serviceArchiveFilter="all";
+function permanentlyDeletedArchiveRequestIds(){
+ return new Set((Array.isArray(db?.deletedArchivedRequestIds)?db.deletedArchivedRequestIds:[]).map(String))
+}
+function rememberPermanentlyDeletedArchiveRequest(id){
+ const value=String(id||"").trim();if(!value)return;
+ const ids=permanentlyDeletedArchiveRequestIds();ids.add(value);db.deletedArchivedRequestIds=[...ids];
+}
 function serviceArchiveRows(){
- const driver=(workspaceRepairAlerts||[]).filter(row=>String(row.status||"")==="rejected").map(row=>({source:"driver",row,when:row.updated_at||row.created_at||""}));
- const internal=(db.repairs||[]).filter(r=>["done","cancelled"].includes(String(r.status||""))).map(row=>({source:"internal",row,when:row.completedDate||row.date||""}));
+ const deleted=permanentlyDeletedArchiveRequestIds();
+ const driver=(workspaceRepairAlerts||[]).filter(row=>String(row.status||"")==="rejected"&&!deleted.has(String(row.id))).map(row=>({source:"driver",row,when:row.updated_at||row.created_at||""}));
+ const internal=(db.repairs||[]).filter(r=>["done","cancelled"].includes(String(r.status||""))&&!deleted.has(String(r.id))).map(row=>({source:"internal",row,when:row.completedDate||row.date||""}));
  return [...driver,...internal].sort((a,b)=>String(b.when).localeCompare(String(a.when)))
 }
 function serviceArchiveAdminCanDelete(){
@@ -1454,20 +1463,24 @@ function serviceArchiveAdminCanDelete(){
 }
 async function deleteArchivedServiceRequest(source,id){
  if(!serviceArchiveAdminCanDelete())return toast("Удалять заявки из архива может только администратор");
- if(!confirm("Удалить эту заявку из архива без возможности восстановления?"))return;
- try{
-  if(source==="driver"){
-   await window.FleetPilotCloud.deleteDriverRepairRequest(id);
-   workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>String(row.id)!==String(id));
-   if(Array.isArray(db.serviceRequests))db.serviceRequests=db.serviceRequests.filter(row=>String(row.id)!==String(id));
-  }else{
-   db.repairs=(db.repairs||[]).filter(row=>String(row.id)!==String(id));
-  }
-  save();
-  toast("Заявка удалена из архива");
-  renderServiceRequestArchive();
-  renderRepairs();
- }catch(error){toast(error.message||"Не удалось удалить заявку")}
+ if(!confirm("Удалить эту заявку НАВСЕГДА? Она больше не появится в архиве после синхронизации."))return;
+ // Tombstone is stored in FleetPilot cloud state. Even if an old Supabase row survives because of RLS,
+ // future syncs are not allowed to resurrect it in the archive.
+ rememberPermanentlyDeletedArchiveRequest(id);
+ if(source==="driver"){
+  workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>String(row.id)!==String(id));
+  if(Array.isArray(db.serviceRequests))db.serviceRequests=db.serviceRequests.filter(row=>String(row.id)!==String(id));
+ }else{
+  db.repairs=(db.repairs||[]).filter(row=>String(row.id)!==String(id));
+ }
+ save();
+ renderServiceRequestArchive();
+ renderRepairs();
+ let cloudDeleteFailed=false;
+ if(source==="driver"){
+  try{await window.FleetPilotCloud.deleteDriverRepairRequest(id)}catch(error){cloudDeleteFailed=true;console.warn("Supabase hard delete failed; permanent FleetPilot tombstone kept",error)}
+ }
+ toast(cloudDeleteFailed?"Удалено навсегда из FleetPilot. Старая запись Supabase заблокирована от возврата.":"Заявка удалена навсегда");
 }
 window.deleteArchivedServiceRequest=deleteArchivedServiceRequest;
 function renderServiceRequestArchive(){
@@ -6920,7 +6933,7 @@ window.deleteRepair=id=>{if(!requireEnterprisePermission("service.edit"))return;
  recalculateVehicleMaintenance(repair.carId);syncCarServiceStatus(repair.carId);
  save();renderRepairs();renderExpenses();renderFleet();renderProfitability();
  toast(removeExpense?"Ремонт и расход удалены":"Техническая запись удалена")
-};window.deletePayment=id=>{if(!requireEnterprisePermission("finance.payments"))return;if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(!requireEnterprisePermission("finance.expenses"))return;if(confirm("Удалить плановый расход?")){const old=db.expenses.find(x=>x.id===id);db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses();renderRepairs();if(old&&selectedCarId===old.carId&&$("#carPage")?.classList.contains("active"))openCar(old.carId,"service")}};window.deleteDocument=async id=>{if(!requireEnterprisePermission("documents.delete"))return;if(confirm("Удалить документ? Связанные автоматические расходы по его ратам тоже будут удалены.")){const d=db.documents.find(x=>x.id===id);if(d?.fileId)await deleteDocumentFile(d.fileId);const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.documents=db.documents.filter(x=>x.id!==id);logActivity("Удалён документ","Документы",d?.title||"");save();renderDocuments();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(!requireEnterprisePermission("cars.delete"))return;if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
+};window.deletePayment=id=>{if(!requireEnterprisePermission("finance.payments"))return;if(confirm("Удалить оплату?")){db.payments=db.payments.filter(x=>x.id!==id);save();renderPayments()}};window.deleteExpense=id=>{if(!requireEnterprisePermission("finance.expenses"))return;if(confirm("Удалить плановый расход?")){const old=db.expenses.find(x=>x.id===id);db.expenses=db.expenses.filter(x=>x.id!==id);save();renderExpenses();renderRepairs();if(old&&selectedCarId===old.carId&&$("#carPage")?.classList.contains("active"))openCar(old.carId,"service")}};window.deleteDocument=async id=>{if(!requireEnterprisePermission("documents.delete"))return;if(confirm("Переместить документ в архив? Он перестанет участвовать во всех расчётах, сроках и уведомлениях.")){const d=db.documents.find(x=>x.id===id);if(!d)return;const linkedIds=new Set((d?.installments||[]).map(x=>x.linkedExpenseId).filter(Boolean));db.expenses=db.expenses.filter(x=>!linkedIds.has(x.id));const c=car(d?.carId);if(c?.insuranceDocumentId===id){c.insurance="";c.insuranceDocumentId=""}if(c?.inspectionDocumentId===id){c.inspection="";c.inspectionDocumentId=""}db.deletedDocumentsArchive=Array.isArray(db.deletedDocumentsArchive)?db.deletedDocumentsArchive:[];db.deletedDocumentsArchive=db.deletedDocumentsArchive.filter(x=>String(x.id)!==String(id));db.deletedDocumentsArchive.unshift({...structuredClone(d),deletedAt:new Date().toISOString(),deletedBy:window.FleetPilotCloud?.profile?.email||"Администратор"});db.documents=db.documents.filter(x=>x.id!==id);logActivity("Документ перемещён в архив","Документы",d?.title||"");save();renderDocuments();renderDocumentArchive?.();renderExpenses();renderFleet()}};window.deleteCar=id=>{if(!requireEnterprisePermission("cars.delete"))return;if(confirm("Удалить автомобиль и все связанные записи?")){db.cars=db.cars.filter(x=>x.id!==id);db.repairs=db.repairs.filter(x=>x.carId!==id);db.payments=db.payments.filter(x=>x.carId!==id);db.expenses=db.expenses.filter(x=>x.carId!==id);db.documents=db.documents.filter(x=>x.carId!==id);db.deposits=(db.deposits||[]).filter(x=>x.carId!==id);db.timeline=(db.timeline||[]).filter(x=>x.carId!==id);db.damages=(db.damages||[]).filter(x=>x.carId!==id);save();showPage("fleetPage");toast("Автомобиль и связанные данные удалены")}};
 $("#carModelKey").onchange=toggleCustomModelFields;
 $("#carForm").onsubmit=e=>{
  e.preventDefault();
@@ -7940,6 +7953,7 @@ function fpPopulateDocumentCarFilter(){
  select.value=[...select.options].some(o=>o.value===current)?current:"all"
 }
 function renderDocuments(){
+ renderDocumentArchive?.();
  const summary=$("#documentSummary"),root=$("#documentList");if(!summary||!root)return;
  fpPopulateDocumentCarFilter();
  const all=[...(db.documents||[])];
@@ -7977,3 +7991,14 @@ function renderDocuments(){
  ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})
 }
 window.renderDocuments=renderDocuments;
+
+function renderDocumentArchive(){
+ const root=$("#documentArchiveList"),count=$("#documentArchiveCount");if(!root)return;
+ const rows=[...(Array.isArray(db?.deletedDocumentsArchive)?db.deletedDocumentsArchive:[])].sort((a,b)=>String(b.deletedAt||"").localeCompare(String(a.deletedAt||"")));
+ if(count)count.textContent=String(rows.length);
+ root.innerHTML=rows.map(row=>`<article class="document-register-row document-archive-row"><div class="document-register-main"><div class="document-register-icon">🗑</div><div><strong>${row.title||documentTypeText(row.type)||"Документ"}</strong><small>${documentTypeText(row.type)} · ${fpDocumentCarLabel(row)}</small></div></div><div class="document-register-cell"><span>Удалён</span><strong>${row.deletedAt?new Date(row.deletedAt).toLocaleString("ru-RU"):"—"}</strong><small>${row.deletedBy||"Администратор"}</small></div><div class="document-register-cell"><span>Статус</span><span class="document-status-badge expired">Удалён</span><small>Не используется системой</small></div><div class="document-register-actions"><button type="button" class="btn" onclick="restoreArchivedDocument('${row.id}')">Восстановить</button><button type="button" class="btn danger" onclick="deleteArchivedDocumentForever('${row.id}')">Удалить навсегда</button></div></article>`).join("")||'<div class="document-empty-professional">Архив документов пуст.</div>';
+}
+function restoreArchivedDocument(id){if(!requireEnterprisePermission("documents.delete"))return;const archive=Array.isArray(db.deletedDocumentsArchive)?db.deletedDocumentsArchive:[],row=archive.find(x=>String(x.id)===String(id));if(!row)return;const restored=structuredClone(row);delete restored.deletedAt;delete restored.deletedBy;db.documents.push(restored);db.deletedDocumentsArchive=archive.filter(x=>String(x.id)!==String(id));syncVehicleDocumentDates?.(restored,null);for(const item of restored.installments||[])if(item.paid)syncInsuranceExpense?.(restored,item);save();renderDocuments();renderDocumentArchive();renderExpenses?.();renderFleet?.();toast("Документ восстановлен")}
+async function deleteArchivedDocumentForever(id){if(!requireEnterprisePermission("documents.delete"))return;if(!confirm("Удалить документ и файл НАВСЕГДА? Отменить это действие нельзя."))return;const archive=Array.isArray(db.deletedDocumentsArchive)?db.deletedDocumentsArchive:[],row=archive.find(x=>String(x.id)===String(id));if(row?.fileId)try{await deleteDocumentFile(row.fileId)}catch(e){console.warn(e)}db.deletedDocumentsArchive=archive.filter(x=>String(x.id)!==String(id));save();renderDocumentArchive();toast("Документ удалён навсегда")}
+window.renderDocumentArchive=renderDocumentArchive;window.restoreArchivedDocument=restoreArchivedDocument;window.deleteArchivedDocumentForever=deleteArchivedDocumentForever;
+

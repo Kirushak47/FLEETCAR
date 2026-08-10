@@ -67,6 +67,7 @@ function currentAssignmentAcceptanceDate(c){
  return currentAssignmentAuditState(c).acceptedAt||""
 }
 window.addVehicleHandoverAudit=addVehicleHandoverAudit;
+window.currentAssignmentAcceptedLocally=currentAssignmentAcceptedLocally;
 
 
 /* =========================================================
@@ -503,19 +504,23 @@ function renderDriverVehicleCard(){
 function renderDriverDocuments(){
  const root=$("#driverDocumentsList");if(!root)return;
  const assignedCar=driverAssignedCar();
- const docs=(db.documents||[]).filter(doc=>!doc.carId||doc.carId===assignedCar?.id).slice(0,8);
+ const docs=(db.documents||[]).filter(doc=>!doc.deletedAt&&(!doc.carId||doc.carId===assignedCar?.id)).slice(0,8);
  root.innerHTML=docs.map(doc=>`
   <article class="driver-list-row">
    <div><strong>${doc.name||documentTypeText(doc.type)||"Документ"}</strong>
    <small>${doc.date?date(doc.date):doc.expiry?`до ${date(doc.expiry)}`:"Доступен"}</small></div>
   </article>`).join("")||'<div class="driver-empty-state">Документов пока нет.</div>'
 }
+let driverRepairRequestsVisible=10;
+function hiddenDriverRequestIds(){return new Set((Array.isArray(db?.hiddenDriverRequestIds)?db.hiddenDriverRequestIds:[]).map(String))}
 async function renderDriverRepairRequests(){
  const root=$("#driverRepairRequestsList");if(!root)return;
  root.innerHTML='<div class="driver-empty-state">Загрузка…</div>';
  try{
-  const rows=await window.FleetPilotCloud.getMyDriverRepairRequests();
-  root.innerHTML=rows.map(row=>`
+  const hidden=hiddenDriverRequestIds();
+  const rows=(await window.FleetPilotCloud.getMyDriverRepairRequests()).filter(row=>!hidden.has(String(row.id))).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  const visible=rows.slice(0,driverRepairRequestsVisible);
+  root.innerHTML=visible.map(row=>`
    <article class="driver-request-row urgency-${row.urgency}">
     <div class="driver-request-main">
      <strong>${DRIVER_REPAIR_CATEGORY_LABELS[row.category]||row.category}</strong>
@@ -527,7 +532,8 @@ async function renderDriverRepairRequests(){
      <span class="urgency">${DRIVER_REPAIR_URGENCY_LABELS[row.urgency]||row.urgency}</span>
      <span class="status">${DRIVER_REPAIR_STATUS_LABELS[row.status]||row.status}</span>
     </div>
-   </article>`).join("")||'<div class="driver-empty-state">Заявок пока нет.</div>'
+   </article>`).join("")||'<div class="driver-empty-state">Заявок пока нет.</div>';
+  if(rows.length>visible.length){const b=document.createElement("button");b.type="button";b.className="btn driver-requests-more";b.textContent=`Показать ещё (${rows.length-visible.length})`;b.onclick=()=>{driverRepairRequestsVisible+=10;renderDriverRepairRequests()};root.appendChild(b)}
  }catch(error){root.innerHTML=`<div class="driver-empty-state">${error.message||error}</div>`}
 }
 
@@ -539,12 +545,13 @@ async function renderDriverServiceFeed(){
  try{
   const rows=await window.FleetPilotCloud.getDriverServiceFeed();
   driverServiceFeedRows=rows;
-  const visibleRows=rows.filter(row=>row.status!=="done"&&(row.driver_action_required===true||row.requires_driver===true||row.driver_message||row.appointment_at||row.scheduled_at||row.date));
+  const visibleRows=rows.filter(row=>row.status==="done"||row.driver_action_required===true||row.requires_driver===true||row.driver_message||row.appointment_at||row.scheduled_at||row.date);
   if(count)count.textContent=String(visibleRows.filter(row=>row.status!=="done").length);
   root.innerHTML=visibleRows.map(row=>{
-   const due=row.date?days(row.date):null;
-   const urgency=due!=null&&due<0?"overdue":due!=null&&due<=3?"urgent":due!=null&&due<=14?"soon":"normal";
-   const statusLabel=repairStatusText(row.status);
+   const done=row.status==="done";
+   const due=!done&&row.date?days(row.date):null;
+   const urgency=done?"done":due!=null&&due<0?"overdue":due!=null&&due<=3?"urgent":due!=null&&due<=14?"soon":"normal";
+   const statusLabel=done?"Выполнено ✓":repairStatusText(row.status);
    return `<article class="driver-service-plan-row ${urgency}">
     <div class="driver-service-plan-icon">🔧</div>
     <div class="driver-service-plan-main">
@@ -755,6 +762,7 @@ async function loadFleetServiceAlerts({rerender=false}={}){
  if(!["owner","coordinator","mechanic"].includes(enterpriseCurrentRole()))return[];
  try{
   workspaceRepairAlerts=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
+  {const deleted=permanentlyDeletedArchiveRequestIds();workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>!deleted.has(String(row.id)));}
   renderFleetDriverRequestsPanel();
   if(typeof renderFleet==="function"&&(rerender||$("#fleetPage")?.classList.contains("active")))renderFleet();
   requestAnimationFrame(renderFleetServiceAlertIndicators);
@@ -802,9 +810,17 @@ window.clearWorkspaceRepairCarFilter=clearWorkspaceRepairCarFilter;
 
 
 let serviceArchiveFilter="all";
+function permanentlyDeletedArchiveRequestIds(){
+ return new Set((Array.isArray(db?.deletedArchivedRequestIds)?db.deletedArchivedRequestIds:[]).map(String))
+}
+function rememberPermanentlyDeletedArchiveRequest(id){
+ const value=String(id||"").trim();if(!value)return;
+ const ids=permanentlyDeletedArchiveRequestIds();ids.add(value);db.deletedArchivedRequestIds=[...ids];
+}
 function serviceArchiveRows(){
- const driver=(workspaceRepairAlerts||[]).filter(row=>String(row.status||"")==="rejected").map(row=>({source:"driver",row,when:row.updated_at||row.created_at||""}));
- const internal=(db.repairs||[]).filter(r=>["done","cancelled"].includes(String(r.status||""))).map(row=>({source:"internal",row,when:row.completedDate||row.date||""}));
+ const deleted=permanentlyDeletedArchiveRequestIds();
+ const driver=(workspaceRepairAlerts||[]).filter(row=>String(row.status||"")==="rejected"&&!deleted.has(String(row.id))).map(row=>({source:"driver",row,when:row.updated_at||row.created_at||""}));
+ const internal=(db.repairs||[]).filter(r=>["done","cancelled"].includes(String(r.status||""))&&!deleted.has(String(r.id))).map(row=>({source:"internal",row,when:row.completedDate||row.date||""}));
  return [...driver,...internal].sort((a,b)=>String(b.when).localeCompare(String(a.when)))
 }
 function serviceArchiveAdminCanDelete(){
@@ -812,20 +828,24 @@ function serviceArchiveAdminCanDelete(){
 }
 async function deleteArchivedServiceRequest(source,id){
  if(!serviceArchiveAdminCanDelete())return toast("Удалять заявки из архива может только администратор");
- if(!confirm("Удалить эту заявку из архива без возможности восстановления?"))return;
- try{
-  if(source==="driver"){
-   await window.FleetPilotCloud.deleteDriverRepairRequest(id);
-   workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>String(row.id)!==String(id));
-   if(Array.isArray(db.serviceRequests))db.serviceRequests=db.serviceRequests.filter(row=>String(row.id)!==String(id));
-  }else{
-   db.repairs=(db.repairs||[]).filter(row=>String(row.id)!==String(id));
-  }
-  save();
-  toast("Заявка удалена из архива");
-  renderServiceRequestArchive();
-  renderRepairs();
- }catch(error){toast(error.message||"Не удалось удалить заявку")}
+ if(!confirm("Удалить эту заявку НАВСЕГДА? Она больше не появится в архиве после синхронизации."))return;
+ // Tombstone is stored in FleetPilot cloud state. Even if an old Supabase row survives because of RLS,
+ // future syncs are not allowed to resurrect it in the archive.
+ rememberPermanentlyDeletedArchiveRequest(id);
+ if(source==="driver"){
+  workspaceRepairAlerts=(workspaceRepairAlerts||[]).filter(row=>String(row.id)!==String(id));
+  if(Array.isArray(db.serviceRequests))db.serviceRequests=db.serviceRequests.filter(row=>String(row.id)!==String(id));
+ }else{
+  db.repairs=(db.repairs||[]).filter(row=>String(row.id)!==String(id));
+ }
+ save();
+ renderServiceRequestArchive();
+ renderRepairs();
+ let cloudDeleteFailed=false;
+ if(source==="driver"){
+  try{await window.FleetPilotCloud.deleteDriverRepairRequest(id)}catch(error){cloudDeleteFailed=true;console.warn("Supabase hard delete failed; permanent FleetPilot tombstone kept",error)}
+ }
+ toast(cloudDeleteFailed?"Удалено навсегда из FleetPilot. Старая запись Supabase заблокирована от возврата.":"Заявка удалена навсегда");
 }
 window.deleteArchivedServiceRequest=deleteArchivedServiceRequest;
 function renderServiceRequestArchive(){

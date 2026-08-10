@@ -523,6 +523,7 @@ function fpPopulateDocumentCarFilter(){
  select.value=[...select.options].some(o=>o.value===current)?current:"all"
 }
 function renderDocuments(){
+ renderDocumentArchive?.();
  const summary=$("#documentSummary"),root=$("#documentList");if(!summary||!root)return;
  fpPopulateDocumentCarFilter();
  const all=[...(db.documents||[])];
@@ -560,3 +561,14 @@ function renderDocuments(){
  ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})
 }
 window.renderDocuments=renderDocuments;
+
+function renderDocumentArchive(){
+ const root=$("#documentArchiveList"),count=$("#documentArchiveCount");if(!root)return;
+ const rows=[...(Array.isArray(db?.deletedDocumentsArchive)?db.deletedDocumentsArchive:[])].sort((a,b)=>String(b.deletedAt||"").localeCompare(String(a.deletedAt||"")));
+ if(count)count.textContent=String(rows.length);
+ root.innerHTML=rows.map(row=>`<article class="document-register-row document-archive-row"><div class="document-register-main"><div class="document-register-icon">🗑</div><div><strong>${row.title||documentTypeText(row.type)||"Документ"}</strong><small>${documentTypeText(row.type)} · ${fpDocumentCarLabel(row)}</small></div></div><div class="document-register-cell"><span>Удалён</span><strong>${row.deletedAt?new Date(row.deletedAt).toLocaleString("ru-RU"):"—"}</strong><small>${row.deletedBy||"Администратор"}</small></div><div class="document-register-cell"><span>Статус</span><span class="document-status-badge expired">Удалён</span><small>Не используется системой</small></div><div class="document-register-actions"><button type="button" class="btn" onclick="restoreArchivedDocument('${row.id}')">Восстановить</button><button type="button" class="btn danger" onclick="deleteArchivedDocumentForever('${row.id}')">Удалить навсегда</button></div></article>`).join("")||'<div class="document-empty-professional">Архив документов пуст.</div>';
+}
+function restoreArchivedDocument(id){if(!requireEnterprisePermission("documents.delete"))return;const archive=Array.isArray(db.deletedDocumentsArchive)?db.deletedDocumentsArchive:[],row=archive.find(x=>String(x.id)===String(id));if(!row)return;const restored=structuredClone(row);delete restored.deletedAt;delete restored.deletedBy;db.documents.push(restored);db.deletedDocumentsArchive=archive.filter(x=>String(x.id)!==String(id));syncVehicleDocumentDates?.(restored,null);for(const item of restored.installments||[])if(item.paid)syncInsuranceExpense?.(restored,item);save();renderDocuments();renderExpenses?.();renderFleet?.();toast("Документ восстановлен")}
+async function deleteArchivedDocumentForever(id){if(!requireEnterprisePermission("documents.delete"))return;if(!confirm("Удалить документ и файл НАВСЕГДА? Отменить это действие нельзя."))return;const archive=Array.isArray(db.deletedDocumentsArchive)?db.deletedDocumentsArchive:[],row=archive.find(x=>String(x.id)===String(id));if(row?.fileId)try{await deleteDocumentFile(row.fileId)}catch(e){console.warn(e)}db.deletedDocumentsArchive=archive.filter(x=>String(x.id)!==String(id));save();renderDocumentArchive();toast("Документ удалён навсегда")}
+window.renderDocumentArchive=renderDocumentArchive;window.restoreArchivedDocument=restoreArchivedDocument;window.deleteArchivedDocumentForever=deleteArchivedDocumentForever;
+
