@@ -39,6 +39,21 @@ const EXTRA_MODEL_CATALOG={
 "Toyota":["Aygo","Yaris","Corolla","Auris","Prius II","Prius III","Camry","C-HR","RAV4"],
 "Volkswagen":["Polo","Golf","Passat","Touran","Tiguan","Caddy"],"Volvo":["S60","S90","V60","XC40","XC60","XC90"]
 };
+// V19.0.32 — shared 10-row progressive disclosure for non-service registers.
+const FP_LIST_PAGE_SIZE=10;
+const fpListVisibleRows=Object.create(null);
+function fpListLimit(key){return Math.max(FP_LIST_PAGE_SIZE,Number(fpListVisibleRows[key]||FP_LIST_PAGE_SIZE))}
+function fpListRows(key,rows){return (Array.isArray(rows)?rows:[]).slice(0,fpListLimit(key))}
+function fpResetListLimit(key){fpListVisibleRows[key]=FP_LIST_PAGE_SIZE}
+function fpAppendListMore(root,key,total,rerender,label="Показать ещё"){
+ if(!root||Number(total||0)<=fpListLimit(key))return;
+ const b=document.createElement("button");b.type="button";b.className="btn fp-list-more";
+ b.textContent=`${label} (${Number(total)-fpListLimit(key)})`;
+ b.onclick=()=>{fpListVisibleRows[key]=fpListLimit(key)+FP_LIST_PAGE_SIZE;rerender?.()};
+ root.appendChild(b)
+}
+window.fpListRows=fpListRows;window.fpResetListLimit=fpResetListLimit;window.fpAppendListMore=fpAppendListMore;
+
 function slugifyModelPart(v){return String(v||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}
 function ensureCatalogModels(){Object.entries(EXTRA_MODEL_CATALOG).forEach(([brand,list])=>list.forEach(name=>{const key=`catalog-${slugifyModelPart(brand)}-${slugifyModelPart(name)}`;if(!MODELS[key])MODELS[key]={brand,model:name,years:"",image:"",catalog:true}}))}
 ensureCatalogModels();

@@ -571,7 +571,7 @@ async function renderDriverServiceFeed(){
   root.innerHTML=`<div class="driver-empty-state">${error.message||"Не удалось загрузить сервисный план"}</div>`
  }
 }
-let driverNotificationsVisible=7;
+let driverNotificationsVisible=10;
 async function renderDriverNotifications(){
  const root=$("#driverNotificationsList");if(!root)return;
  try{
@@ -582,7 +582,7 @@ async function renderDriverNotifications(){
     <span>${row.type==="repair"?"🔧":"🔔"}</span>
     <div><strong>${row.title}</strong><small>${row.message||""}</small><em>${new Date(row.created_at).toLocaleString("ru-RU")}</em></div>
    </article>`).join("")||'<div class="driver-empty-state">Новых уведомлений нет.</div>';
-  if(rows.length>visible.length){const b=document.createElement("button");b.type="button";b.className="btn driver-notifications-more";b.textContent=`Показать ещё (${rows.length-visible.length})`;b.onclick=()=>{driverNotificationsVisible+=7;renderDriverNotifications()};root.appendChild(b)}
+  if(rows.length>visible.length){const b=document.createElement("button");b.type="button";b.className="btn driver-notifications-more";b.textContent=`Показать ещё (${rows.length-visible.length})`;b.onclick=()=>{driverNotificationsVisible+=10;renderDriverNotifications()};root.appendChild(b)}
  }catch(error){root.innerHTML='<div class="driver-empty-state">Не удалось загрузить уведомления.</div>'}
 }
 async function renderDriverPortal(){

@@ -553,7 +553,8 @@ async function renderCloudVersions(){
  root.innerHTML='<div class="driver-empty-state">Загрузка облачных версий…</div>';
  try{
   const versions=await window.FleetPilotCloud.getCloudFleetVersions();
-  root.innerHTML=versions.map(version=>`
+  const visibleVersions=fpListRows("cloudVersions",versions);
+  root.innerHTML=visibleVersions.map(version=>`
    <article class="cloud-version-row">
     <div>
      <strong>${new Date(version.created_at).toLocaleString("ru-RU")}</strong>
@@ -562,6 +563,7 @@ async function renderCloudVersions(){
     </div>
     <button type="button" class="btn" data-cloud-version="${version.id}">Восстановить</button>
    </article>`).join("")||'<div class="driver-empty-state">Облачных версий пока нет.</div>';
+  fpAppendListMore(root,"cloudVersions",versions.length,renderCloudVersions);
   $$("[data-cloud-version]").forEach(button=>button.onclick=async()=>{
    if(!confirm("Восстановить выбранную облачную версию?"))return;
    await window.FleetPilotCloud.restoreCloudFleetVersion(button.dataset.cloudVersion)

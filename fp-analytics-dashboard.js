@@ -446,10 +446,12 @@ function addActivity(text,type="info",carId=""){
 function activityIcon(type){return{status:"↔",service:"🔧",insurance:"🛡",inspection:"✓",payment:"$",expense:"↓",car:"🚘",info:"•"}[type]||"•"}
 function renderDesktopActivityFeed(){
  const root=$("#desktopActivityFeed");if(!root)return;
- const rows=readLocalArray(ACTIVITY_KEY).slice(0,10);
+ const allRows=readLocalArray(ACTIVITY_KEY);
+ const rows=fpListRows("desktopActivity",allRows);
  root.innerHTML=rows.length?rows.map(row=>`<button type="button" class="activity-row" ${row.carId?`onclick="openCar('${row.carId}')"`:""}>
   <span>${activityIcon(row.type)}</span><div><strong>${row.text}</strong><small>${new Date(row.date).toLocaleString("ru-RU")}</small></div>
- </button>`).join(""):`<div class="control-empty">Действий пока нет</div>`
+ </button>`).join(""):`<div class="control-empty">Действий пока нет</div>`;
+ fpAppendListMore(root,"desktopActivity",allRows.length,renderDesktopActivityFeed)
 }
 
 function systemTodayTasks(){

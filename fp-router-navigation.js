@@ -8,7 +8,6 @@
    Uses hash routes so Cloudflare always serves index.html.
    ========================================================= */
 const FLEETPILOT_ROUTES={
- dashboardPage:"dashboard",
  fleetPage:"fleet",
  repairsPage:"service",
  paymentsPage:"rent",
@@ -46,7 +45,7 @@ function fleetPilotRememberedRoute(){
 }
 
 function fleetPilotHash(route){
- return `#/${String(route||"dashboard").replace(/^\/+/,"")}`
+ return `#/${String(route||"fleet").replace(/^\/+/,"")}`
 }
 function fleetPilotCurrentRoute(){
  return decodeURIComponent(String(location.hash||"").replace(/^#\/?/,""))
@@ -64,7 +63,8 @@ function fleetPilotSetRoute(route,{replace=false}={}){
  }
 }
 function fleetPilotRouteForPage(pageId){
- return FLEETPILOT_ROUTES[pageId]||"dashboard"
+ if(pageId==="dashboardPage")pageId=fleetPilotDefaultCrmPage();
+ return FLEETPILOT_ROUTES[pageId]||"fleet"
 }
 function fleetPilotCarRoute(carId,tab="info"){
  const safeId=encodeURIComponent(String(carId||""));
@@ -98,6 +98,15 @@ function fleetPilotApplyRoute({replaceInvalid=true}={}){
 
  const parts=route.split("/").filter(Boolean);
  const root=parts[0];
+ // V19.0.32: the legacy Home/Dashboard page is not a user-facing route anymore.
+ // Old bookmarks or transient stale hashes go to the first real accessible section.
+ if(root==="dashboard"||root==="home"||root==="main"){
+  const landing=enterpriseCurrentRole()==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage();
+  fleetPilotApplyingRoute=true;
+  try{showPage(landing)}finally{fleetPilotApplyingRoute=false}
+  if(replaceInvalid)setTimeout(()=>fleetPilotSetRoute(fleetPilotRouteForPage(landing),{replace:true}),0);
+  return
+ }
 
  fleetPilotApplyingRoute=true;
  try{
@@ -156,6 +165,8 @@ function showPage(id){
  if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady){return}
  applyEnterpriseAccess();
  const resolvedRole=enterpriseCurrentRole();
+ // V19.0.32: Dashboard/Home is retired from navigation. Never flash it during auth/sync rerenders.
+ if(resolvedRole!=="driver"&&id==="dashboardPage")id=fleetPilotDefaultCrmPage();
  // V19.0.30: do not rewrite a valid dashboard/current route to Autopark on refresh.
  // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
  if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";

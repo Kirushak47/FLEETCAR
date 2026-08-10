@@ -495,8 +495,9 @@ function renderPayments(){
   return(!search||label.includes(search))&&(statusFilter==="all"||s===statusFilter)
  });
  const counter=$("#paymentVisibleCount");if(counter)counter.textContent=String(visible.length);
+ const visibleRows=fpListRows("payments",visible);
 
- $("#paymentList").innerHTML=visible.map(p=>{
+ $("#paymentList").innerHTML=visibleRows.map(p=>{
   const c=car(p.carId),s=paymentStatus(p),rest=Math.max(0,Number(p.expected||0)-Number(p.received||0));
   const allocation=paymentMonthAllocation(p).map(x=>`${x.month}: ${x.days} дн. · ${money(x.received)}`).join(" | ");
   return `<article class="professional-row payment-professional-row">
@@ -516,7 +517,8 @@ function renderPayments(){
     <button class="btn danger" onclick="deletePayment('${p.id}')">Удалить</button>
    </div>
   </article>`
- }).join("")||`<div class="professional-empty">Оплат по выбранным фильтрам нет.</div>`
+ }).join("")||`<div class="professional-empty">Оплат по выбранным фильтрам нет.</div>`;
+ fpAppendListMore($("#paymentList"),"payments",visible.length,renderPayments)
 }
 function renderExpenses(){
  const search=String($("#expenseSearch")?.value||"").trim().toLowerCase();
@@ -540,8 +542,9 @@ function renderExpenses(){
   return(!search||label.includes(search))&&(statusFilter==="all"||x.status===statusFilter)&&(categoryFilter==="all"||x.category===categoryFilter)
  });
  const counter=$("#expenseVisibleCount");if(counter)counter.textContent=String(visible.length);
+ const visibleRows=fpListRows("expenses",visible);
 
- $("#expenseList").innerHTML=visible.map(x=>{
+ $("#expenseList").innerHTML=visibleRows.map(x=>{
   const c=car(x.carId);
   const linkedRepair=x.linkedRepairId?db.repairs.find(r=>String(r.id)===String(x.linkedRepairId)):null;
   return `<article class="professional-row" data-expense-id="${x.id}">
@@ -562,6 +565,7 @@ function renderExpenses(){
    </div>
   </article>`
  }).join("")||`<div class="professional-empty">Расходов по выбранным фильтрам нет.</div>`;
+ fpAppendListMore($("#expenseList"),"expenses",visible.length,renderExpenses);
 
  const categories=["repair","insurance","inspection","tires","leasing","other"];
  const total=rows.reduce((s,x)=>s+Number(x.amount||0),0);

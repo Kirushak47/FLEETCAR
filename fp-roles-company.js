@@ -5,7 +5,7 @@
    ========================================================= */
 
 // Build marker for fast verification after GitHub deploy.
-window.FLEETPILOT_BUILD="19.0.26";
+window.FLEETPILOT_BUILD="19.0.32";
 window.addEventListener("DOMContentLoaded",()=>{
  document.querySelector(".topbar .eyebrow")?.replaceChildren(document.createTextNode(`FleetPilot V${window.FLEETPILOT_BUILD}`));
  document.documentElement.dataset.fleetpilotBuild=window.FLEETPILOT_BUILD;
@@ -468,13 +468,15 @@ async function renderCompanyActivity(){
  root.innerHTML='<div class="owner-empty">Загрузка…</div>';
  try{
   const rows=await window.FleetPilotCloud.getWorkspaceActivity();
-  root.innerHTML=rows.map(row=>`
+  const visible=fpListRows("companyActivity",rows);
+  root.innerHTML=visible.map(row=>`
    <article class="activity-row">
     <div class="activity-dot"></div>
     <div><strong>${row.actor_email||"Пользователь"}</strong><span>${row.action}</span>
      <small>${new Date(row.created_at).toLocaleString("ru-RU")}</small>
     </div>
-   </article>`).join("")||'<div class="owner-empty">Журнал пока пуст.</div>'
+   </article>`).join("")||'<div class="owner-empty">Журнал пока пуст.</div>';
+  fpAppendListMore(root,"companyActivity",rows.length,renderCompanyActivity)
  }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
 }
 
@@ -501,12 +503,14 @@ async function renderDriversRegistry(){
   const members=(workspaceDriverDirectory||[]).filter(member=>member.role==="driver"&&member.status!=="disabled");
   const query=($("#driversRegistrySearch")?.value||"").trim().toLowerCase();
   const filter=$("#driversRegistryFilter")?.value||"";
-  const accountRows=members.map(member=>{const assignedCar=fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))||null;const assignment=driverRegistryAssignmentRow(member.user_id);const accepted=Boolean(assignedCar&&(window.currentAssignmentAcceptedLocally?.(assignedCar)||driverRegistryAccepted(assignment)||assignedCar.driverAcceptedAt));const operationalStatus=assignedCar?(typeof vehicleEffectiveStatus==="function"?vehicleEffectiveStatus(assignedCar):(assignedCar.status||"active")):"free";return{type:"account",member,assignedCar,accepted,operationalStatus,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}});
+  const accountRows=members.map(member=>{const assignedCar=fleetCars().find(c=>String(c.driverUserId||"")===String(member.user_id||""))||null;return{type:"account",member,assignedCar,name:workspaceDriverName(member)||workspaceDriverEmail(member),email:workspaceDriverEmail(member)}});
   const knownEmails=new Set(accountRows.map(x=>normalizeDriverIdentity(x.email)).filter(Boolean));
-  const manualRows=fleetCars().filter(c=>c.tenant&&!c.driverUserId&&!knownEmails.has(normalizeDriverIdentity(c.driverEmail))).map(c=>({type:"manual",member:null,assignedCar:c,accepted:false,operationalStatus:(typeof vehicleEffectiveStatus==="function"?vehicleEffectiveStatus(c):(c.status||"active")),name:c.tenant||c.driverName||"Водитель",email:c.driverEmail||""}));
-  const rows=[...accountRows,...manualRows].filter(item=>{const c=item.assignedCar,text=`${item.name} ${item.email} ${item.member?workspaceDriverPhone?.(item.member)||"":""} ${c?`${model(c).brand} ${model(c).model} ${c.plate} ${c.city||""}`:""}`.toLowerCase();if(query&&!text.includes(query))return false;if(filter==="assigned"&&!c)return false;if(filter==="free"&&c)return false;if(filter==="active"&&(!c||item.operationalStatus!=="active"))return false;if(filter==="repair"&&(!c||item.operationalStatus!=="repair"))return false;if(filter==="manual"&&item.type!=="manual")return false;return true});
-  const body=rows.map(item=>{const c=item.assignedCar;const phone=item.member&&workspaceDriverPhone?.(item.member)||"";const op=item.operationalStatus||(c?(c.status||"active"):"free");const status=item.type==="manual"?"Введён вручную":!c?"Без автомобиля":op==="repair"?"В ремонте":op==="free"?"Свободен":"На линии";const cls=item.type==="manual"?"manual":!c?"free":op==="repair"?"pending":op==="free"?"free":"accepted";const vehicle=c?`<button type="button" class="driver-vehicle-link" data-open-driver-car="${c.id}">${model(c).brand} ${model(c).model}<small>${c.plate||"Без номера"}</small></button>`:'<span class="driver-no-car">Без автомобиля</span>';return `<article class="driver-registry-card ${cls}" data-open-driver-profile="${item.type==="account"?item.member.user_id:""}" role="${item.type==="account"?"button":"article"}" tabindex="${item.type==="account"?"0":"-1"}"><div class="driver-registry-avatar">${String(item.name||"D").trim().charAt(0).toUpperCase()}</div><div class="driver-registry-main"><strong>${item.name||"Водитель"}</strong><small>${item.email||"Без e-mail"}</small></div><div class="driver-registry-phone">${phone||"—"}</div><div class="driver-registry-vehicle">${vehicle}</div><div class="driver-registry-city">${c?.city||"Без города"}</div><span class="driver-registry-status ${cls}">${status}</span><div class="driver-registry-actions">${item.type==="account"?`<button type="button" class="btn" data-edit-driver="${item.member.user_id}">Редактировать</button><button type="button" class="driver-delete-button" data-delete-driver="${item.member.user_id}">Удалить</button>`:`<button type="button" class="driver-delete-button" data-delete-manual-driver="${c?.id||""}">Удалить</button>`}</div></article>`}).join("");
+  const manualRows=fleetCars().filter(c=>c.tenant&&!c.driverUserId&&!knownEmails.has(normalizeDriverIdentity(c.driverEmail))).map(c=>({type:"manual",member:null,assignedCar:c,name:c.tenant||c.driverName||"Водитель",email:c.driverEmail||""}));
+  const rows=[...accountRows,...manualRows].filter(item=>{const c=item.assignedCar,text=`${item.name} ${item.email} ${item.member?workspaceDriverPhone?.(item.member)||"":""} ${c?`${model(c).brand} ${model(c).model} ${c.plate} ${c.city||""}`:""}`.toLowerCase();if(query&&!text.includes(query))return false;if(filter==="free"&&c)return false;if(filter==="active"&&!c)return false;return true});
+  const visibleRows=fpListRows("driversRegistry",rows);
+  const body=visibleRows.map(item=>{const c=item.assignedCar;const phone=item.member&&workspaceDriverPhone?.(item.member)||"";const status=c?"На линии":"Без автомобиля";const cls=c?"accepted":"free";const vehicle=c?`<button type="button" class="driver-vehicle-link" data-open-driver-car="${c.id}">${model(c).brand} ${model(c).model}<small>${c.plate||"Без номера"}</small></button>`:'<span class="driver-no-car">Без автомобиля</span>';return `<article class="driver-registry-card ${cls}" data-open-driver-profile="${item.type==="account"?item.member.user_id:""}" role="${item.type==="account"?"button":"article"}" tabindex="${item.type==="account"?"0":"-1"}"><div class="driver-registry-avatar">${String(item.name||"D").trim().charAt(0).toUpperCase()}</div><div class="driver-registry-main"><strong>${item.name||"Водитель"}</strong><small>${item.email||"Без e-mail"}</small></div><div class="driver-registry-phone">${phone||"—"}</div><div class="driver-registry-vehicle">${vehicle}</div><div class="driver-registry-city">${c?.city||"Без города"}</div><span class="driver-registry-status ${cls}">${status}</span><div class="driver-registry-actions">${item.type==="account"?`<button type="button" class="btn" data-edit-driver="${item.member.user_id}">Редактировать</button><button type="button" class="driver-delete-button" data-delete-driver="${item.member.user_id}">Удалить</button>`:`<button type="button" class="driver-delete-button" data-delete-manual-driver="${c?.id||""}">Удалить</button>`}</div></article>`}).join("");
   root.innerHTML=body||'<div class="owner-empty">Водители не найдены.</div>';
+  fpAppendListMore(root,"driversRegistry",rows.length,renderDriversRegistry);
   root.querySelectorAll('[data-open-driver-car]').forEach(b=>b.onclick=()=>window.openCar?.(b.dataset.openDriverCar));
   root.querySelectorAll('[data-open-driver-profile]').forEach(card=>{if(!card.dataset.openDriverProfile)return;card.onclick=e=>{if(e.target.closest('button'))return;openAdminDriverProfile(card.dataset.openDriverProfile)};card.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();openAdminDriverProfile(card.dataset.openDriverProfile)}}});
   root.querySelectorAll('[data-edit-driver]').forEach(button=>button.onclick=()=>openEditDriverProfile(button.dataset.editDriver));
@@ -537,14 +541,16 @@ async function openAdminDriverProfile(userId){
  const dialog=$("#adminDriverProfileDialog"),name=workspaceDriverName(member)||workspaceDriverEmail(member)||"Водитель",email=workspaceDriverEmail(member),phone=workspaceDriverPhone?.(member)||"";
  $("#adminDriverProfileName").textContent=name;$("#adminDriverProfileMeta").textContent=[email,phone].filter(Boolean).join(" · ")||"—";
  const c=fleetCars().find(x=>String(x.driverUserId||"")===String(userId))||null,vehicle=$("#adminDriverProfileVehicle");
- vehicle.innerHTML=c?`<button type="button" class="driver-profile-vehicle-card" data-profile-car="${c.id}"><strong>${model(c).brand} ${model(c).model}</strong><span>${c.plate||"Без номера"} · ${c.city||"Без города"}</span><em>${(typeof vehicleEffectiveStatus==="function"?vehicleEffectiveStatus(c):(c.status||"active"))==="repair"?"В ремонте":(typeof vehicleEffectiveStatus==="function"?vehicleEffectiveStatus(c):(c.status||"active"))==="free"?"Свободен":"На линии"}</em></button>`:'<div class="owner-empty">Автомобиль не назначен</div>';
+ vehicle.innerHTML=c?`<button type="button" class="driver-profile-vehicle-card" data-profile-car="${c.id}"><strong>${model(c).brand} ${model(c).model}</strong><span>${c.plate||"Без номера"} · ${c.city||"Без города"}</span><em>На линии</em></button>`:'<div class="owner-empty">Без автомобиля</div>';
  vehicle.querySelector('[data-profile-car]')?.addEventListener('click',()=>{dialog.close();openCar?.(c.id)});
  const root=$("#adminDriverProfileRequests");root.innerHTML='<div class="owner-empty">Загрузка заявок…</div>';dialog.showModal();
  try{
   const all=await window.FleetPilotCloud.getWorkspaceDriverRepairRequests();
   const rows=all.filter(r=>String(r.driver_user_id||r.user_id||"")===String(userId)||normalizeDriverIdentity(r.driver_email||"")===normalizeDriverIdentity(email)).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
   const hidden=hiddenDriverRequestsSet();
-  root.innerHTML=rows.map(r=>{const isHidden=hidden.has(String(r.id)),cat=DRIVER_REPAIR_CATEGORY_LABELS?.[r.category]||r.category||"Заявка";return `<article class="admin-driver-request-row ${isHidden?"hidden-from-driver":""}"><div><strong>${cat}</strong><span>${r.description||"Без описания"}</span><small>${r.created_at?new Date(r.created_at).toLocaleString("ru-RU"):"—"} · ${km?.(r.mileage)||r.mileage||"—"}</small>${isHidden?'<em>Скрыто у водителя</em>':""}</div><div class="admin-driver-request-actions"><button type="button" class="btn" data-toggle-driver-request="${r.id}" data-hidden="${isHidden?1:0}">${isHidden?"Вернуть водителю":"Убрать у водителя"}</button><button type="button" class="btn danger" data-delete-driver-request="${r.id}">Удалить навсегда</button></div></article>`}).join("")||'<div class="owner-empty">Заявок у водителя нет.</div>';
+  const visibleRows=fpListRows(`adminDriverRequests:${userId}`,rows);
+  root.innerHTML=visibleRows.map(r=>{const isHidden=hidden.has(String(r.id)),cat=DRIVER_REPAIR_CATEGORY_LABELS?.[r.category]||r.category||"Заявка";return `<article class="admin-driver-request-row ${isHidden?"hidden-from-driver":""}"><div><strong>${cat}</strong><span>${r.description||"Без описания"}</span><small>${r.created_at?new Date(r.created_at).toLocaleString("ru-RU"):"—"} · ${km?.(r.mileage)||r.mileage||"—"}</small>${isHidden?'<em>Скрыто у водителя</em>':""}</div><div class="admin-driver-request-actions"><button type="button" class="btn" data-toggle-driver-request="${r.id}" data-hidden="${isHidden?1:0}">${isHidden?"Вернуть водителю":"Убрать у водителя"}</button><button type="button" class="btn danger" data-delete-driver-request="${r.id}">Удалить навсегда</button></div></article>`}).join("")||'<div class="owner-empty">Заявок у водителя нет.</div>';
+  fpAppendListMore(root,`adminDriverRequests:${userId}`,rows.length,()=>openAdminDriverProfile(userId));
   root.querySelectorAll('[data-toggle-driver-request]').forEach(b=>b.onclick=()=>{setDriverRequestHidden(b.dataset.toggleDriverRequest,b.dataset.hidden!=="1");openAdminDriverProfile(userId)});
   root.querySelectorAll('[data-delete-driver-request]').forEach(b=>b.onclick=async()=>{if(!confirm("Удалить заявку навсегда? Она исчезнет и из кабинета водителя, и из архива."))return;const id=b.dataset.deleteDriverRequest;setDriverRequestHidden(id,true);if(typeof rememberPermanentlyDeletedArchiveRequest==='function')rememberPermanentlyDeletedArchiveRequest(id);try{await window.FleetPilotCloud.deleteDriverRepairRequest(id)}catch(e){console.warn(e)}save?.();openAdminDriverProfile(userId);toast("Заявка удалена навсегда")});
  }catch(error){root.innerHTML=`<div class="owner-empty">${error.message||error}</div>`}
@@ -599,7 +605,8 @@ async function renderEnterprisePage(){
    <div><span>Часовой пояс</span><strong>${ws.timezone||"Europe/Warsaw"}</strong></div>`;
 
   const canManage=enterpriseCurrentRole()==="owner";
-  root.innerHTML=filtered.map(member=>`
+  const visibleMembers=fpListRows("companyMembers",filtered);
+  root.innerHTML=visibleMembers.map(member=>`
    <article class="enterprise-member-card">
     <div class="enterprise-member-avatar">${enterpriseMemberEmail(member)[0]?.toUpperCase()||"U"}</div>
     <div class="enterprise-member-main">
@@ -611,14 +618,18 @@ async function renderEnterprisePage(){
     <span class="enterprise-status ${member.status}">${member.status==="active"?"Активен":"Отключён"}</span>
     ${canManage&&member.user_id!==window.FleetPilotCloud.session?.user?.id?`<button type="button" class="enterprise-member-toggle" data-enterprise-toggle="${member.user_id}" data-status="${member.status}">${member.status==="active"?"Отключить":"Включить"}</button>`:""}
    </article>`).join("")||`<div class="owner-empty">Участники не найдены.</div>`;
+  fpAppendListMore(root,"companyMembers",filtered.length,renderEnterprisePage);
 
   const inviteRoot=$("#enterpriseInvitesList");
-  inviteRoot.innerHTML=invites.filter(x=>x.status==="pending").map(invite=>`
+  const pendingInvites=invites.filter(x=>x.status==="pending");
+  const visibleInvites=fpListRows("companyInvites",pendingInvites);
+  inviteRoot.innerHTML=visibleInvites.map(invite=>`
    <article class="enterprise-invite-row">
     <div><strong>${invite.email}</strong><small>${ENTERPRISE_ROLE_LABELS[invite.role]||invite.role} · ${invite.city||"все города"}</small></div>
     <span>до ${new Date(invite.expires_at).toLocaleDateString("ru-RU")}</span>
     ${canManage?`<button type="button" data-cancel-invite="${invite.id}">Отменить</button>`:""}
    </article>`).join("")||`<div class="owner-empty">Активных приглашений нет.</div>`;
+  fpAppendListMore(inviteRoot,"companyInvites",pendingInvites.length,renderEnterprisePage);
 
   $$("[data-enterprise-role]").forEach(select=>select.onchange=async()=>{
    await window.FleetPilotCloud.enterpriseUpdateMember(select.dataset.enterpriseRole,{role:select.value});

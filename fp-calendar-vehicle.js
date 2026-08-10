@@ -166,11 +166,14 @@ function renderCalendar(){
   ["Просрочено",overdue,"Требует внимания"]
  ].map(([label,value,note])=>`<article class="professional-kpi"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
  const counter=$("#calendarVisibleCount");if(counter)counter.textContent=String(events.length);
- const grouped=new Map();events.forEach(event=>{const key=event.date;if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event)});
- $("#calendarList").innerHTML=events.length?[...grouped.entries()].map(([group,items])=>{
+ const visibleEvents=fpListRows("calendarEvents",events);
+ const grouped=new Map();visibleEvents.forEach(event=>{const key=event.date;if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event)});
+ const calendarRoot=$("#calendarList");
+ calendarRoot.innerHTML=events.length?[...grouped.entries()].map(([group,items])=>{
   const groupDate=calendarDate(group),groupLabel=groupDate.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});
   return `<section class="calendar-day-group"><h4><span>${groupLabel}</span><b>${items.length}</b></h4>${items.map(e=>`<article class="calendar-professional-row ${e.days<0?"overdue":e.days<=7?"urgent":e.days<=30?"soon":""}" onclick="openSmartEntity('${e.type}','${e.entityId||''}','${e.carId||''}')"><div class="calendar-professional-date"><strong>${groupDate.getDate()}</strong><span>${groupDate.toLocaleDateString("ru-RU",{weekday:"short"})}</span></div><div class="calendar-professional-icon fp-standard-icon type-${e.type}">${eventIcon(e.type)}</div><div class="calendar-professional-main"><div class="calendar-event-title-line"><strong>${e.title}</strong><em>${calendarEventTypeLabel(e.type)}</em></div><span>${e.car}${e.amount?` · ${money(e.amount)}`:""}</span><small>${e.days<0?`Просрочено ${Math.abs(e.days)} дн.`:e.days===0?"Сегодня":`через ${e.days} дн.`}</small></div><b class="fp-row-chevron">${fpUiIcon("arrow")}</b></article>`).join("")}</section>`
  }).join(""):`<div class="professional-empty">В выбранном ${calendarViewMode==="day"?"дне":calendarViewMode==="week"?"периоде недели":"месяце"} событий нет.</div>`;
+ fpAppendListMore(calendarRoot,"calendarEvents",events.length,renderCalendar);
  renderCalendarMonthGrid(all);
  const overview=$("#calendarMonthOverview");
  if(overview){overview.innerHTML=[0,1,2,3].map(offset=>{const base=calendarDate(calendarAnchorDate||today()),d=new Date(base.getFullYear(),base.getMonth()+offset,1),key=calendarIsoLocal(d).slice(0,7),count=all.filter(x=>(x.date||"").startsWith(key)).length;return `<button type="button" class="calendar-month-card ${calendarViewMonth.getFullYear()===d.getFullYear()&&calendarViewMonth.getMonth()===d.getMonth()?"selected":""}" onclick="calendarViewMonth=new Date(${d.getFullYear()},${d.getMonth()},1);calendarAnchorDate='${calendarIsoLocal(d)}';calendarViewMode='month';renderCalendar()"><span>${d.toLocaleDateString("ru-RU",{month:"long"})}</span><strong>${count}</strong><small>событий</small></button>`}).join("")}

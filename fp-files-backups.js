@@ -162,7 +162,7 @@ async function renderDataPage(){
   $("#restoreAutoBackup").disabled=true
  }
  try{const stats=await fileStorageStats();$("#fileStorageStats").innerHTML=`<strong>${stats.count}</strong> файлов · <strong>${humanSize(stats.size)}</strong>`}catch{$("#fileStorageStats").textContent="Недоступно"}
- try{const backups=await listBackups();$("#backupHistory").innerHTML=backups.length?backups.map(x=>`<button class="backup-history-row" onclick="restoreBackupById('${x.id}')"><div><strong>${x.reason||"Автокопия"}</strong><small>${new Date(x.savedAt).toLocaleString("ru-RU")}</small></div><span>Восстановить</span></button>`).join(""):"Копий пока нет"}catch{$("#backupHistory").textContent="История недоступна"}
+ try{const backups=await listBackups();const root=$("#backupHistory"),visible=fpListRows("backupHistory",backups);root.innerHTML=backups.length?visible.map(x=>`<button class="backup-history-row" onclick="restoreBackupById('${x.id}')"><div><strong>${x.reason||"Автокопия"}</strong><small>${new Date(x.savedAt).toLocaleString("ru-RU")}</small></div><span>Восстановить</span></button>`).join(""):"Копий пока нет";fpAppendListMore(root,"backupHistory",backups.length,renderBackupHistory)}catch{$("#backupHistory").textContent="История недоступна"}
  }
 
 function analyticsSelectedPeriod(){

@@ -1183,20 +1183,19 @@ async function getDriverAssignments(){
 async function assignDriverVehicle(driverUserId,carId){
  if(!client||!membership)throw new Error("Workspace недоступен");
  const wanted=carId?String(carId):null;
- // Idempotency guard: saving/refreshing a car must never start a new handover cycle
- // when this exact driver is already assigned to this exact vehicle.
+ // V19.0.32: never call the obsolete get_driver_assignments endpoint.
+ // The shared fleet state is the source of truth for the current driver ↔ vehicle link.
+ // This removes the recurring Supabase 404 and prevents a failed background check
+ // from triggering UI/router fallback logic.
  try{
-  const {data:rows,error:readError}=await client.rpc("get_driver_assignments");
-  if(!readError){
-   const list=Array.isArray(rows)?rows:[];
-   const current=list.find(row=>String(row?.user_id||row?.driver_user_id||"")===String(driverUserId));
-   const currentCar=current?.car_id??current?.vehicle_id??null;
-   if(String(currentCar||"")===String(wanted||"")){
-    console.info("assignDriverVehicle: unchanged assignment, RPC skipped",{driverUserId,carId:wanted});
-    return current||null;
-   }
+  const list=await getDriverAssignments();
+  const current=(Array.isArray(list)?list:[]).find(row=>String(row?.user_id||row?.driver_user_id||"")===String(driverUserId));
+  const currentCar=current?.car_id??current?.vehicle_id??null;
+  if(String(currentCar||"")===String(wanted||"")){
+   console.info("assignDriverVehicle: unchanged assignment, write skipped",{driverUserId,carId:wanted});
+   return current||null;
   }
- }catch(error){console.warn("Assignment idempotency check",error)}
+ }catch(error){console.warn("Local assignment idempotency check",error)}
  const call=async value=>{const {data,error}=await client.rpc("assign_driver_vehicle",{driver_user_id_value:driverUserId,car_id_value:value||null});if(error)throw error;return data};
  // Only an ACTUAL driver/car change starts a new acceptance cycle.
  if(wanted){
