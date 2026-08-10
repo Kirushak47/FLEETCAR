@@ -1164,10 +1164,28 @@ async function getDriverAssignments(){
 }
 async function assignDriverVehicle(driverUserId,carId){
  if(!client||!membership)throw new Error("Workspace недоступен");
- const call=async value=>{const {error}=await client.rpc("assign_driver_vehicle",{driver_user_id_value:driverUserId,car_id_value:value||null});if(error)throw error};
- // A non-null assignment is a NEW acceptance cycle. Reset any previous link first,
- // including the same driver + same car, so an old issued handover cannot be reused.
- if(carId){try{await call(null)}catch(error){console.warn("Assignment reset",error)}await call(carId)}else await call(null)
+ const wanted=carId?String(carId):null;
+ // Idempotency guard: saving/refreshing a car must never start a new handover cycle
+ // when this exact driver is already assigned to this exact vehicle.
+ try{
+  const {data:rows,error:readError}=await client.rpc("get_driver_assignments");
+  if(!readError){
+   const list=Array.isArray(rows)?rows:[];
+   const current=list.find(row=>String(row?.user_id||row?.driver_user_id||"")===String(driverUserId));
+   const currentCar=current?.car_id??current?.vehicle_id??null;
+   if(String(currentCar||"")===String(wanted||"")){
+    console.info("assignDriverVehicle: unchanged assignment, RPC skipped",{driverUserId,carId:wanted});
+    return current||null;
+   }
+  }
+ }catch(error){console.warn("Assignment idempotency check",error)}
+ const call=async value=>{const {data,error}=await client.rpc("assign_driver_vehicle",{driver_user_id_value:driverUserId,car_id_value:value||null});if(error)throw error;return data};
+ // Only an ACTUAL driver/car change starts a new acceptance cycle.
+ if(wanted){
+  try{await call(null)}catch(error){console.warn("Assignment reset",error)}
+  return await call(wanted)
+ }
+ return await call(null)
 }
 
 async function getCloudFleetVersions(){
@@ -1273,10 +1291,38 @@ async function updateDriverMileage(mileage,source="driver_manual"){
  return Array.isArray(data)?data[0]||null:data||null
 }
 
+let driverServiceFeedRpcDisabled=false;
+function localDriverServiceFeedFallback(){
+ try{
+  const ctx=typeof driverPortalContext!=="undefined"?driverPortalContext:null;
+  const carId=ctx?.car_id?String(ctx.car_id):"";
+  const source=(typeof db!=="undefined"&&Array.isArray(db?.repairs))?db.repairs:[];
+  if(!carId)return[];
+  return source.filter(r=>String(r?.carId||r?.car_id||"")===carId).map(r=>({
+   id:r.id,car_id:carId,title:r.title||"Сервис",date:r.date||r.scheduled_at||null,
+   scheduled_at:r.scheduled_at||r.date||null,mileage:Number(r.mileage||0),status:String(r.status||"planned"),
+   note:r.note||"",driver_action_required:Boolean(r.driverActionRequired||r.driver_action_required),
+   requires_driver:Boolean(r.requiresDriver||r.requires_driver),driver_message:r.driverMessage||r.driver_message||"",
+   appointment_at:r.appointmentAt||r.appointment_at||null
+  }))
+ }catch(error){console.warn("Local driver service feed fallback",error);return[]}
+}
 async function getDriverServiceFeed(){
- if(!client||!membership)return[];
+ if(!client||!membership)return localDriverServiceFeedFallback();
+ if(driverServiceFeedRpcDisabled)return localDriverServiceFeedFallback();
  const {data,error}=await client.rpc("get_driver_service_feed");
- if(error)throw error;
+ if(error){
+  const status=Number(error?.status||error?.statusCode||0);
+  const text=[error?.message,error?.details,error?.hint,error?.code].filter(Boolean).join(" | ");
+  // A broken/missing legacy RPC must not spam POST 400 forever or break Driver Portal.
+  // Disable it for the current page session and use the synchronized fleet state instead.
+  if(status===400||String(text).toLowerCase().includes("400")||error?.code){
+   driverServiceFeedRpcDisabled=true;
+   console.warn("get_driver_service_feed disabled for this session; using local fleet fallback",text||error);
+   return localDriverServiceFeedFallback()
+  }
+  throw error
+ }
  return data||[]
 }
 async function notifyAssignedDriverService(repair){
