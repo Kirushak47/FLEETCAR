@@ -34,6 +34,16 @@ function fleetPilotDefaultCrmPage(){
 const FLEETPILOT_CAR_TABS=new Set(["info","service","finance","history","documents","damages"]);
 let fleetPilotRouteReady=false;
 let fleetPilotApplyingRoute=false;
+const FLEETPILOT_LAST_ROUTE_KEY="fleetpilot.lastRoute.v1";
+
+function fleetPilotRememberRoute(route){
+ const value=String(route||"").replace(/^#\/?/,"").trim();
+ if(!value)return;
+ try{sessionStorage.setItem(FLEETPILOT_LAST_ROUTE_KEY,value)}catch{}
+}
+function fleetPilotRememberedRoute(){
+ try{return String(sessionStorage.getItem(FLEETPILOT_LAST_ROUTE_KEY)||"").trim()}catch{return ""}
+}
 
 function fleetPilotHash(route){
  return `#/${String(route||"dashboard").replace(/^\/+/,"")}`
@@ -42,6 +52,7 @@ function fleetPilotCurrentRoute(){
  return decodeURIComponent(String(location.hash||"").replace(/^#\/?/,""))
 }
 function fleetPilotSetRoute(route,{replace=false}={}){
+ fleetPilotRememberRoute(route);
  if(!fleetPilotRouteReady||fleetPilotApplyingRoute)return;
  const hash=fleetPilotHash(route);
  if(location.hash===hash)return;
@@ -68,7 +79,14 @@ function fleetPilotFindCar(routeId){
   ||null
 }
 function fleetPilotApplyRoute({replaceInvalid=true}={}){
- const route=fleetPilotCurrentRoute();
+ let route=fleetPilotCurrentRoute();
+ // V19.0.30: a hard refresh must keep the exact section the user was viewing.
+ // Some hosts/PWA launches can temporarily start without the hash, so restore
+ // the last successful route before falling back to a default CRM page.
+ if(!route){
+  const remembered=fleetPilotRememberedRoute();
+  if(remembered)route=remembered;
+ }
  if(!route){
   fleetPilotApplyingRoute=true;
   const landing=enterpriseCurrentRole()==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage();
@@ -76,6 +94,7 @@ function fleetPilotApplyRoute({replaceInvalid=true}={}){
   fleetPilotSetRoute(fleetPilotRouteForPage(landing),{replace:true});
   return
  }
+ fleetPilotRememberRoute(route);
 
  const parts=route.split("/").filter(Boolean);
  const root=parts[0];
@@ -96,7 +115,6 @@ function fleetPilotApplyRoute({replaceInvalid=true}={}){
   }
 
   let pageId=FLEETPILOT_ROUTE_PAGES[root];
-  if(pageId==="dashboardPage"&&enterpriseCurrentRole()!=="driver")pageId=fleetPilotDefaultCrmPage();
   if(pageId&&document.getElementById(pageId)){
    showPage(pageId);
    if(root==="dashboard"&&replaceInvalid)setTimeout(()=>fleetPilotSetRoute(fleetPilotRouteForPage(pageId),{replace:true}),0);
@@ -138,7 +156,7 @@ function showPage(id){
  if(window.FleetPilotCloud?.session&&!fleetPilotEnterpriseAccessReady){return}
  applyEnterpriseAccess();
  const resolvedRole=enterpriseCurrentRole();
- if(id==="dashboardPage"&&resolvedRole!=="driver")id=fleetPilotDefaultCrmPage();
+ // V19.0.30: do not rewrite a valid dashboard/current route to Autopark on refresh.
  // V18.2: a driver lives inside Driver Portal and must never be bounced through CRM dashboard.
  if(resolvedRole==="driver"&&!['driverPortalPage','driverProfilePage'].includes(id))id="driverPortalPage";
  // V18.3: Driver Portal is a dedicated shell. Never run CRM access denial against its own pages.
@@ -151,8 +169,9 @@ function showPage(id){
   id=role==="driver"?"driverPortalPage":fleetPilotDefaultCrmPage()
  }
  if(enterpriseCurrentRole()!=="driver"&&window.innerWidth<1100&&isSimpleMode()&&!SIMPLE_ALLOWED_PAGES.has(id))id=fleetPilotDefaultCrmPage();
- if(id!=="carPage"&&fleetPilotRouteReady&&!fleetPilotApplyingRoute){
-  fleetPilotSetRoute(fleetPilotRouteForPage(id))
+ if(id!=="carPage"){
+  fleetPilotRememberRoute(fleetPilotRouteForPage(id));
+  if(fleetPilotRouteReady&&!fleetPilotApplyingRoute)fleetPilotSetRoute(fleetPilotRouteForPage(id))
  }
  const previous=$(".page.active");$$(".page").forEach(p=>p.classList.toggle("active",p.id===id));
  syncDesktopNavigation(id);
