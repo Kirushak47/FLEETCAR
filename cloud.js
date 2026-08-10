@@ -1062,8 +1062,40 @@ async function logWorkspaceActivity(action,entityType=null,entityId=null,details
 
 async function getDriverPortalContext(){
  if(!client||!membership)throw new Error("Workspace недоступен");
+ const localFallback=()=>{
+  const payload=window.getFleetPilotDatabase?.()||{};
+  const cars=Array.isArray(payload.cars)?payload.cars:[];
+  const userId=String(session?.user?.id||"");
+  const car=cars.find(row=>String(row?.driverUserId||"")===userId);
+  if(!car)return null;
+  const modelInfo=typeof window.model==="function"?window.model(car):null;
+  return{
+   workspace_id:membership.workspace_id||null,
+   driver_user_id:userId,
+   driver_email:session?.user?.email||car.driverEmail||"",
+   driver_name:car.driverName||car.tenant||"",
+   car_id:String(car.id||""),
+   status:car.driverAcceptedAt?"issued":"assigned",
+   assigned_at:car.driverAssignedAt||car.driverAssignmentAt||null,
+   accepted_at:car.driverAcceptedAt||null,
+   mileage:Number(car.mileage||0),
+   vehicle_snapshot:{
+    id:String(car.id||""),plate:car.plate||"",vin:car.vin||"",year:car.year||null,
+    brand:modelInfo?.brand||car.brand||"",model:modelInfo?.model||car.model||"",
+    mileage:Number(car.mileage||0),city:car.city||"",status:car.status||"active"
+   },
+   source:"fleet_state_fallback"
+  }
+ };
  const {data,error}=await client.rpc("get_driver_portal_context");
- if(error)throw error;
+ if(error){
+  const fallback=localFallback();
+  if(fallback){
+   console.warn("Driver portal RPC failed; using shared fleet state fallback",error);
+   return fallback
+  }
+  throw error
+ }
  return Array.isArray(data)?data[0]||null:data||null
 }
 async function submitDriverRepairRequest(request){

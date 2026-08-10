@@ -926,28 +926,48 @@ function driverAssignmentControl(member){
   const form=$("#carForm");if(!form||form.dataset.driverAssignmentBridge==="1")return;
   form.dataset.driverAssignmentBridge="1";
   form.addEventListener("submit",()=>{
+   const carIdBefore=String($("#carId")?.value||"");
+   const carBefore=carIdBefore?car(carIdBefore):null;
    const snapshot={
-    carId:String($("#carId")?.value||""),
+    carId:carIdBefore,
     plate:String($("#carPlate")?.value||"").trim(),
     driverUserId:String($("#carDriverUserId")?.value||"").trim(),
     manualName:String($("#carDriverManualName")?.value||$("#carTenant")?.value||"").trim(),
     email:String($("#carDriverEmail")?.value||"").trim(),
-    phone:String($("#carDriverPhone")?.value||"").trim()
+    phone:String($("#carDriverPhone")?.value||"").trim(),
+    previousDriverUserId:String(carBefore?.driverUserId||""),
+    previousManualName:String((!carBefore?.driverUserId&&(carBefore?.driverName||carBefore?.tenant))||"").trim(),
+    previousAcceptedAt:String(carBefore?.driverAcceptedAt||""),
+    previousAcceptedRevision:String(carBefore?.driverAcceptedRevision||""),
+    previousAssignmentRevision:String(carBefore?.driverAssignmentRevision||"")
    };
    // Run after the original car save handler creates/updates the vehicle.
    setTimeout(async()=>{
     const target=(snapshot.carId&&car(snapshot.carId))||fleetCars().find(c=>String(c.plate||"").trim()===snapshot.plate);
     if(!target)return;
     try{
+     const assignmentUnchanged=Boolean(snapshot.driverUserId)&&snapshot.driverUserId===snapshot.previousDriverUserId;
+     const manualUnchanged=!snapshot.driverUserId&&!snapshot.previousDriverUserId&&snapshot.manualName===snapshot.previousManualName;
      if(snapshot.driverUserId){
-      await assignVehicleDriverUnified(snapshot.driverUserId,target.id,{name:snapshot.manualName,email:snapshot.email,phone:snapshot.phone});
-      toast("Водитель назначен · ожидаем подтверждения")
+      if(assignmentUnchanged){
+       // Editing plate, mileage, status, rent, documents, etc. is NOT a reassignment.
+       // Preserve the driver's already completed acceptance cycle verbatim.
+       target.driverAcceptedAt=snapshot.previousAcceptedAt||target.driverAcceptedAt||"";
+       target.driverAcceptedRevision=snapshot.previousAcceptedRevision||target.driverAcceptedRevision||"";
+       target.driverAssignmentRevision=snapshot.previousAssignmentRevision||target.driverAssignmentRevision||"";
+       save?.();renderFleet?.();renderDriversRegistry?.();
+      }else{
+       await assignVehicleDriverUnified(snapshot.driverUserId,target.id,{name:snapshot.manualName,email:snapshot.email,phone:snapshot.phone});
+       toast("Водитель назначен · ожидаем подтверждения")
+      }
      }else if(snapshot.manualName){
-      // Manual driver has no acceptance flow/account.
-      target.driverUserId="";target.driverName=snapshot.manualName;target.driverEmail=snapshot.email;target.driverPhone=snapshot.phone;
-      target.driverAssignmentSource="manual";target.driverAcceptedAt="";target.tenant=snapshot.manualName;save?.();renderFleet?.();renderDriversRegistry?.();
-     }else if(target.driverUserId){
-      await unassignVehicleDriverUnified(target.driverUserId,target.id)
+      if(!manualUnchanged||target.driverUserId){
+       // Manual driver has no acceptance flow/account.
+       target.driverUserId="";target.driverName=snapshot.manualName;target.driverEmail=snapshot.email;target.driverPhone=snapshot.phone;
+       target.driverAssignmentSource="manual";target.driverAcceptedAt="";target.driverAcceptedRevision="";target.tenant=snapshot.manualName;save?.();renderFleet?.();renderDriversRegistry?.();
+      }
+     }else if(snapshot.previousDriverUserId){
+      await unassignVehicleDriverUnified(snapshot.previousDriverUserId,target.id)
      }
     }catch(error){toast(error.message||String(error))}
    },180)

@@ -19,6 +19,9 @@ window.deleteRepair=id=>{if(!requireEnterprisePermission("service.edit"))return;
   expense.financeSource="expense"
  }
  if(expense&&removeExpense)db.expenses=db.expenses.filter(x=>x.id!==expense.id);
+ // Preserve the actual oil/tyre service fact before removing the service-board task.
+ // The vehicle maintenance history is intentionally independent from service task CRUD.
+ if(repair.status==="done")rememberCompletedMaintenance?.(repair);
  db.repairs=db.repairs.filter(x=>x.id!==id);
  recalculateVehicleMaintenance(repair.carId);syncCarServiceStatus(repair.carId);
  save();renderRepairs();renderExpenses();renderFleet();renderProfitability();
@@ -246,11 +249,7 @@ $("#repairForm").onsubmit=async e=>{
   const old=db.repairs.find(x=>x.id===id);
   const carId=$("#repairCarId").value;
   const mileage=Number($("#repairMileage").value||0);
-  const linkedRequestId=$("#repairLinkedRequestId").value;
-  const linkedDriverRequest=(workspaceRepairAlerts||[]).find(row=>String(row.id)===String(linkedRequestId));
-  // Driver request mileage is compared to the vehicle's real current odometer.
-  // Future/planned service entries must never block accepting a driver's request.
-  const minimum=linkedRequestId?Number(car(carId)?.mileage||0):currentConfirmedMileage(carId);
+  const minimum=currentConfirmedMileage(carId);
 
   if(!carId){
    toast("Выберите автомобиль");
@@ -290,7 +289,7 @@ $("#repairForm").onsubmit=async e=>{
    completedDate:$("#repairCompletedDate").value||(status==="done"?today():""),
    mechanic:$("#repairMechanic")?.value.trim()||"",priority:$("#repairPriority")?.value||"planned",
    warrantyUntil:$("#repairWarrantyUntil").value,
-   linkedRequestId,
+   linkedRequestId:$("#repairLinkedRequestId").value,
    linkedExpenseId:$("#repairLinkedExpenseId").value
   };
 
@@ -320,13 +319,7 @@ $("#repairForm").onsubmit=async e=>{
   obj.history=history.slice(-60);obj.updatedAt=new Date().toISOString();
   old?Object.assign(old,obj):db.repairs.push(obj);
   const c=car(carId);
-  // A driver's submitted odometer is an actual reading. For ordinary service,
-  // only in-progress/completed work may advance the vehicle odometer.
-  if(c&&(linkedDriverRequest||["repair","done"].includes(String(status)))&&mileage>Number(c.mileage||0)){
-   c.mileage=mileage;
-   c.history=Array.isArray(c.history)?c.history:[];
-   c.history.push({date:today(),value:mileage,source:linkedDriverRequest?"driver_service_request":"service"});
-  }
+  if(c&&mileage>Number(c.mileage||0))c.mileage=mileage;
   syncServiceRelations(obj,previous);
   if(!old)addTimeline(obj.carId,"repair",obj.title,-Number(obj.actual||obj.planned||0),obj.date,repairStatusText(obj.status));
   logActivity(old?"Изменён ремонт":"Добавлен ремонт","Сервис",obj.title,obj.carId);

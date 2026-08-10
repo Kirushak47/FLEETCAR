@@ -229,7 +229,7 @@ function syncServiceRelations(repair,previous=null){
  repair.serviceType=repair.serviceType||inferRepairServiceType(repair);
  syncLinkedExpenseFromRepair(repair);
  const c=car(repair.carId);
- if(c&&["repair","done"].includes(String(repair.status||""))&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
+ if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
  applyCompletedServiceToVehicle(repair,previous);
  recalculateVehicleMaintenance(repair.carId);
  syncCarServiceStatus(repair.carId)

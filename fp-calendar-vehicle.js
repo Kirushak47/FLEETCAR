@@ -764,12 +764,7 @@ function syncExpenseRepairFields(){
 document.addEventListener("change",e=>{if(e.target?.id==="expensePaymentStatus"||e.target?.id==="expenseCreateRepair"||e.target?.id==="expenseCategory")syncExpenseRepairFields()});
 function currentConfirmedMileage(carId){
  const c=car(carId),local=Number(c?.mileage||0);
- // V19.0.19: planned/future service mileage is NOT a confirmed vehicle mileage.
- // Only completed/in-progress physical service records may raise the confirmed value.
- const values=db.repairs
-  .filter(r=>String(r.carId)===String(carId)&&["repair","done"].includes(String(r.status||"")))
-  .map(r=>Number(r.mileage||0))
-  .filter(Number.isFinite);
+ const values=db.repairs.filter(r=>r.carId===carId).map(r=>Number(r.mileage||0));
  return Math.max(local,...values,0)
 }
 function createOrUpdateRepairFromExpense(expense){
@@ -857,7 +852,7 @@ function syncServiceRelations(repair){
  if(!repair)return;
  syncLinkedExpenseFromRepair(repair);
  const c=car(repair.carId);
- if(c&&["repair","done"].includes(String(repair.status||""))&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
+ if(c&&Number(repair.mileage||0)>Number(c.mileage||0))c.mileage=Number(repair.mileage||0);
 }
 function openRepairFromDriverRequest(request){
  const c=car(request.car_id);if(!c)return toast("Автомобиль из заявки не найден");

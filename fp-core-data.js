@@ -249,15 +249,39 @@ function fleetCars(){return db.cars.filter(c=>c.inFleet!==false&&!c.archived)}
 function archivedCars(){return db.cars.filter(c=>c.inFleet!==false&&c.archived)}
 function opts(selected=""){return fleetCars().map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${model(c).brand} ${model(c).model} · ${c.plate}</option>`).join("")}
 function statusText(s){return {active:"На линии",pending:"Ожидает приёмки",repair:"В ремонте",free:"Свободен"}[s]||s}
+function vehicleMaintenanceHistory(c){
+ if(!c)return[];
+ if(!Array.isArray(c.maintenanceHistory))c.maintenanceHistory=[];
+ return c.maintenanceHistory
+}
+function rememberCompletedMaintenance(repair){
+ if(!repair||repair.status!=="done")return null;
+ const c=car(repair.carId);if(!c)return null;
+ const type=inferRepairServiceType(repair);
+ if(!["oil","tires"].includes(type))return null;
+ const performed=repair.completedDate||repair.date||today(),mileage=Number(repair.mileage||c.mileage||0);
+ const history=vehicleMaintenanceHistory(c);
+ const repairKey=String(repair.id||"");
+ let row=history.find(x=>repairKey&&String(x.sourceRepairId||"")===repairKey);
+ if(!row)row=history.find(x=>x.type===type&&String(x.date||"")===String(performed)&&Number(x.mileage||0)===mileage);
+ if(row){Object.assign(row,{type,date:performed,mileage,sourceRepairId:repairKey||row.sourceRepairId||"",title:repair.title||row.title||serviceTypeText(type)});return row}
+ row={id:`mh_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,type,date:performed,mileage,sourceRepairId:repairKey,title:repair.title||serviceTypeText(type),createdAt:new Date().toISOString()};
+ history.push(row);return row
+}
 function recalculateVehicleMaintenance(carId){
  const c=car(carId);if(!c)return;
  const done=(db.repairs||[]).filter(r=>String(r.carId)===String(carId)&&r.status==="done");
- const latestOf=type=>done.filter(r=>inferRepairServiceType(r)===type).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||""))||Number(b.mileage||0)-Number(a.mileage||0))[0];
- const oilRepair=latestOf("oil");
- if(oilRepair){c.lastOil=Number(oilRepair.mileage||c.lastOil||0);c.lastOilDate=oilRepair.completedDate||oilRepair.date||""}
+ // Completed maintenance is copied into an independent vehicle history.
+ // Deleting/archiving a service task must never erase the real maintenance fact.
+ done.forEach(rememberCompletedMaintenance);
+ const history=vehicleMaintenanceHistory(c);
+ const latestHistory=type=>history.filter(r=>r.type===type).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||Number(b.mileage||0)-Number(a.mileage||0))[0];
+ const latestRepair=type=>done.filter(r=>inferRepairServiceType(r)===type).sort((a,b)=>String(b.completedDate||b.date||"").localeCompare(String(a.completedDate||a.date||""))||Number(b.mileage||0)-Number(a.mileage||0))[0];
+ const oilEvent=latestHistory("oil")||latestRepair("oil");
+ if(oilEvent){c.lastOil=Number(oilEvent.mileage||c.lastOil||0);c.lastOilDate=oilEvent.date||oilEvent.completedDate||""}
  else if(c.serviceBaselineLastOil!==undefined){c.lastOil=Number(c.serviceBaselineLastOil||0);c.lastOilDate=""}
- const tireRepair=latestOf("tires");
- if(tireRepair){c.tireInstalled=tireRepair.completedDate||tireRepair.date||"";c.tireMileage=Number(tireRepair.mileage||c.tireMileage||0)}
+ const tireEvent=latestHistory("tires")||latestRepair("tires");
+ if(tireEvent){c.tireInstalled=tireEvent.date||tireEvent.completedDate||"";c.tireMileage=Number(tireEvent.mileage||c.tireMileage||0)}
  else{if(c.serviceBaselineTireInstalled!==undefined)c.tireInstalled=c.serviceBaselineTireInstalled;if(c.serviceBaselineTireMileage!==undefined)c.tireMileage=Number(c.serviceBaselineTireMileage||0)}
 }
 function paymentStatus(p){const rest=Math.max(0,p.expected-p.received);return rest===0?"paid":p.received>0?"partial":"unpaid"}
@@ -323,6 +347,7 @@ function applyCompletedServiceToVehicle(repair,previous=null){
  const type=inferRepairServiceType(repair),performed=repair.completedDate||repair.date||today(),mileage=Number(repair.mileage||c.mileage||0);
  const firstCompletion=!previous||previous.status!=="done";
  repair.serviceType=type;
+ rememberCompletedMaintenance(repair);
  if(mileage>Number(c.mileage||0))c.mileage=mileage;
  if(type==="oil"){
   if(c.serviceBaselineLastOil===undefined)c.serviceBaselineLastOil=Number(c.lastOil||0);
