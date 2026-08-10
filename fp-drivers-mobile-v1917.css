@@ -1,5 +1,5 @@
 @media(max-width:900px){
-#driversPage{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:12px!important;overflow-x:hidden!important}
+#driversPage.active{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:12px!important;overflow-x:hidden!important}
 #driversPage>.desktop-fleet-page-head{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:visible!important}
 #driversPage .company-section-head{display:flex!important;flex-direction:column!important;align-items:stretch!important;width:100%!important;min-width:0!important;gap:10px!important;margin:0 0 12px!important}
 #driversPage .company-section-head p{display:none!important}

@@ -554,7 +554,7 @@ function renderDocuments(){
    <div class="document-register-cell"><span>Срок</span><strong>${row.expiry?date(row.expiry):"Не указан"}</strong><small>${st.detail}</small></div>
    <div class="document-register-cell"><span>Статус</span><span class="document-status-badge ${st.key}"><i class="document-status-dot"></i>${st.label}</span>${Number(row.cost||0)?`<small>Стоимость ${money(row.cost)}</small>`:""}</div>
    <div class="document-register-file-slot ${row.fileId?"has-file":"no-file"}" title="${row.fileId?"К документу прикреплён файл":"Файл не прикреплён"}" aria-label="${row.fileId?"Есть прикреплённый файл":"Нет прикреплённого файла"}"><span aria-hidden="true">▣</span></div>
-   <div class="document-register-actions"><button type="button" class="btn document-more-button" title="Удалить документ" aria-label="Удалить документ" onclick="event.stopPropagation();deleteDocument('${row.id}')">Удалить</button></div>
+   <div class="document-register-actions"><button type="button" class="document-delete-icon" title="Удалить документ" aria-label="Удалить документ" onclick="event.stopPropagation();deleteDocument('${row.id}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg></button></div>
   </article>`
  }).join("")||'<div class="document-empty-professional">По выбранным фильтрам документов нет.</div>';
  ["documentSearch","documentTypeFilter","documentStatusFilter","documentCarFilter"].forEach(id=>{const el=$("#"+id);if(el&&!el.dataset.documentsBound){el.dataset.documentsBound="1";el.addEventListener(id==="documentSearch"?"input":"change",renderDocuments)}})

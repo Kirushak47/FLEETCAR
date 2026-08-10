@@ -1031,13 +1031,34 @@ async function submitVehicleHandoverFromPortal(event){
  if(submit){submit.dataset.busy="1";submit.disabled=true;submit.textContent="Сохраняем…"}
  try{
   const equipment={};$$('[data-handover-equipment]').forEach(input=>equipment[input.dataset.handoverEquipment]=Boolean(input.checked));
+
+  // V19.0.14 — sync return odometer BEFORE backend return detaches the driver.
+  if(state.type==="return"){
+   const current=Number(driverAssignedCar()?.mileage||driverPortalContext?.mileage||0);
+   if(state.mileage<current)throw new Error(`Пробег возврата не может быть меньше текущего: ${current.toLocaleString("ru-RU")} км`);
+   if(state.mileage>current&&window.FleetPilotCloud?.updateDriverMileage){
+    await window.FleetPilotCloud.updateDriverMileage(state.mileage,"vehicle_return");
+   }
+  }
+
   const result=await window.FleetPilotCloud.submitVehicleHandover({
    type:state.type,mileage:state.mileage,fuelLevel:Number($("#vehicleHandoverFuel")?.value||0),
    equipment,photos:state.photos,notes:$("#vehicleHandoverNotes")?.value||""
   });
   const assigned=driverAssignedCar();
   if(assigned){
-   if(state.mileage>Number(assigned.mileage||0))assigned.mileage=state.mileage;
+   if(state.mileage>=Number(assigned.mileage||0)){
+    const previousMileage=Number(assigned.mileage||0);
+    assigned.mileage=state.mileage;
+    if(state.mileage>previousMileage){
+     assigned.history=Array.isArray(assigned.history)?assigned.history:[];
+     const returnDate=(typeof today==="function"?today():new Date().toISOString().slice(0,10));
+     const last=assigned.history[assigned.history.length-1];
+     if(!last||Number(last.value)!==state.mileage||last.date!==returnDate){
+      assigned.history.push({date:returnDate,value:state.mileage,source:state.type==="return"?"vehicle_return":"vehicle_issue"});
+     }
+    }
+   }
    if(state.type==="issue"){
     assigned.driverAcceptedAt=result?.accepted_at||result?.issue_at||new Date().toISOString();
     assigned.driverAcceptedRevision=assigned.driverAssignmentRevision||"";
