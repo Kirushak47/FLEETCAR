@@ -50,7 +50,7 @@ function renderAnalytics(){renderProfitability();
  fpAppendListMore($("#analyticsCars"),"analyticsCars",rows.length,renderAnalytics);
  const best=rows[0];
  $("#bestCar").innerHTML=best?`<strong class="big-stat">${model(best.c).brand} ${model(best.c).model}</strong><p>${best.c.plate} · ${money(best.data.finalProfit)}</p>`:"Нет данных";
- const repair=[...db.repairs].filter(x=>x.status==="done").sort((a,b)=>Number(b.actual||b.planned)-Number(a.actual||a.planned))[0];
+ const repair=[...db.repairs].filter(x=>x.status!=="cancelled"&&x.paymentStatus==="paid"&&inPeriod(x.paidDate||x.date,periodBounds(period))).sort((a,b)=>Number(b.actual||b.planned)-Number(a.actual||a.planned))[0];
  $("#largestRepair").innerHTML=repair?`<strong class="big-stat">${repair.title}</strong><p>${car(repair.carId).plate} · ${money(repair.actual||repair.planned)}</p>`:"Нет данных";
  const insurance=[...db.documents].filter(x=>x.type==="insurance").sort((a,b)=>b.cost-a.cost)[0];
  $("#largestInsurance").innerHTML=insurance?`<strong class="big-stat">${insurance.title}</strong><p>${car(insurance.carId).plate} · ${money(insurance.cost)}</p>`:"Нет данных";

@@ -487,6 +487,7 @@ const expenseCategoryFilter=$("#expenseCategoryFilter");if(expenseCategoryFilter
 $("#profitPeriod").onchange=renderProfitability;
 $("#taxMethod").onchange=syncTaxMethodFields;
 $("#taxVat").onchange=syncTaxMethodFields;
+if($("#taxScaleRate"))$("#taxScaleRate").onchange=syncTaxMethodFields;
 
 $("#saveTaxSettings").onclick=()=>{
  const tax=taxSettings();
@@ -501,6 +502,7 @@ $("#saveTaxSettings").onclick=()=>{
   tax.deductVatCosts=$("#taxDeductVatCosts").checked;
  }
  tax.ryczaltRate=Number($("#taxRyczaltRate").value||0);
+ tax.scaleRate=$("#taxScaleRate")?.value==="custom"?Number($("#taxScaleCustomRate")?.value||12):Number($("#taxScaleRate")?.value||12);
  save();renderProfitability();renderFleet();toast("Налоговый профиль сохранён")
 };
 

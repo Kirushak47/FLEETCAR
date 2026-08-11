@@ -190,7 +190,7 @@ function renderServiceCarTasks(row){
      <span class="service-task-icon">🔧</span>
      <div class="service-task-copy"><div class="service-task-titleline"><strong>${r.title}</strong><span class="service-priority-chip ${priority}">${servicePriorityText(priority)}</span>${overdue?`<span class="service-overdue-chip">Просрочено</span>`:""}</div><span>${r.service||"Сервис не указан"}${r.mechanic?` · ${r.mechanic}`:""}${r.problem?` · ${r.problem}`:r.note?` · ${r.note}`:""}</span><small>${date(r.date)} · ${km(r.mileage)} · ${serviceRepairCostMeta(r)}${Array.isArray(r.parts)&&r.parts.length?` · запчастей ${r.parts.length}`:""}${Array.isArray(r.checklist)&&r.checklist.length?` · чек-лист ${r.checklist.filter(x=>x.done).length}/${r.checklist.length}`:""}${linkedExpense?` · расход ${expenseStatusText(linkedExpense.status)}`:""}</small></div>
      <div class="service-task-inline-controls"><select aria-label="Приоритет" onchange="updateServiceRepairField('${r.id}','priority',this.value)"><option value="planned" ${priority==="planned"?"selected":""}>Планово</option><option value="today" ${priority==="today"?"selected":""}>Сегодня</option><option value="critical" ${priority==="critical"?"selected":""}>Срочно</option></select><input aria-label="Исполнитель" value="${String(r.mechanic||"").replaceAll('"','&quot;')}" placeholder="Исполнитель" onchange="updateServiceRepairField('${r.id}','mechanic',this.value.trim())"></div>
-     <span class="service-task-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span>
+     <div class="service-task-status-stack"><span class="service-task-status ${serviceStatusClass(r.status)}">${repairStatusText(r.status)}</span><span class="service-payment-chip ${r.paymentStatus==="paid"?"paid":"unpaid"}">${r.paymentStatus==="paid"?"Оплачено":r.status==="done"?"Выполнено · не оплачено":r.paymentStatus==="partial"?"Частично оплачено":r.paymentStatus==="driver"?"Оплата водителем":r.paymentStatus==="insurance"?"Страховая":r.paymentStatus==="warranty"?"Гарантия":"Не оплачено"}</span></div>
      <div class="service-task-actions">${linkedExpense?`<button class="btn" onclick="openSmartEntity('expense','${linkedExpense.id}','${c.id}')">Расход</button>`:""}${nextLabel?`<button class="btn primary" onclick="advanceServiceRepair('${r.id}')">${nextLabel}</button>`:""}<button class="btn" onclick="editRepair('${r.id}')">Подробнее</button></div>
     </div>`}).join("")}
   </div>
@@ -228,7 +228,8 @@ function renderRepairs(){
 }
 
 function taxSettings(){
- db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,monthlyContributions:0,deductVatCosts:true};
+ db.settings.tax=db.settings.tax||{vat:"no",method:"ryczalt",ryczaltRate:8.5,scaleRate:12,monthlyContributions:0,deductVatCosts:true};
+ if(db.settings.tax.scaleRate==null)db.settings.tax.scaleRate=12;
  return db.settings.tax
 }
 function monthLabel(value){
@@ -306,10 +307,11 @@ function financialExpenseRows(bounds,carId=null){
  const linkedRepairIds=new Set(paidExpenses.map(x=>x.linkedRepairId).filter(Boolean));
  const legacyRepairs=db.repairs.filter(r=>
   (!carId||r.carId===carId)&&
-  r.status==="done"&&
+  r.status!=="cancelled"&&
+  r.paymentStatus==="paid"&&
   !linkedRepairIds.has(r.id)&&
   !r.linkedExpenseId&&
-  inPeriod(r.completedDate||r.date,bounds)
+  inPeriod(r.paidDate||r.date,bounds)
  );
  return{paidExpenses,legacyRepairs}
 }
@@ -342,11 +344,8 @@ function financialData(period,carId=null){
  else if(tax.method==="linear"&&!noTaxes)pit=Math.max(0,profitBeforePit*.19);
  else if(tax.method==="scale"&&!noTaxes){
   const taxable=Math.max(0,profitBeforePit);
-  pit=bounds.months===1
-   ?Math.max(0,taxable*.12-(carId?300/Math.max(1,fleetCars().length):300))
-   :(taxable<=120000
-     ?Math.max(0,taxable*.12-(carId?3600/Math.max(1,fleetCars().length):3600))
-     :10800+(taxable-120000)*.32)
+  const rate=Math.max(0,Number(tax.scaleRate??12))/100;
+  pit=Math.max(0,taxable*rate)
  }
 
  const contributions=noTaxes?0:fixedContributionShare(carId,bounds);
@@ -361,11 +360,16 @@ function syncTaxMethodFields(){
  const method=$("#taxMethod").value;
  const noTaxes=method==="none";
  const ryczalt=method==="ryczalt";
+ const scale=method==="scale";
  $("#taxRyczaltRate").disabled=!ryczalt;
+ if($("#taxScaleRate"))$("#taxScaleRate").disabled=!scale;
+ if($("#taxScaleCustomRate"))$("#taxScaleCustomRate").disabled=!scale||$("#taxScaleRate")?.value!=="custom";
  $("#taxVat").disabled=noTaxes;
  $("#taxMonthlyContributions").disabled=noTaxes;
  $("#taxDeductVatCosts").disabled=noTaxes||$("#taxVat").value!=="yes";
  $("#taxRyczaltField").classList.toggle("disabled-field",!ryczalt);
+ if($("#taxScaleField"))$("#taxScaleField").classList.toggle("disabled-field",!scale);
+ if($("#taxScaleCustomField"))$("#taxScaleCustomField").hidden=!scale||$("#taxScaleRate")?.value!=="custom";
  $("#taxVatField").classList.toggle("disabled-field",noTaxes);
  $("#taxContributionsField").classList.toggle("disabled-field",noTaxes);
  $("#taxVatCostsField").classList.toggle("disabled-field",noTaxes||$("#taxVat").value!=="yes");
@@ -384,7 +388,7 @@ function taxMethodReportLabel(tax){
  if(tax.method==="none")return "Налоги отключены";
  if(tax.method==="ryczalt")return `Ryczałt ${Number(tax.ryczaltRate||0).toLocaleString("ru-RU")}%`;
  if(tax.method==="linear")return "PIT liniowy 19%";
- if(tax.method==="scale")return "PIT — zasady ogólne";
+ if(tax.method==="scale")return `PIT — zasady ogólne ${Number(tax.scaleRate??12).toLocaleString("ru-RU")}%`;
  return "PIT"
 }
 function taxBreakdownExpenseGroups(bounds){
@@ -473,6 +477,8 @@ function renderProfitability(){
  $("#taxVat").value=tax.vat;
  $("#taxMethod").value=tax.method;
  $("#taxRyczaltRate").value=tax.ryczaltRate;
+ if($("#taxScaleRate")){const common=[12,32].includes(Number(tax.scaleRate));$("#taxScaleRate").value=common?String(Number(tax.scaleRate)):"custom"}
+ if($("#taxScaleCustomRate"))$("#taxScaleCustomRate").value=Number(tax.scaleRate??12);
  $("#taxMonthlyContributions").value=tax.monthlyContributions;
  $("#taxDeductVatCosts").checked=tax.deductVatCosts!==false;
  syncTaxMethodFields();
@@ -563,7 +569,7 @@ function renderExpenses(){
     <small>${expenseCategoryText(x.category)}${x.note?` · ${x.note}`:""}</small>
    </div>
    <div class="professional-row-numbers">
-    <span class="professional-status ${x.status}">${expenseStatusText(x.status)}</span>
+    <span class="professional-status ${x.status}">${expenseStatusText(x.status)}</span>${linkedRepair?`<span class="expense-service-chip ${linkedRepair.status==="done"?"done":"pending"}">${linkedRepair.status==="done"?"Сервис выполнен":x.status==="paid"?"Оплачено · сервис не выполнен":repairStatusText(linkedRepair.status)}</span>`:""}
     <b>${money(x.amount)}</b>
    </div>
    <div class="professional-row-actions">
