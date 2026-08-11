@@ -17,14 +17,14 @@ window.addEventListener("load",()=>{
   }
   if(!document.querySelector('script[data-fp-driver-assignment-v3]')){
     const script=document.createElement("script");
-    script.src="fp-driver-assignment-v3.js?v=20260811a";
+    script.src="fp-driver-assignment-v3.js?v=20260811c";
     script.dataset.fpDriverAssignmentV3="1";
     script.async=false;
     document.body.appendChild(script)
   }
   if(!document.querySelector('script[data-fp-operational-domain-v1]')){
     const script=document.createElement("script");
-    script.src="fp-operational-domain-v1.js?v=20260811b";
+    script.src="fp-operational-domain-v1.js?v=20260811c";
     script.dataset.fpOperationalDomainV1="1";
     script.async=false;
     document.body.appendChild(script)
