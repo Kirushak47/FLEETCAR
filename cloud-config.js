@@ -15,10 +15,10 @@ window.addEventListener("load",()=>{
     script.async=false;
     document.body.appendChild(script)
   }
-  if(!document.querySelector('script[data-fp-driver-assignment]')){
+  if(!document.querySelector('script[data-fp-driver-assignment-v3]')){
     const script=document.createElement("script");
-    script.src="fp-driver-assignment-hotfix.js?v=20260811d";
-    script.dataset.fpDriverAssignment="1";
+    script.src="fp-driver-assignment-v3.js?v=20260811a";
+    script.dataset.fpDriverAssignmentV3="1";
     script.async=false;
     document.body.appendChild(script)
   }
