@@ -5,8 +5,6 @@
   const asNumber=value=>Number.isFinite(Number(value))?Number(value):0;
   const same=(a,b)=>String(a??'')===String(b??'');
 
-  // Prevent the same anonymous listeners from being added on every showPage() call.
-  // This targets only controls that are known to be rebound inside navigation code.
   const dedupeIds=new Set(['activitySearch','activityTypeFilter','activityPeriodFilter','fileViewerDialog']);
   const originalAdd=EventTarget.prototype.addEventListener;
   const listenerKeys=new WeakMap();
@@ -20,15 +18,14 @@
     return originalAdd.call(this,type,listener,options)
   };
 
-  // Ask for an odometer correction BEFORE the original handler can write it to cloud.
-  // The original handler contains a second confirmation after cloud sync; suppress only
-  // that immediately-following duplicate confirmation once the user already approved.
   let approvedMileageReduction=null;
+  let approvedMileageTimer=0;
   const nativeConfirm=window.confirm.bind(window);
   window.confirm=function(message){
     const text=String(message||'');
     if(approvedMileageReduction&&text.startsWith('Пробег уменьшается с ')){
       approvedMileageReduction=null;
+      clearTimeout(approvedMileageTimer);
       return true
     }
     return nativeConfirm(message)
@@ -45,13 +42,13 @@
       if(c&&entered<current){
         const ok=nativeConfirm(`Пробег уменьшается с ${typeof km==='function'?km(current):current} до ${typeof km==='function'?km(entered):entered}. Подтвердить исправление?`);
         if(!ok){event.preventDefault();event.stopImmediatePropagation();return}
-        approvedMileageReduction={carId,entered,current}
+        approvedMileageReduction={carId,entered,current};
+        clearTimeout(approvedMileageTimer);
+        approvedMileageTimer=setTimeout(()=>{approvedMileageReduction=null},10000)
       }
     },true)
   }
 
-  // Existing service tasks must show their own recorded mileage, not be forced up to a
-  // poisoned/current odometer. New ordinary tasks still start from the live odometer.
   if(typeof window.openRepairDialog==='function'){
     const originalOpenRepairDialog=window.openRepairDialog;
     window.openRepairDialog=function(carId='',id=''){
@@ -65,8 +62,6 @@
     }
   }
 
-  // A repair created from Expenses must not move the real odometer until it is done.
-  // Staff may also correct mileage downward; do not Math.max() it with the current value.
   window.createOrUpdateRepairFromExpense=function(expense){
     if(expense.category!=='repair'||!$id('expenseCreateRepair')?.checked)return null;
     let repair=expense.linkedRepairId?(db.repairs||[]).find(r=>same(r.id,expense.linkedRepairId)):null;
@@ -88,15 +83,15 @@
       completedDate:repairStatus==='done'?(repair.completedDate||expense.date||today()):'',
       warrantyUntil:repair.warrantyUntil||''
     });
-    if(paymentStatus==='paid')repair.paidDate=wasPaid&&repair.paidDate?repair.paidDate:(expense.paidDate||expense.date||today());
+    if(paymentStatus==='paid')repair.paidDate=wasPaid&&repair.paidDate?repair.paidDate:today();
     else repair.paidDate='';
     expense.linkedRepairId=repair.id;
     expense.financeSource=expense.financeSource||'expense';
     expense.serviceConvertedAt=expense.serviceConvertedAt||new Date().toISOString();
     if(expense.status==='paid'){
-      expense.paidDate=expense.paidDate||repair.paidDate||today();
+      expense.paidDate=repair.paidDate||today();
       expense.date=expense.paidDate
-    }
+    }else expense.paidDate='';
     const c=typeof car==='function'?car(expense.carId):null;
     if(c&&repairStatus==='done'&&Number.isFinite(mileage)&&mileage>=0){
       c.mileage=mileage;c.mileageUpdatedAt=new Date().toISOString();c.mileageSource='service_done'
@@ -104,7 +99,6 @@
     return repair
   };
 
-  // Financial date is the actual payment date. Completion and payment remain independent.
   window.syncLinkedExpenseFromRepair=function(repair){
     const plannedAmount=Math.max(0,asNumber(repair.planned));
     const actualAmount=Math.max(0,asNumber(repair.actual));
@@ -147,7 +141,6 @@
     }
   };
 
-  // Use paidDate if it exists, including legacy standalone repairs.
   window.financialExpenseRows=function(bounds,carId=null){
     if(typeof normalizeRepairExpenseLinks==='function')normalizeRepairExpenseLinks();
     const paidExpenses=(db.expenses||[]).filter(x=>(!carId||same(x.carId,carId))&&x.status==='paid'&&inPeriod(x.paidDate||x.date,bounds));
@@ -156,8 +149,6 @@
     return{paidExpenses,legacyRepairs}
   };
 
-  // Status changes are operational history. Do not create a negative financial timeline
-  // entry on every transition; one finance row is the source of truth for money.
   window.advanceServiceRepair=function(id){
     const repair=(db.repairs||[]).find(r=>same(r.id,id));if(!repair)return toast('Задача не найдена');
     const previous=structuredClone(repair),next=serviceNextStatus(repair.status);if(!next)return editRepair(repair.id);
@@ -173,8 +164,6 @@
     toast(repairStatusText(next))
   };
 
-  // Archiving a document must never delete historical paid expenses. Only unpaid/planned
-  // installment projections are removed from active finance.
   window.deleteDocument=async function(id){
     if(typeof requireEnterprisePermission==='function'&&!requireEnterprisePermission('documents.delete'))return;
     if(!nativeConfirm('Переместить документ в архив? Он перестанет участвовать в сроках и уведомлениях. Уже оплаченные расходы останутся в финансовой истории.'))return;
@@ -192,7 +181,6 @@
     save();renderDocuments();renderDocumentArchive?.();renderExpenses();renderFleet();renderProfitability?.()
   };
 
-  // Calendar must ignore orphan records instead of crashing the whole page.
   window.allEvents=function(){
     const result=[];
     const carLabel=carId=>{const c=typeof car==='function'?car(carId):null;if(!c)return null;const m=model(c);return{c,label:`${m.brand} ${m.model} · ${c.plate}`}};
@@ -216,8 +204,6 @@
     return result.filter(x=>x.date).map(x=>({...x,days:days(x.date)}))
   };
 
-  // Correct analytics cards after the existing renderer finishes: use actual paid rows
-  // and the selected period for both repairs and insurance.
   if(typeof window.renderAnalytics==='function'){
     const originalRenderAnalytics=window.renderAnalytics;
     window.renderAnalytics=function(){
