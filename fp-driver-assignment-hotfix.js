@@ -17,10 +17,8 @@
     if(!['repair','free','on_line'].includes(String(c.status||''))){
       c.status=c.driverUserId?'on_line':'free';
     }
-    // Business rule: no assigned driver = free, except a vehicle explicitly in repair.
-    if(!c.driverUserId&&c.status!=='repair')c.status='free';
-    // An assigned vehicle is on line unless Fleet Board explicitly puts it in repair.
-    if(c.driverUserId&&c.status==='free')c.status='on_line';
+    // Hard business rule: a vehicle without an assigned driver is always free.
+    if(!c.driverUserId)c.status='free';
   }
 
   function refreshAssignmentUi(carId=''){
@@ -41,6 +39,9 @@
     c.driverAcceptedRevision='';
     c.driverAssignedAt=now();
     c.driverAssignmentRevision=`${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    // A newly assigned vehicle starts on line. Fleet Board may later explicitly
+    // change it to repair/free/on_line without assignment code overriding that choice.
+    if(c.status!=='repair')c.status='on_line';
     normalizeOperationalStatus(c);
     try{
       window.addVehicleHandoverAudit?.(c,'assigned',{
@@ -80,7 +81,7 @@
 
   function installCloudAssignmentFix(){
     const cloud=window.FleetPilotCloud;
-    if(!cloud?.assignDriverVehicle||cloud.assignDriverVehicle.__fpDirectAssignmentFixed)return false;
+    if(!cloud?.assignDriverVehicle||cloud.assignDriverVehicle.__fpDirectAssignmentFixedV3)return false;
     const legacy=cloud.assignDriverVehicle.bind(cloud);
 
     const fixed=async function(driverUserId,carId){
@@ -89,14 +90,22 @@
       if(!uid)return legacy(driverUserId,carId);
 
       const before=cars().filter(c=>same(c.driverUserId,uid));
-      // IMPORTANT: exactly one backend write. No technical pre-detach with null before an assignment.
       const result=await directAssignmentRpc(uid,wanted);
 
       if(wanted){
         const target=getCar(wanted);
         for(const c of cars()){
           if(c!==target&&same(c.driverUserId,uid)){
-            c.driverUserId='';c.driverEmail='';c.driverName='';c.driverPhone='';c.driverAcceptedAt='';c.driverAcceptedRevision='';
+            try{
+              const accepted=window.currentAssignmentAcceptedLocally?.(c);
+              window.addVehicleHandoverAudit?.(c,accepted?'forced_return':'assignment_cancelled',{
+                key:`${accepted?'forced_return':'assignment_cancelled'}:${c.driverAssignmentRevision||Date.now()}`,
+                revision:c.driverAssignmentRevision||'',driverUserId:c.driverUserId,
+                driverName:c.driverName,driverEmail:c.driverEmail,mileage:c.mileage,
+                notes:accepted?'Забран партнёром':'Назначение отменено компанией'
+              })
+            }catch{}
+            c.driverUserId='';c.driverEmail='';c.driverName='';c.driverPhone='';c.driverAcceptedAt='';c.driverAcceptedRevision='';c.driverAssignedAt='';
             if(c.driverAssignmentSource==='account'){c.tenant='';c.driverAssignmentSource=''}
             normalizeOperationalStatus(c)
           }
@@ -110,6 +119,15 @@
         }
       }else{
         for(const c of before){
+          try{
+            const accepted=window.currentAssignmentAcceptedLocally?.(c);
+            window.addVehicleHandoverAudit?.(c,accepted?'forced_return':'assignment_cancelled',{
+              key:`${accepted?'forced_return':'assignment_cancelled'}:${c.driverAssignmentRevision||Date.now()}`,
+              revision:c.driverAssignmentRevision||'',driverUserId:c.driverUserId,
+              driverName:c.driverName,driverEmail:c.driverEmail,mileage:c.mileage,
+              notes:accepted?'Забран партнёром':'Назначение отменено компанией'
+            })
+          }catch{}
           c.driverUserId='';c.driverEmail='';c.driverName='';c.driverPhone='';c.driverAcceptedAt='';c.driverAcceptedRevision='';c.driverAssignedAt='';
           if(c.driverAssignmentSource==='account'){c.tenant='';c.driverAssignmentSource=''}
           normalizeOperationalStatus(c)
@@ -125,13 +143,14 @@
     };
 
     fixed.__fpDirectAssignmentFixed=true;
+    fixed.__fpDirectAssignmentFixedV3=true;
     fixed.__fpOriginal=legacy;
     cloud.assignDriverVehicle=fixed;
     return true
   }
 
   function installUnifiedAssignmentFix(){
-    if(typeof window.assignVehicleDriverUnified!=='function'||window.assignVehicleDriverUnified.__fpAssignmentFixedV2)return;
+    if(typeof window.assignVehicleDriverUnified!=='function'||window.assignVehicleDriverUnified.__fpAssignmentFixedV3)return;
     const original=window.assignVehicleDriverUnified;
 
     const fixed=async function(driverUserId,carId,options={}){
@@ -142,6 +161,8 @@
       const target=getCar(cid);
       if(!target)throw new Error('Автомобиль не найден');
 
+      // Editing the same already-active assignment is idempotent: do not force
+      // another acceptance merely because the vehicle profile was saved.
       if(same(target.driverUserId,uid)&&target.driverAssignmentRevision){
         if(options.email)target.driverEmail=options.email;
         if(options.name){target.driverName=options.name;target.tenant=options.name}
@@ -152,39 +173,45 @@
         return target
       }
 
-      // Legacy helper still prepares driver metadata/audit. Its backend calls are now safe:
-      // null is used only for the explicit detach call, and the following assignment is one direct RPC.
+      // A real new/re-assignment first closes the old vehicle with the backend
+      // ("Забран партнёром" when it had been accepted), then creates a fresh
+      // assignment that requires mileage + photos again.
       const result=await original.call(this,uid,cid,options);
       const actual=result||target;
       actual.driverUserId=uid;
+      if(!actual.driverAssignmentRevision)startFreshAssignmentCycle(actual,uid);
       normalizeOperationalStatus(actual);
       try{window.save?.()}catch{}
       refreshAssignmentUi(cid);
       return result
     };
-    fixed.__fpAssignmentFixedV2=true;
+    fixed.__fpAssignmentFixedV3=true;
     fixed.__fpOriginal=original;
     window.assignVehicleDriverUnified=fixed;
   }
 
   function installUnassignGuard(){
-    if(typeof window.unassignVehicleDriverUnified!=='function'||window.unassignVehicleDriverUnified.__fpFreeStatusFixed)return;
+    if(typeof window.unassignVehicleDriverUnified!=='function'||window.unassignVehicleDriverUnified.__fpFreeStatusFixedV3)return;
     const original=window.unassignVehicleDriverUnified;
     const fixed=async function(driverUserId,carId=''){
       const affected=cars().filter(c=>same(c.driverUserId,driverUserId)||(carId&&same(c.id,carId)));
       const result=await original.apply(this,arguments);
       for(const c of affected){
-        if(!c.driverUserId&&c.status!=='repair')c.status='free';
+        c.status='free';
+        normalizeOperationalStatus(c);
       }
       try{window.save?.()}catch{}
       refreshAssignmentUi(carId||affected[0]?.id||'');
       return result
     };
-    fixed.__fpFreeStatusFixed=true;
+    fixed.__fpFreeStatusFixedV3=true;
     window.unassignVehicleDriverUnified=fixed;
   }
 
   function installFleetBoardGuards(){
+    if(window.__fpFleetBoardAssignmentGuardsV3)return;
+    window.__fpFleetBoardAssignmentGuardsV3=true;
+
     window.addEventListener('fleetpilot:driver-assignment-changed',event=>{
       const cid=event?.detail?.carId||'';
       if(cid){const c=getCar(cid);if(c)normalizeOperationalStatus(c)}
@@ -202,8 +229,8 @@
   }
 
   function install(){
-    if(window.__fpDriverAssignmentHotfixInstalledV2)return;
-    window.__fpDriverAssignmentHotfixInstalledV2=true;
+    if(window.__fpDriverAssignmentHotfixInstalledV3)return;
+    window.__fpDriverAssignmentHotfixInstalledV3=true;
     installCloudAssignmentFix();
     installUnifiedAssignmentFix();
     installUnassignGuard();
@@ -217,7 +244,7 @@
       installCloudAssignmentFix();
       installUnifiedAssignmentFix();
       installUnassignGuard();
-      if(window.FleetPilotCloud?.assignDriverVehicle?.__fpDirectAssignmentFixed||attempts>30)clearInterval(timer)
+      if(window.FleetPilotCloud?.assignDriverVehicle?.__fpDirectAssignmentFixedV3||attempts>30)clearInterval(timer)
     },100);
   }
 
