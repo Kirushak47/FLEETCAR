@@ -8,10 +8,18 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
 
 // Load post-boot consistency fixes only after the legacy modules have defined their globals.
 window.addEventListener("load",()=>{
-  if(document.querySelector('script[data-fp-critical-consistency]'))return;
-  const script=document.createElement("script");
-  script.src="fp-critical-consistency-hotfix.js?v=20260811";
-  script.dataset.fpCriticalConsistency="1";
-  script.async=false;
-  document.body.appendChild(script)
+  if(!document.querySelector('script[data-fp-critical-consistency]')){
+    const script=document.createElement("script");
+    script.src="fp-critical-consistency-hotfix.js?v=20260811";
+    script.dataset.fpCriticalConsistency="1";
+    script.async=false;
+    document.body.appendChild(script)
+  }
+  if(!document.querySelector('script[data-fp-driver-assignment]')){
+    const script=document.createElement("script");
+    script.src="fp-driver-assignment-hotfix.js?v=20260811b";
+    script.dataset.fpDriverAssignment="1";
+    script.async=false;
+    document.body.appendChild(script)
+  }
 },{once:true});
