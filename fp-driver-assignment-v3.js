@@ -1,4 +1,4 @@
-/* FleetPilot assignment + Fleet Board domain separation v3 — 2026-08-11 */
+/* FleetPilot assignment + Fleet Board domain separation v3.1 — 2026-08-11 */
 (()=>{
   'use strict';
 
@@ -6,14 +6,12 @@
   const now=()=>new Date().toISOString();
   const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
   const getCar=id=>typeof window.car==='function'?window.car(id):cars().find(c=>same(c.id,id));
-  const validStatus=s=>['repair','free','on_line'].includes(String(s||''));
-  let directClient=null;
+  const validStatus=s=>['repair','free','active','on_line'].includes(String(s||''));
 
   function normalizeLegacyStatus(c){
     if(!c)return;
-    if(!validStatus(c.status)){
-      c.status=c.driverUserId?'on_line':'free';
-    }
+    if(!validStatus(c.status))c.status=c.driverUserId?'active':'free';
+    if(c.status==='on_line')c.status='active';
   }
 
   function refresh(carId=''){
@@ -47,41 +45,41 @@
     }catch{}
   }
 
-  function getDirectClient(){
-    if(directClient)return directClient;
+  async function assignmentRpc(driverUserId,carId){
+    const cloud=window.FleetPilotCloud;
+    if(!cloud?.session?.access_token)throw new Error('Сессия Supabase не найдена');
     const cfg=window.FLEETPILOT_CLOUD_CONFIG||{};
-    if(!window.supabase?.createClient||!cfg.url||!cfg.publishableKey)return null;
-    directClient=window.supabase.createClient(cfg.url,cfg.publishableKey,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+    if(!cfg.url||!cfg.publishableKey)throw new Error('Supabase недоступен');
+    const response=await fetch(`${cfg.url}/rest/v1/rpc/assign_driver_vehicle`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':cfg.publishableKey,
+        'Authorization':`Bearer ${cloud.session.access_token}`
+      },
+      body:JSON.stringify({
+        driver_user_id_value:String(driverUserId),
+        car_id_value:carId?String(carId):null
+      })
     });
-    return directClient
-  }
-
-  async function directAssignmentRpc(driverUserId,carId){
-    const client=getDirectClient();
-    if(!client)throw new Error('Supabase недоступен');
-    const {data:{session}={}}=await client.auth.getSession();
-    if(!session)throw new Error('Сессия Supabase не найдена');
-    const {data,error}=await client.rpc('assign_driver_vehicle',{
-      driver_user_id_value:String(driverUserId),
-      car_id_value:carId?String(carId):null
-    });
-    if(error)throw error;
-    return data
+    if(!response.ok){
+      let detail='';try{detail=(await response.json())?.message||''}catch{}
+      throw new Error(detail||`assign_driver_vehicle HTTP ${response.status}`)
+    }
+    try{return await response.json()}catch{return null}
   }
 
   function installCloudFix(){
     const cloud=window.FleetPilotCloud;
-    if(!cloud?.assignDriverVehicle||cloud.assignDriverVehicle.__fpDomainV3)return false;
-    const legacy=cloud.assignDriverVehicle.bind(cloud);
+    if(!cloud?.assignDriverVehicle||cloud.assignDriverVehicle.__fpDomainV31)return false;
 
     const fixed=async function(driverUserId,carId){
       const uid=String(driverUserId||'').trim();
       const wanted=carId?String(carId):null;
-      if(!uid)return legacy(driverUserId,carId);
+      if(!uid)throw new Error('Водитель не выбран');
 
       const previous=cars().filter(c=>same(c.driverUserId,uid));
-      const result=await directAssignmentRpc(uid,wanted);
+      const result=await assignmentRpc(uid,wanted);
 
       if(wanted){
         const target=getCar(wanted);
@@ -90,7 +88,7 @@
             c.driverUserId='';c.driverEmail='';c.driverName='';c.driverPhone='';
             c.driverAcceptedAt='';c.driverAcceptedRevision='';c.driverAssignedAt='';
             if(c.driverAssignmentSource==='account'){c.tenant='';c.driverAssignmentSource=''}
-            c.status='free';
+            if(c.status!=='repair')c.status='free';
           }
         }
         if(target){
@@ -99,18 +97,15 @@
           target.driverAssignmentSource='account';
           if(!isSameActive){
             startFreshCycle(target,uid);
-            if(target.status!=='repair')target.status='on_line';
-          }else{
-            normalizeLegacyStatus(target);
-          }
+            if(target.status!=='repair')target.status='active';
+          }else normalizeLegacyStatus(target);
         }
       }else{
         for(const c of previous){
           c.driverUserId='';c.driverEmail='';c.driverName='';c.driverPhone='';
           c.driverAcceptedAt='';c.driverAcceptedRevision='';c.driverAssignedAt='';
           if(c.driverAssignmentSource==='account'){c.tenant='';c.driverAssignmentSource=''}
-          // Explicit business rule: company unassigns vehicle => vehicle becomes free.
-          c.status='free';
+          if(c.status!=='repair')c.status='free';
         }
       }
 
@@ -122,79 +117,57 @@
       return result
     };
 
-    fixed.__fpDomainV3=true;
-    fixed.__fpOriginal=legacy;
+    fixed.__fpDomainV31=true;
     cloud.assignDriverVehicle=fixed;
     return true
   }
 
   function installUnifiedAssign(){
-    if(typeof window.assignVehicleDriverUnified!=='function'||window.assignVehicleDriverUnified.__fpDomainV3)return;
+    if(typeof window.assignVehicleDriverUnified!=='function'||window.assignVehicleDriverUnified.__fpDomainV31)return;
     const original=window.assignVehicleDriverUnified;
     const fixed=async function(driverUserId,carId,options={}){
-      const uid=String(driverUserId||'').trim();
-      const cid=String(carId||'').trim();
+      const uid=String(driverUserId||'').trim(),cid=String(carId||'').trim();
       if(!uid)throw new Error('Водитель не выбран');
       if(!cid)throw new Error('Автомобиль не выбран');
-      const target=getCar(cid);
-      if(!target)throw new Error('Автомобиль не найден');
-
-      if(same(target.driverUserId,uid)&&target.driverAssignmentRevision){
-        if(options.email)target.driverEmail=options.email;
-        if(options.name){target.driverName=options.name;target.tenant=options.name}
-        if(options.phone)target.driverPhone=options.phone;
-        normalizeLegacyStatus(target);
-        try{window.save?.()}catch{}
-        refresh(cid);
-        return target
-      }
-
+      const target=getCar(cid);if(!target)throw new Error('Автомобиль не найден');
       const result=await original.call(this,uid,cid,options);
       const actual=result||target;
       actual.driverUserId=uid;
+      if(options.email)actual.driverEmail=options.email;
+      if(options.name){actual.driverName=options.name;actual.tenant=options.name}
+      if(options.phone)actual.driverPhone=options.phone;
       normalizeLegacyStatus(actual);
       try{window.save?.()}catch{}
       refresh(cid);
       return result
     };
-    fixed.__fpDomainV3=true;
-    fixed.__fpOriginal=original;
+    fixed.__fpDomainV31=true;fixed.__fpOriginal=original;
     window.assignVehicleDriverUnified=fixed;
   }
 
   function installUnifiedUnassign(){
-    if(typeof window.unassignVehicleDriverUnified!=='function'||window.unassignVehicleDriverUnified.__fpDomainV3)return;
+    if(typeof window.unassignVehicleDriverUnified!=='function'||window.unassignVehicleDriverUnified.__fpDomainV31)return;
     const original=window.unassignVehicleDriverUnified;
     const fixed=async function(driverUserId,carId=''){
       const affected=cars().filter(c=>same(c.driverUserId,driverUserId)||(carId&&same(c.id,carId)));
       const result=await original.apply(this,arguments);
-      for(const c of affected){
-        if(!c.driverUserId)c.status='free';
-      }
+      for(const c of affected){if(!c.driverUserId&&c.status!=='repair')c.status='free'}
       try{window.save?.()}catch{}
       refresh(carId||affected[0]?.id||'');
       return result
     };
-    fixed.__fpDomainV3=true;
-    fixed.__fpOriginal=original;
+    fixed.__fpDomainV31=true;fixed.__fpOriginal=original;
     window.unassignVehicleDriverUnified=fixed;
   }
 
   function install(){
-    if(window.__fpDriverAssignmentDomainV3)return;
-    window.__fpDriverAssignmentDomainV3=true;
     for(const c of cars())normalizeLegacyStatus(c);
     try{window.save?.()}catch{}
-    installCloudFix();
-    installUnifiedAssign();
-    installUnifiedUnassign();
+    installCloudFix();installUnifiedAssign();installUnifiedUnassign();
     let attempts=0;
     const timer=setInterval(()=>{
-      attempts++;
-      installCloudFix();
-      installUnifiedAssign();
-      installUnifiedUnassign();
-      if(window.FleetPilotCloud?.assignDriverVehicle?.__fpDomainV3||attempts>40)clearInterval(timer)
+      attempts++;installCloudFix();installUnifiedAssign();installUnifiedUnassign();
+      if(window.FleetPilotCloud?.assignDriverVehicle?.__fpDomainV31||attempts>40)clearInterval(timer)
     },100);
   }
 
