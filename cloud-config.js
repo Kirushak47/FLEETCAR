@@ -5,3 +5,13 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
   redirectUrl: "https://kirushak47.github.io/FLEETCAR/?email-confirmed=1",
   dashboardUrl: "https://supabase.com/dashboard/project/tbpfasumklpdqwnlfncd"
 });
+
+// Load post-boot consistency fixes only after the legacy modules have defined their globals.
+window.addEventListener("load",()=>{
+  if(document.querySelector('script[data-fp-critical-consistency]'))return;
+  const script=document.createElement("script");
+  script.src="fp-critical-consistency-hotfix.js?v=20260811";
+  script.dataset.fpCriticalConsistency="1";
+  script.async=false;
+  document.body.appendChild(script)
+},{once:true});
