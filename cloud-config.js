@@ -28,6 +28,6 @@ window.addEventListener("load",()=>{
     const script=document.createElement("script");script.src="fp-driver-assignment-v3.js?v=20260811d";script.dataset.fpDriverAssignmentV3="1";script.async=false;document.body.appendChild(script)
   }
   if(!document.querySelector('script[data-fp-operational-domain-v1]')){
-    const script=document.createElement("script");script.src="fp-operational-domain-v1.js?v=20260812a";script.dataset.fpOperationalDomainV1="1";script.async=false;document.body.appendChild(script)
+    const script=document.createElement("script");script.src="fp-operational-domain-v1.js?v=20260812b";script.dataset.fpOperationalDomainV1="1";script.async=false;document.body.appendChild(script)
   }
 },{once:true});
