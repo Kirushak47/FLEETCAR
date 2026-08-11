@@ -17,7 +17,7 @@ window.addEventListener("load",()=>{
   }
   if(!document.querySelector('script[data-fp-driver-assignment]')){
     const script=document.createElement("script");
-    script.src="fp-driver-assignment-hotfix.js?v=20260811b";
+    script.src="fp-driver-assignment-hotfix.js?v=20260811c";
     script.dataset.fpDriverAssignment="1";
     script.async=false;
     document.body.appendChild(script)
