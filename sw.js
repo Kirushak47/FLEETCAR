@@ -1,4 +1,4 @@
-const CACHE="fleetpilot-v19-0-33";
+const CACHE="fleetpilot-v19-0-34";
 const ASSETS=[
   "./","./index.html","./manifest.webmanifest",
   "./fp-base.css?v=1903300","./fp-service-layout.css?v=1903300","./fp-desktop-gps.css?v=1903300","./fp-cloud-roles.css?v=1903300","./fp-driver.css?v=1903300","./fp-crm-service.css?v=1903300","./fp-current-ui.css?v=1903300","./fp-mobile-v17.css?v=1903300","./fp-mobile-audit-v1916.css?v=1903300",
