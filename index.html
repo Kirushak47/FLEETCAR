@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>FleetPilot V19.0.2 Driver & Handover Fix Pack</title>
-  <link rel="manifest" href="manifest.webmanifest?v=1903200">
+  <link rel="manifest" href="manifest.webmanifest?v=1903300">
   <!-- FleetPilot styles: load in this order; CSS cascade depends on it -->
-  <link rel="stylesheet" href="fp-base.css?v=1903200">
-  <link rel="stylesheet" href="fp-service-layout.css?v=1903200">
-  <link rel="stylesheet" href="fp-desktop-gps.css?v=1903200">
-  <link rel="stylesheet" href="fp-cloud-roles.css?v=1903200">
-  <link rel="stylesheet" href="fp-driver.css?v=1903200">
-  <link rel="stylesheet" href="fp-crm-service.css?v=1903200">
-  <link rel="stylesheet" href="fp-current-ui.css?v=1903200">
+  <link rel="stylesheet" href="fp-base.css?v=1903300">
+  <link rel="stylesheet" href="fp-service-layout.css?v=1903300">
+  <link rel="stylesheet" href="fp-desktop-gps.css?v=1903300">
+  <link rel="stylesheet" href="fp-cloud-roles.css?v=1903300">
+  <link rel="stylesheet" href="fp-driver.css?v=1903300">
+  <link rel="stylesheet" href="fp-crm-service.css?v=1903300">
+  <link rel="stylesheet" href="fp-current-ui.css?v=1903300">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="fp-mobile-v17.css?v=1903200">
-  <link rel="stylesheet" href="fp-mobile-audit-v1916.css?v=1903200">
-  <link rel="stylesheet" href="fp-drivers-mobile-v1917.css?v=1903200">
-  <style>html.fp-role-loading body .app{visibility:hidden}html.fp-role-loading body::before{content:"FleetPilot";position:fixed;inset:0;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font:700 20px system-ui;z-index:999999}html.fp-role-loading body::after{content:"";position:fixed;left:50%;top:55%;width:28px;height:28px;margin:-14px;border:3px solid #cbd5e1;border-top-color:#0f172a;border-radius:50%;animation:fpBootSpin .8s linear infinite;z-index:1000000}@keyframes fpBootSpin{to{transform:rotate(360deg)}}</style><script>document.documentElement.classList.add("fp-role-loading");window.FLEETPILOT_VERSION="19.0.32";window.FLEETPILOT_BUILD="1903200";setTimeout(()=>document.documentElement.classList.remove("fp-role-loading"),5000);</script>
+  <link rel="stylesheet" href="fp-mobile-v17.css?v=1903300">
+  <link rel="stylesheet" href="fp-mobile-audit-v1916.css?v=1903300">
+  <link rel="stylesheet" href="fp-drivers-mobile-v1917.css?v=1903300">
+  <style>html.fp-role-loading body .app{visibility:hidden}html.fp-role-loading body::before{content:"FleetPilot";position:fixed;inset:0;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font:700 20px system-ui;z-index:999999}html.fp-role-loading body::after{content:"";position:fixed;left:50%;top:55%;width:28px;height:28px;margin:-14px;border:3px solid #cbd5e1;border-top-color:#0f172a;border-radius:50%;animation:fpBootSpin .8s linear infinite;z-index:1000000}@keyframes fpBootSpin{to{transform:rotate(360deg)}}</style><script>document.documentElement.classList.add("fp-role-loading");window.FLEETPILOT_VERSION="19.0.33";window.FLEETPILOT_BUILD="1903300";setTimeout(()=>document.documentElement.classList.remove("fp-role-loading"),5000);</script>
 </head>
 <body><div class="ambient-background" aria-hidden="true"><span></span><span></span><span></span></div>
 <div class="app">
@@ -680,126 +680,32 @@
 
     
     <section id="calendarPage" class="page" data-advanced-page="true">
-      <div class="section-head professional-page-head">
-        <div><span class="eyebrow">Планирование</span><h2>Календарь автопарка</h2><p>Страховки, техосмотры, сервисы, платежи и другие сроки.</p></div>
-        <div class="calendar-professional-toolbar smart-calendar-toolbar">
-          <div class="calendar-view-switch" aria-label="Режим календаря">
-            <button type="button" data-calendar-view="month" class="active">Месяц</button>
-            <button type="button" data-calendar-view="week">Неделя</button>
-            <button type="button" data-calendar-view="day">День</button>
-          </div>
-          <div class="calendar-period-nav">
-            <button type="button" id="calendarPrevPeriod" aria-label="Предыдущий период">‹</button>
-            <button type="button" id="calendarTodayTop">Сегодня</button>
-            <button type="button" id="calendarNextPeriod" aria-label="Следующий период">›</button>
-          </div>
+      <div class="calendar-page-head">
+        <div class="professional-page-title"><span class="eyebrow">Планирование</span><h2>Календарь автопарка</h2><p>Страховки, техосмотры, сервисы, платежи и другие сроки.</p></div>
+        <div class="calendar-control-bar">
+          <div class="calendar-view-switch" aria-label="Режим календаря"><button type="button" data-calendar-view="month" class="active">Месяц</button><button type="button" data-calendar-view="week">Неделя</button><button type="button" data-calendar-view="day">День</button></div>
+          <div class="calendar-period-nav"><button type="button" id="calendarPrevPeriod" aria-label="Предыдущий период">‹</button><button type="button" id="calendarTodayTop">Сегодня</button><button type="button" id="calendarNextPeriod" aria-label="Следующий период">›</button></div>
           <input id="calendarSelectedDate" type="date" aria-label="Выбрать день">
-          <select id="calendarTypeFilter">
-            <option value="all">Все события</option>
-            <option value="insurance">Страховка</option>
-            <option value="inspection">Техосмотр</option>
-            <option value="repair">Сервис</option>
-            <option value="expense">Расходы</option>
-            <option value="installment">Платежи</option>
-            <option value="document">Документы</option>
-          </select>
+          <select id="calendarTypeFilter"><option value="all">Все события</option><option value="insurance">Страховка</option><option value="inspection">Техосмотр</option><option value="repair">Сервис</option><option value="expense">Расходы</option><option value="installment">Платежи</option><option value="document">Документы</option></select>
         </div>
       </div>
-      <div id="calendarSummary" class="professional-kpi-grid"></div>
+      <div class="calendar-summary-wrap"><div id="calendarSummary" class="professional-kpi-grid"></div></div>
       <div class="professional-split-layout calendar-professional-layout">
-        <section class="professional-panel">
-          <div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3 id="calendarAgendaTitle">События месяца</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div>
-          <div id="calendarList" class="calendar-professional-list"></div>
-        </section>
-        <aside class="professional-panel professional-side-panel calendar-side-panel">
-          <div class="professional-panel-head calendar-month-head"><div><span class="eyebrow">Навигация</span><h3 id="calendarMonthTitle">Календарь</h3></div><div class="calendar-month-actions"><button type="button" id="calendarPrevMonth" aria-label="Предыдущий месяц">‹</button><button type="button" id="calendarToday">Сегодня</button><button type="button" id="calendarNextMonth" aria-label="Следующий месяц">›</button></div></div>
-          <div id="calendarMonthGrid" class="calendar-month-grid"></div>
-          <div class="calendar-selected-day"><span>Выбранный день</span><strong id="calendarSelectedDayLabel">Не выбран</strong><button type="button" id="calendarClearDay">Показать период</button></div>
-          <div class="professional-panel-head calendar-upcoming-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div>
-          <div id="calendarMonthOverview" class="calendar-month-overview"></div>
-        </aside>
+        <section class="professional-panel"><div class="professional-panel-head"><div><span class="eyebrow">Повестка</span><h3 id="calendarAgendaTitle">События месяца</h3></div><span id="calendarVisibleCount" class="professional-counter">0</span></div><div id="calendarList" class="calendar-professional-list"></div></section>
+        <aside class="professional-panel professional-side-panel calendar-side-panel"><div class="professional-panel-head calendar-month-head"><div><span class="eyebrow">Навигация</span><h3 id="calendarMonthTitle">Календарь</h3></div><div class="calendar-month-actions"><button type="button" id="calendarPrevMonth" aria-label="Предыдущий месяц">‹</button><button type="button" id="calendarToday">Сегодня</button><button type="button" id="calendarNextMonth" aria-label="Следующий месяц">›</button></div></div><div id="calendarMonthGrid" class="calendar-month-grid"></div><div class="calendar-selected-day"><span>Выбранный период</span><strong id="calendarSelectedDayLabel">Не выбран</strong><button type="button" id="calendarClearDay">Показать период</button></div><div class="professional-panel-head calendar-upcoming-head"><div><span class="eyebrow">Обзор</span><h3>Следующие месяцы</h3></div></div><div id="calendarMonthOverview" class="calendar-month-overview"></div></aside>
       </div>
     </section>
 
     <section id="analyticsPage" class="page" data-advanced-page="true">
-      <div class="section-head">
-        <div><span class="eyebrow">Результаты автопарка</span><h2>Аналитика</h2></div>
-        <div class="analytics-period-controls">
-          <select id="analyticsPeriod">
-            <option value="selectedMonth">Выбранный месяц</option>
-            <option value="year" selected>Текущий год</option>
-            <option value="all">За всё время</option>
-          </select>
-          <input id="analyticsMonth" type="month" aria-label="Месяц аналитики">
-        </div>
-      </div>
-      <div class="analytics-period-title card">
-        <span class="eyebrow">Финансовый результат</span>
-        <h3 id="analyticsPeriodTitle">Текущий год</h3>
-      </div>
-      <div id="analyticsSummary" class="summary-grid compact"></div>
-      <div class="intelligence-grid">
-        <div class="card intelligence-card"><span class="eyebrow">Следующие 30 дней</span><h3>Финансовый прогноз</h3><div id="financialForecast"></div></div>
-        <div class="card intelligence-card"><span class="eyebrow">Общее состояние</span><h3>Здоровье автопарка</h3><div id="fleetHealthIndex"></div></div>
-      </div>
-
-      <div class="card tax-panel">
-        <div class="section-head">
-          <div><span class="eyebrow">Налоговый профиль партнёра</span><h3>Налоги и прибыль после налогов</h3></div>
-          <select id="profitPeriod">
-            <option value="month">Текущий месяц</option>
-            <option value="year">Текущий год</option>
-            <option value="all">За всё время</option>
-          </select>
-        </div>
-        <div id="profitSummary" class="summary-grid compact"></div>
-        <div class="tax-report-actions"><button type="button" id="openTaxBreakdown" class="btn primary">Подробный расчёт</button></div>
-        <div class="tax-settings">
-          <label id="taxVatField">VAT
-            <select id="taxVat">
-              <option value="no">Не VATowiec</option>
-              <option value="yes">VATowiec 23%</option>
-            </select>
-          </label>
-          <label>Форма PIT
-            <select id="taxMethod">
-              <option value="none">Не плачу налоги</option>
-              <option value="ryczalt">Ryczałt</option>
-              <option value="linear">Liniowy 19%</option>
-              <option value="scale">Zasady ogólne</option>
-            </select>
-          </label>
-          <label id="taxRyczaltField">Ставка ryczałtu
-            <input id="taxRyczaltRate" type="number" min="0" max="100" step="0.1" value="8.5">
-          </label>
-          <label id="taxContributionsField">Ежемесячные ZUS/взносы
-            <input id="taxMonthlyContributions" type="number" min="0" step="0.01" value="0">
-          </label>
-          <label id="taxVatCostsField" class="check-label"><input id="taxDeductVatCosts" type="checkbox" checked> Отнимать VAT из ремонтов и оплаченных расходов</label>
-          <button id="saveTaxSettings" class="btn primary">Сохранить налоговый профиль</button>
-        </div>
-        <p class="tax-note">Расчёт ориентировочный. VAT и PIT считаются отдельно. Для ryczałtu ставка задаётся вручную, потому что она зависит от классификации фактической деятельности.</p>
-        <div id="carProfitability" class="profitability-list"></div>
-      </div>
-
-      <div id="fleetKpi" class="kpi-grid"></div>
-      <div class="analytics-grid">
-        <div class="card"><h3>Рекомендации владельцу</h3><div id="ownerRecommendations" class="recommendation-list"></div></div>
-        <div class="card"><h3>Рейтинг арендаторов</h3><div id="tenantRatings" class="tenant-list"></div></div>
-      </div>
-
-      <div class="card">
-        <h3>Прибыль по автомобилям</h3>
-        <div id="analyticsCars" class="analytics-cars"></div>
-      </div>
-      <div class="analytics-grid">
-        <div class="card"><h3>Самая прибыльная машина</h3><div id="bestCar"></div></div>
-        <div class="card"><h3>Самый дорогой ремонт</h3><div id="largestRepair"></div></div>
-        <div class="card"><h3>Самая дорогая страховка</h3><div id="largestInsurance"></div></div>
-        <div class="card"><h3>Средняя прибыль машины</h3><div id="averageProfit"></div></div>
-      </div>
+      <div class="section-head analytics-page-head"><div><span class="eyebrow">Результаты автопарка</span><h2>Аналитика</h2><p>Финансовый результат, эффективность автомобилей и налоги в одном отчёте.</p></div></div>
+      <section class="card analytics-section"><div class="analytics-section-head"><div><span class="eyebrow">Период анализа</span><h3 id="analyticsPeriodTitle">Текущий месяц</h3></div><div class="analytics-control-bar"><div class="analytics-mode-switch"><button type="button" data-analytics-mode="day" onclick="setAnalyticsPeriod('day')">День</button><button type="button" data-analytics-mode="month" class="active" onclick="setAnalyticsPeriod('month')">Месяц</button><button type="button" data-analytics-mode="year" onclick="setAnalyticsPeriod('year')">Год</button><button type="button" data-analytics-mode="all" onclick="setAnalyticsPeriod('all')">Всё время</button></div><select id="analyticsPeriod" hidden><option value="day">День</option><option value="month" selected>Месяц</option><option value="year">Год</option><option value="all">Всё время</option></select><input id="analyticsDay" class="analytics-date-control" type="date" hidden><input id="analyticsMonth" class="analytics-date-control" type="month"><input id="analyticsYear" class="analytics-date-control" type="number" min="2000" max="2100" step="1" hidden aria-label="Год аналитики"></div></div></section>
+      <section class="analytics-section"><div class="analytics-section-head"><div><span class="eyebrow">Финансовый результат</span><h3>Что заработал автопарк</h3><p>Главные цифры за выбранный период.</p></div></div><div id="analyticsSummary" class="summary-grid analytics-primary-kpis"></div></section>
+      <section class="analytics-section analytics-work-grid"><div class="card"><div class="analytics-section-head"><div><span class="eyebrow">Автопарк</span><h3>Прибыль по автомобилям</h3><p>Доход, расходы, налоги и итог по каждой машине.</p></div></div><div id="analyticsCars"></div></div><div class="card"><div class="analytics-section-head"><div><span class="eyebrow">Следующие 30 дней</span><h3>Финансовый прогноз</h3></div></div><div id="financialForecast"></div></div></section>
+      <section class="analytics-section analytics-insights-grid"><div class="card"><span class="eyebrow">Лидер периода</span><h3>Самая прибыльная машина</h3><div id="bestCar"></div></div><div class="card"><span class="eyebrow">Сервис</span><h3>Самый дорогой ремонт</h3><div id="largestRepair"></div></div><div class="card"><span class="eyebrow">Документы</span><h3>Самая дорогая страховка</h3><div id="largestInsurance"></div></div><div class="card"><span class="eyebrow">Среднее</span><h3>Прибыль на автомобиль</h3><div id="averageProfit"></div></div></section>
+      <section class="card analytics-section tax-panel"><div class="analytics-section-head"><div><span class="eyebrow">Налоги</span><h3>Налоги и прибыль после налогов</h3><p>Расчёт использует тот же выбранный период, что и вся аналитика.</p></div><button type="button" id="openTaxBreakdown" class="btn primary">Подробный расчёт</button></div><select id="profitPeriod" hidden><option value="month">Текущий месяц</option><option value="year">Текущий год</option><option value="all">За всё время</option></select><div id="profitSummary" class="summary-grid compact"></div><details class="analytics-tax-settings"><summary>Налоговый профиль</summary><div class="tax-settings"><label id="taxVatField">VAT<select id="taxVat"><option value="no">Не VATowiec</option><option value="yes">VATowiec 23%</option></select></label><label>Форма PIT<select id="taxMethod"><option value="none">Не плачу налоги</option><option value="ryczalt">Ryczałt</option><option value="linear">Liniowy 19%</option><option value="scale">Zasady ogólne</option></select></label><label id="taxRyczaltField">Ставка ryczałtu<input id="taxRyczaltRate" type="number" min="0" max="100" step="0.1" value="8.5"></label><label id="taxContributionsField">Ежемесячные ZUS/взносы<input id="taxMonthlyContributions" type="number" min="0" step="0.01" value="0"></label><label id="taxVatCostsField" class="check-label"><input id="taxDeductVatCosts" type="checkbox" checked> Отнимать VAT из ремонтов и оплаченных расходов</label><button id="saveTaxSettings" class="btn primary">Сохранить налоговый профиль</button></div><p class="tax-note">Расчёт ориентировочный. VAT и PIT считаются отдельно.</p></details><div id="carProfitability" class="profitability-list"></div></section>
+      <section class="analytics-section"><div class="analytics-section-head"><div><span class="eyebrow">Состояние автопарка</span><h3>Операционные показатели</h3></div></div><div id="fleetKpi" class="kpi-grid"></div><div class="intelligence-grid"><div class="card intelligence-card"><span class="eyebrow">Общее состояние</span><h3>Здоровье автопарка</h3><div id="fleetHealthIndex"></div></div><div class="card"><h3>Рекомендации владельцу</h3><div id="ownerRecommendations" class="recommendation-list"></div></div></div></section>
+      <section class="analytics-section"><div class="analytics-section-head"><div><span class="eyebrow">Детализация</span><h3>Работа с арендаторами</h3></div></div><div class="card"><div id="tenantRatings" class="tenant-list"></div></div></section>
     </section>
-
 
 
     <section id="driversPage" class="page drivers-management-page" data-role-page="owner,coordinator">
@@ -1956,19 +1862,19 @@
     </div>
   </form>
 </dialog>
-<script src="cloud-config.js?v=1903200"></script>
-<script src="cloud.js?v=1903200"></script>
+<script src="cloud-config.js?v=1903300"></script>
+<script src="cloud.js?v=1903300"></script>
 <!-- FleetPilot application code: order is intentional -->
-<script src="fp-core-data.js?v=1903200"></script>
-<script src="fp-roles-company.js?v=1903200"></script>
-<script src="fp-driver-portal.js?v=1903200"></script>
-<script src="fp-router-navigation.js?v=1903200"></script>
-<script src="fp-files-backups.js?v=1903200"></script>
-<script src="fp-analytics-dashboard.js?v=1903200"></script>
-<script src="fp-gps-map.js?v=1903200"></script>
-<script src="fp-fleet.js?v=1903200"></script>
-<script src="fp-service-finance.js?v=1903200"></script>
-<script src="fp-calendar-vehicle.js?v=1903200"></script>
-<script src="fp-actions-documents.js?v=1903200"></script>
-<script src="fp-boot-hotfixes.js?v=1903200"></script>
+<script src="fp-core-data.js?v=1903300"></script>
+<script src="fp-roles-company.js?v=1903300"></script>
+<script src="fp-driver-portal.js?v=1903300"></script>
+<script src="fp-router-navigation.js?v=1903300"></script>
+<script src="fp-files-backups.js?v=1903300"></script>
+<script src="fp-analytics-dashboard.js?v=1903300"></script>
+<script src="fp-gps-map.js?v=1903300"></script>
+<script src="fp-fleet.js?v=1903300"></script>
+<script src="fp-service-finance.js?v=1903300"></script>
+<script src="fp-calendar-vehicle.js?v=1903300"></script>
+<script src="fp-actions-documents.js?v=1903300"></script>
+<script src="fp-boot-hotfixes.js?v=1903300"></script>
 </body></html>

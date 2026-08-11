@@ -166,18 +166,28 @@ async function renderDataPage(){
  }
 
 function analyticsSelectedPeriod(){
- const mode=$("#analyticsPeriod")?.value||"year";
- if(mode==="selectedMonth"){
-  if(!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
-  return`month:${$("#analyticsMonth").value}`
+ const mode=$("#analyticsPeriod")?.value||"month";
+ if(mode==="day"){
+  const input=$("#analyticsDay");if(input&&!input.value)input.value=today();
+  return`day:${input?.value||today()}`
  }
- return mode
+ if(mode==="month"){
+  const input=$("#analyticsMonth");if(input&&!input.value)input.value=today().slice(0,7);
+  return`month:${input?.value||today().slice(0,7)}`
+ }
+ if(mode==="year"){
+  const input=$("#analyticsYear");if(input&&!input.value)input.value=String(new Date().getFullYear());
+  return`year:${input?.value||new Date().getFullYear()}`
+ }
+ return"all"
 }
 function syncAnalyticsPeriodControls(){
- const selected=$("#analyticsPeriod").value==="selectedMonth";
- $("#analyticsMonth").disabled=!selected;
- $("#analyticsMonth").classList.toggle("disabled-control",!selected)
+ const mode=$("#analyticsPeriod")?.value||"month";
+ $$('[data-analytics-mode]').forEach(btn=>btn.classList.toggle('active',btn.dataset.analyticsMode===mode));
+ [["analyticsDay","day"],["analyticsMonth","month"],["analyticsYear","year"]].forEach(([id,target])=>{const el=$("#"+id);if(el)el.hidden=mode!==target});
 }
+function setAnalyticsPeriod(mode){const select=$("#analyticsPeriod");if(select)select.value=mode;syncAnalyticsPeriodControls();renderAnalytics()}
+window.setAnalyticsPeriod=setAnalyticsPeriod;
 
 function addTimeline(carId,type,title,amount=0,dateValue=today(),note=""){
  db.timeline=db.timeline||[];

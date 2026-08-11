@@ -19,32 +19,35 @@ function renderGlobalSearch(){
 function exportActivityCsv(){const rows=[["Дата","Действие","Раздел","Описание"],...(db.activity||[]).map(x=>[x.date,x.action,x.entity||"",x.details||""])];const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`FleetPilot_activity_${today()}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 
 function renderAnalytics(){renderProfitability();
- if(!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
+ if($("#analyticsMonth")&&!$("#analyticsMonth").value)$("#analyticsMonth").value=today().slice(0,7);
+ if($("#analyticsDay")&&!$("#analyticsDay").value)$("#analyticsDay").value=today();
+ if($("#analyticsYear")&&!$("#analyticsYear").value)$("#analyticsYear").value=String(new Date().getFullYear());
  syncAnalyticsPeriodControls();
  const period=analyticsSelectedPeriod();
- const title=period.startsWith("month:")
-  ?monthLabel(period.slice(6))
-  :period==="year"
-    ?`текущий ${new Date().getFullYear()} год`
-    :"за всё время";
+ const title=period.startsWith("day:")
+  ?new Date(period.slice(4)+"T12:00:00").toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})
+  :period.startsWith("month:")
+    ?monthLabel(period.slice(6))
+    :period.startsWith("year:")
+      ?`${period.slice(5)} год`
+      :"за всё время";
  $("#analyticsPeriodTitle").textContent=title;
  const rows=fleetCars().map(c=>({c,data:financialData(period,c.id)})).sort((a,b)=>b.data.finalProfit-a.data.finalProfit);
  const all=financialData(period),avg=rows.length?rows.reduce((s,x)=>s+x.data.finalProfit,0)/rows.length:0;
  $("#analyticsSummary").innerHTML=[
-  ["Оплата аренды",money(all.grossRevenue)],
-  ["Ремонты и расходы",money(all.grossCosts)],
-  ["Налоги и взносы",money(all.vatDue+all.pit+all.contributions)],
-  ["Чистая прибыль",money(all.finalProfit)]
- ].map(x=>`<div class="summary-card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
+  ["Доход",money(all.grossRevenue),""],
+  ["Расходы",money(all.grossCosts),"danger"],
+  ["VAT",money(all.vatDue),""],
+  ["PIT + взносы",money(all.pit+all.contributions),""],
+  ["Чистая прибыль",money(all.finalProfit),all.finalProfit>=0?"good":"danger"]
+ ].map(x=>`<div class="summary-card ${x[2]}"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join("");
  const forecast=futureFinancialData(30);$("#financialForecast").innerHTML=[["Плановый доход",forecast.revenue],["Плановые расходы",forecast.expenses+forecast.repairs],["Оценка налогов",forecast.tax],["Ожидаемая прибыль",forecast.balance]].map(x=>`<div class="forecast-row"><span>${x[0]}</span><strong>${money(x[1])}</strong></div>`).join("");
  const fh=fleetHealthData();$("#fleetHealthIndex").innerHTML=`<div class="health-index-main"><strong>${fh.overall}%</strong><span>Общий индекс</span></div>${[["Техника",fh.technical],["Документы",fh.documents],["Финансы",fh.finance]].map(x=>`<div class="health-progress"><div><span>${x[0]}</span><strong>${x[1]}%</strong></div><i><b style="width:${x[1]}%"></b></i></div>`).join("")}`;
 
  const max=Math.max(1,...rows.map(x=>Math.abs(x.data.finalProfit)));
- $("#analyticsCars").innerHTML=rows.map(x=>`<div class="analytics-row">
-  <div><strong>${model(x.c).brand} ${model(x.c).model}</strong><small>${x.c.plate}</small></div>
-  <div class="analytics-track"><span style="width:${Math.max(3,Math.abs(x.data.finalProfit)/max*100)}%"></span></div>
-  <strong class="${x.data.finalProfit<0?"negative":""}">${money(x.data.finalProfit)}</strong>
- </div>`).join("");
+ const analyticsVisible=fpListRows("analyticsCars",rows);
+ $("#analyticsCars").innerHTML=`<div class="analytics-car-table"><div class="analytics-car-head"><span>Автомобиль</span><span>Доход</span><span>Расходы</span><span>Налоги</span><span>После налогов</span></div>${analyticsVisible.map(x=>`<div class="analytics-car-line"><div><strong>${model(x.c).brand} ${model(x.c).model}</strong><small>${x.c.plate}</small></div><span>${money(x.data.grossRevenue)}</span><span>${money(x.data.grossCosts)}</span><span>${money(x.data.vatDue+x.data.pit+x.data.contributions)}</span><strong class="${x.data.finalProfit<0?"negative":"positive"}">${money(x.data.finalProfit)}</strong></div>`).join("")}</div>`;
+ fpAppendListMore($("#analyticsCars"),"analyticsCars",rows.length,renderAnalytics);
  const best=rows[0];
  $("#bestCar").innerHTML=best?`<strong class="big-stat">${model(best.c).brand} ${model(best.c).model}</strong><p>${best.c.plate} · ${money(best.data.finalProfit)}</p>`:"Нет данных";
  const repair=[...db.repairs].filter(x=>x.status==="done").sort((a,b)=>Number(b.actual||b.planned)-Number(a.actual||a.planned))[0];

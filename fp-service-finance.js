@@ -237,6 +237,14 @@ function monthLabel(value){
 }
 function periodBounds(period){
  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
+ if(typeof period==="string"&&period.startsWith("day:")){
+  const value=period.slice(4),d=new Date(value+"T12:00:00");
+  return{from:d,to:d,months:1/30,year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate()}
+ }
+ if(typeof period==="string"&&period.startsWith("year:")){
+  const selectedYear=Number(period.slice(5))||year;
+  return{from:new Date(selectedYear,0,1),to:new Date(selectedYear,11,31),months:12,year:selectedYear}
+ }
  if(typeof period==="string"&&period.startsWith("month:")){
   const value=period.slice(6),parts=value.split("-").map(Number),selectedYear=parts[0],selectedMonth=parts[1]-1;
   return{from:new Date(selectedYear,selectedMonth,1),to:new Date(selectedYear,selectedMonth+1,0),months:1,year:selectedYear,month:selectedMonth+1}
@@ -454,7 +462,7 @@ window.printTaxBreakdown=printTaxBreakdown;
 
 function renderProfitability(){
  normalizeRepairExpenseLinks();
- const period=$("#profitPeriod")?.value||"month",tax=taxSettings(),data=financialData(period);
+ const period=$("#analyticsPage")?.classList.contains("active")?analyticsSelectedPeriod():($("#profitPeriod")?.value||"month"),tax=taxSettings(),data=financialData(period);
  $("#profitSummary").innerHTML=[
   ["Доход за дни периода",money(data.grossRevenue),"good"],
   ["Ремонты и расходы",money(data.grossCosts),"danger"],
@@ -468,10 +476,10 @@ function renderProfitability(){
  $("#taxMonthlyContributions").value=tax.monthlyContributions;
  $("#taxDeductVatCosts").checked=tax.deductVatCosts!==false;
  syncTaxMethodFields();
- $("#carProfitability").innerHTML=fleetCars().map(c=>{
-  const d=financialData(period,c.id),m=model(c);
-  return `<div class="profitability-row"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></div><span>Доход периода ${money(d.grossRevenue)}</span><span>Ремонты ${money(d.repairGross)}</span><span>После налогов ${money(d.finalProfit)}</span></div>`
- }).join("");
+ const profitabilityRows=fleetCars().map(c=>({c,d:financialData(period,c.id),m:model(c)}));
+ const profitabilityVisible=fpListRows("carProfitability",profitabilityRows);
+ $("#carProfitability").innerHTML=profitabilityVisible.map(({c,d,m})=>`<div class="profitability-row"><div><strong>${m.brand} ${m.model}</strong><small>${c.plate}</small></div><span>Доход периода ${money(d.grossRevenue)}</span><span>Ремонты ${money(d.repairGross)}</span><span>После налогов ${money(d.finalProfit)}</span></div>`).join("");
+ fpAppendListMore($("#carProfitability"),"carProfitability",profitabilityRows.length,renderProfitability);
 }
 
 function renderPayments(){
