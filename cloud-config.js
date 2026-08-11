@@ -53,7 +53,7 @@ window.addEventListener("load",()=>{
   }
   if(!document.querySelector('script[data-fp-operational-domain-v1]')){
     const script=document.createElement("script");
-    script.src="fp-operational-domain-v1.js?v=20260811d";
+    script.src="fp-operational-domain-v1.js?v=20260811e";
     script.dataset.fpOperationalDomainV1="1";
     script.async=false;
     document.body.appendChild(script)
