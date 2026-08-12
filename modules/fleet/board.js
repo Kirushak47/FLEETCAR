@@ -18,5 +18,9 @@
  window.renderDesktopBoard=render;window.renderFleetBoardV2=render;
  ['driver-assignment-changed','assignments-changed','vehicle-status-changed'].forEach(name=>window.addEventListener(`fleetpilot:${name}`,()=>setTimeout(render,0)));
  document.addEventListener('click',e=>{if(e.target.closest('[data-fleet-view="board"]'))setTimeout(render,0)});
+ // The module is loaded after legacy boot. If Board was already the saved view,
+ // no click event occurs, so render once immediately after installing the override.
+ requestAnimationFrame(()=>render());
+ window.addEventListener('pageshow',()=>requestAnimationFrame(render));
  console.info('FleetPilot 20 fleet board ready');
 })();
