@@ -1,0 +1,25 @@
+/* FleetPilot Fleet Board V2 — authoritative simple vehicle state */
+(()=>{
+'use strict';
+if(window.__fpFleetBoardV2)return;window.__fpFleetBoardV2=true;
+const cars=()=>Array.isArray(window.db?.cars)?window.db.cars.filter(c=>!c.archived&&!c.deletedAt):[];
+const carById=id=>cars().find(c=>String(c.id)===String(id));
+const hasDriver=c=>Boolean(c&&(c.driverUserId||String(c.tenant||'').trim()));
+const manualRepair=c=>Boolean(c?.fleetBoardRepair===true||c?.fleetBoardRepair==='true');
+const state=c=>hasDriver(c)?'active':manualRepair(c)?'repair':'free';
+const label=s=>s==='active'?'На линии':s==='repair'?'В ремонте':'Свободен';
+function sync(c){if(!c)return'free';const s=state(c);if(c.status!==s)c.status=s;return s}
+function syncAll(){let changed=false;for(const c of cars()){const before=c.status;sync(c);if(before!==c.status)changed=true}if(changed){try{window.save?.()}catch{}}return changed}
+window.FleetPilotFleetBoard=Object.freeze({state,label,hasDriver,manualRepair,sync,syncAll});
+window.vehicleEffectiveStatus=c=>sync(c);
+window.statusText=s=>label(s==='on_line'?'active':s);
+window.setVehicleOperationalStatus=function(carId,next){const c=carById(carId);if(!c)return false;next=next==='on_line'?'active':String(next||'');if(hasDriver(c)){c.fleetBoardRepair=false;c.status='active';try{window.save?.()}catch{};refresh();if(next!=='active')window.toast?.('Автомобиль привязан к водителю и остаётся «На линии»');return next==='active'}if(next==='repair')c.fleetBoardRepair=true;else if(next==='free')c.fleetBoardRepair=false;else if(next==='active'){window.toast?.('Статус «На линии» включается автоматически после назначения водителя');return false}else return false;sync(c);try{window.save?.()}catch{};refresh();return true};
+window.updateCarStatusLive=(id,s)=>window.setVehicleOperationalStatus(id,s);
+function card(c){const s=state(c),m=window.model?.(c)||{};return `<article class="fp-board2-card" draggable="true" data-fb2-car="${c.id}"><strong>${m.brand||''} ${m.model||''}</strong><span>${c.plate||'Без номера'}</span><small>${hasDriver(c)?(c.tenant||c.driverName||'Водитель'):'Без водителя'}</small><b>${label(s)}</b></article>`}
+function render(){const root=document.querySelector('#desktopFleetBoard');if(!root)return;syncAll();const groups={active:[],repair:[],free:[]};for(const c of cars())groups[state(c)].push(c);root.innerHTML=['active','repair','free'].map(s=>`<section class="fp-board2-column" data-fb2-drop="${s}"><header><strong>${label(s)}</strong><span>${groups[s].length}</span></header><div class="fp-board2-list">${groups[s].map(card).join('')||'<em>Нет автомобилей</em>'}</div></section>`).join('');root.querySelectorAll('[data-fb2-car]').forEach(el=>{el.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',el.dataset.fb2Car));el.addEventListener('dblclick',()=>window.openCar?.(el.dataset.fb2Car))});root.querySelectorAll('[data-fb2-drop]').forEach(col=>{col.addEventListener('dragover',e=>e.preventDefault());col.addEventListener('drop',e=>{e.preventDefault();const id=e.dataTransfer.getData('text/plain'),target=col.dataset.fb2Drop;window.setVehicleOperationalStatus(id,target)})})}
+function refresh(){syncAll();try{window.renderFleet?.()}catch{};try{window.renderStableFleetTable?.()}catch{};try{window.renderDesktopCommandKpis?.()}catch{};render()}
+window.renderFleetBoardV2=render;
+const style=document.createElement('style');style.textContent=`#desktopFleetBoard.desktop-fleet-board-v2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.fp-board2-column{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;min-height:240px}.fp-board2-column>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.fp-board2-column>header span{background:#e2e8f0;border-radius:999px;padding:3px 8px}.fp-board2-list{display:grid;gap:9px}.fp-board2-list>em{color:#94a3b8;font-style:normal;padding:16px 4px}.fp-board2-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px;display:grid;gap:3px;cursor:grab}.fp-board2-card span,.fp-board2-card small{color:#64748b}.fp-board2-card b{font-size:12px;margin-top:5px}@media(max-width:900px){#desktopFleetBoard.desktop-fleet-board-v2{grid-template-columns:1fr}}`;document.head.appendChild(style);
+let t=0;const schedule=()=>{clearTimeout(t);t=setTimeout(refresh,80)};window.addEventListener('fleetpilot:driver-assignment-changed',schedule);window.addEventListener('fleetpilot:assignments-changed',schedule);window.addEventListener('fleetpilot:authoritative-assignments',schedule);document.addEventListener('click',e=>{if(e.target.closest('[data-fleet-view="board"]'))setTimeout(render,30)});setInterval(()=>{if(document.querySelector('#desktopBoardView:not([hidden])'))render()},1500);setTimeout(refresh,0);
+console.info('FleetPilot Fleet Board V2 active');
+})();
