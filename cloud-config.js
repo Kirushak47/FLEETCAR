@@ -20,51 +20,12 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
  create.__fleetPilotSingleton=true;create.__nativeCreateClient=nativeCreate;supabase.createClient=create
 })();
 
-/* Route fix must run before normal boot handlers. Drivers used to have no route at all,
-   so showPage('driversPage') silently wrote #/fleet and F5 could only restore Autopark. */
-function fpInstallStableRoutes(){
- try{
-  if(typeof FLEETPILOT_ROUTES==='object')FLEETPILOT_ROUTES.driversPage='drivers';
-  if(typeof FLEETPILOT_ROUTE_PAGES==='object')FLEETPILOT_ROUTE_PAGES.drivers='driversPage';
- }catch(error){console.warn('FleetPilot route map patch',error)}
-
- // Legacy desktop boot must render only; it must never choose the active page/view.
- try{
-  if(typeof forceInitialFleetRender==='function'){
-   forceInitialFleetRender=function(){
-    if(window.innerWidth<1100)return;
-    const fleetPage=document.querySelector('#fleetPage');
-    if(!fleetPage?.classList.contains('active'))return;
-    try{renderFleet?.()}catch{}
-    try{renderDesktopCommandKpis?.()}catch{}
-    try{renderDesktopEvents?.()}catch{}
-    try{renderDesktopInsights?.()}catch{}
-    try{renderControlCenterExtras?.()}catch{}
-    fleetPilotBootCompleted=true;
-   };
-   window.forceInitialFleetRender=forceInitialFleetRender;
-  }
-  if(typeof scheduleInitialFleetBoot==='function'){
-   scheduleInitialFleetBoot=function(){
-    if(window.innerWidth<1100)return;
-    if(!document.querySelector('#fleetPage')?.classList.contains('active'))return;
-    requestAnimationFrame(()=>{try{forceInitialFleetRender()}catch{}})
-   };
-   window.scheduleInitialFleetBoot=scheduleInitialFleetBoot;
-  }
- }catch(error){console.warn('FleetPilot desktop boot patch',error)}
-}
-
-// Registered from cloud-config, before the later app boot listeners.
-document.addEventListener('DOMContentLoaded',fpInstallStableRoutes,{once:true});
-window.addEventListener('fleetpilot:access-ready',fpInstallStableRoutes);
-
+/* Temporary compatibility patches that have not yet been migrated to FleetPilot 20 modules.
+   Router, boot coordination and Fleet Board are NOT loaded here anymore. */
 window.addEventListener("load",()=>{
  const load=(attr,src)=>{if(document.querySelector(`script[${attr}]`))return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.async=false;document.body.appendChild(s)};
- // Old fp-route-stability-v1 intentionally disabled: its MutationObserver/timer restore loop caused visible hangs.
  load('data-fp-critical-consistency','fp-critical-consistency-hotfix.js?v=20260811');
  load('data-fp-driver-assignment-v3','fp-driver-assignment-v3.js?v=20260811d');
  load('data-fp-driver-return-mileage','fp-driver-return-mileage-hotfix.js?v=20260812');
- load('data-fp-ui-completion-v1','fp-ui-completion-v1.js?v=20260812b');
- load('data-fp-fleet-board-v2','fp-fleet-board-v2.js?v=20260812b')
+ load('data-fp-ui-completion-v1','fp-ui-completion-v1.js?v=20260812b')
 },{once:true});
