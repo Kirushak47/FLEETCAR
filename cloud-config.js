@@ -51,8 +51,10 @@ window.addEventListener('load',()=>{const load=(attr,src)=>new Promise(resolve=>
  await load('data-fp-v19-expense-service','modules/finance/expense-service-v19-behavior.js?v=200001');
  css('data-driver-app-css','driver-app/app.css?v=210005');
  await load('data-driver-app','driver-app/app.js?v=210005');
+ css('data-mechanic-app-css','mechanic-app/app.css?v=210007');
+ await load('data-mechanic-app','mechanic-app/app.js?v=210007');
  await load('data-fp-live-permissions','modules/roles/live-permissions.js?v=210004');
  await load('data-fp-invite-password','modules/auth/invite-password-flow.js?v=210006');
- window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'21.0.0-invite-password-flow'}}));
+ window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'21.0.0-mechanic-workspace'}}));
  try{window.FleetPilot?.FleetBoard?.render?.()}catch{}
 })();},{once:true});
