@@ -36,7 +36,8 @@ window.addEventListener("load",()=>{
   if(!document.querySelector('script[data-fp-ui-completion-v1]')){
     const script=document.createElement("script");script.src="fp-ui-completion-v1.js?v=20260812";script.dataset.fpUiCompletionV1="1";script.async=false;document.body.appendChild(script)
   }
-  if(!document.querySelector('script[data-fp-driver-status-v1]')){
-    const script=document.createElement("script");script.src="fp-driver-status-v1.js?v=20260812";script.dataset.fpDriverStatusV1="1";script.async=false;document.body.appendChild(script)
+  // Driver Domain V2 is loaded last and is the only authority for driver registry status.
+  if(!document.querySelector('script[data-fp-driver-domain-v2]')){
+    const script=document.createElement("script");script.src="fp-driver-domain-v2.js?v=20260812a";script.dataset.fpDriverDomainV2="1";script.async=false;document.body.appendChild(script)
   }
 },{once:true});
