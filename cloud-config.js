@@ -21,23 +21,12 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
 })();
 
 window.addEventListener("load",()=>{
-  if(!document.querySelector('script[data-fp-critical-consistency]')){
-    const script=document.createElement("script");script.src="fp-critical-consistency-hotfix.js?v=20260811";script.dataset.fpCriticalConsistency="1";script.async=false;document.body.appendChild(script)
-  }
-  if(!document.querySelector('script[data-fp-driver-assignment-v3]')){
-    const script=document.createElement("script");script.src="fp-driver-assignment-v3.js?v=20260811d";script.dataset.fpDriverAssignmentV3="1";script.async=false;document.body.appendChild(script)
-  }
-  if(!document.querySelector('script[data-fp-operational-domain-v1]')){
-    const script=document.createElement("script");script.src="fp-operational-domain-v1.js?v=20260812b";script.dataset.fpOperationalDomainV1="1";script.async=false;document.body.appendChild(script)
-  }
-  if(!document.querySelector('script[data-fp-driver-return-mileage]')){
-    const script=document.createElement("script");script.src="fp-driver-return-mileage-hotfix.js?v=20260812";script.dataset.fpDriverReturnMileage="1";script.async=false;document.body.appendChild(script)
-  }
-  if(!document.querySelector('script[data-fp-ui-completion-v1]')){
-    const script=document.createElement("script");script.src="fp-ui-completion-v1.js?v=20260812";script.dataset.fpUiCompletionV1="1";script.async=false;document.body.appendChild(script)
-  }
-  // Driver Domain V2 is loaded last and is the only authority for driver registry status.
-  if(!document.querySelector('script[data-fp-driver-domain-v2]')){
-    const script=document.createElement("script");script.src="fp-driver-domain-v2.js?v=20260812a";script.dataset.fpDriverDomainV2="1";script.async=false;document.body.appendChild(script)
-  }
+  const load=(attr,src)=>{if(document.querySelector(`script[${attr}]`))return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.async=false;document.body.appendChild(s)};
+  load('data-fp-critical-consistency','fp-critical-consistency-hotfix.js?v=20260811');
+  load('data-fp-driver-assignment-v3','fp-driver-assignment-v3.js?v=20260811d');
+  // Old operational status domain intentionally removed. Fleet Board V2 owns vehicle status now.
+  load('data-fp-driver-return-mileage','fp-driver-return-mileage-hotfix.js?v=20260812');
+  load('data-fp-ui-completion-v1','fp-ui-completion-v1.js?v=20260812');
+  load('data-fp-driver-domain-v2','fp-driver-domain-v2.js?v=20260812a');
+  load('data-fp-fleet-board-v2','fp-fleet-board-v2.js?v=20260812a');
 },{once:true});
