@@ -113,3 +113,46 @@
  },true);
  setTimeout(boot,50);setTimeout(boot,500);setTimeout(boot,1500);
 })();
+
+/* Driver registry and driver creation must be an explicit role permission. */
+(()=>{'use strict';
+ const KEY='company.drivers.manage';
+ const currentRole=()=>String(window.enterpriseCurrentRole?.()||window.FleetPilotCloud?.role||'').toLowerCase();
+ const isOwner=()=>['owner','admin','administrator','ceo'].includes(currentRole())||Boolean(window.FleetPilotCloud?.isWorkspaceOwner);
+ const explicit=()=>{try{const values=typeof companyPermissions==='object'?(companyPermissions?.[currentRole()]||{}):{};return Object.prototype.hasOwnProperty.call(values,KEY)?Boolean(values[KEY]):null}catch{return null}};
+ const allowed=()=>isOwner()||explicit()===true;
+ function install(){
+  if(typeof ROLE_PERMISSION_DEFINITIONS!=='object')return false;
+  const group=ROLE_PERMISSION_DEFINITIONS.company||(ROLE_PERMISSION_DEFINITIONS.company=[]);
+  if(group.some(x=>x?.[0]===KEY))return false;
+  group.push([KEY,'Управлять водителями и создавать водителей']);
+  return true
+ }
+ function driverCreateControls(){
+  const found=new Set();
+  ['#createDriverButton','#openCreateDriver','#addDriver','#newDriver','#createDriver','[data-create-driver]','[data-open-create-driver]'].forEach(sel=>document.querySelectorAll(sel).forEach(el=>found.add(el)));
+  document.querySelectorAll('button,a').forEach(el=>{const t=(el.textContent||'').trim().toLowerCase();if(/создать водителя|добавить водителя|новый водитель/.test(t))found.add(el)});
+  return [...found]
+ }
+ function applyDriverAccess(){
+  install();const ok=allowed();
+  driverCreateControls().forEach(el=>{el.hidden=!ok;el.setAttribute('aria-hidden',String(!ok));if('disabled'in el)el.disabled=!ok});
+  if(!ok)document.querySelectorAll('dialog[open]').forEach(d=>{const txt=(d.textContent||'').toLowerCase();if(/водител/.test(txt)&&/создать|добавить|новый/.test(txt))d.close?.()})
+ }
+ function refreshPermissionUi(){const added=install();if(added&&typeof window.renderRolePermissions==='function')window.renderRolePermissions();applyDriverAccess()}
+ document.addEventListener('click',e=>{
+  if(allowed())return;
+  const el=e.target.closest?.('button,a,[role="button"]');if(!el)return;
+  const t=(el.textContent||'').trim().toLowerCase(),id=String(el.id||'').toLowerCase();
+  if(/создать водителя|добавить водителя|новый водитель/.test(t)||(/driver/.test(id)&&/(create|add|new|invite)/.test(id))){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к управлению водителями')}
+ },true);
+ document.addEventListener('submit',e=>{
+  if(allowed())return;
+  const form=e.target,id=String(form?.id||'').toLowerCase(),txt=(form?.closest?.('dialog')?.textContent||'').toLowerCase();
+  if((/driver/.test(id)&&/(create|add|new|invite)/.test(id))||(/водител/.test(txt)&&/создать|добавить|приглас/.test(txt))){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к управлению водителями')}
+ },true);
+ ['fleetpilot:access-ready','fleetpilot:permissions-changed','fleetpilot:modules-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refreshPermissionUi,0)));
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshPermissionUi,0),{once:true});
+ let queued=false;const mo=new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;applyDriverAccess()})});document.addEventListener('DOMContentLoaded',()=>mo.observe(document.body,{subtree:true,childList:true}),{once:true});
+ window.enterpriseCanManageDrivers=allowed;
+})();
