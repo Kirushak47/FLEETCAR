@@ -1,0 +1,13 @@
+/* FleetPilot 20 — Mileage
+   One mileage writer; rejected/archived requests are never a source of current mileage. */
+(()=>{
+ 'use strict';
+ const FP=window.FleetPilot=window.FleetPilot||{};if(FP.Mileage)return;
+ const Core=FP.Core;if(!Core)throw new Error('FleetPilot Core required');
+ const valid=value=>{const n=Number(value);return Number.isFinite(n)&&n>=0?n:null};
+ const currentDriverId=()=>String(window.FleetPilotCloud?.session?.user?.id||'');
+ const assignedCar=()=>{try{const c=window.driverAssignedCar?.();if(c)return c}catch{}const uid=currentDriverId();return uid?Core.activeCars().find(c=>Core.same(c.driverUserId,uid))||null:null};
+ function set(car,value,source='manual'){const n=valid(value);if(!car||n==null)return null;car.mileage=n;car.mileageUpdatedAt=new Date().toISOString();car.mileageUpdatedBy=source;car.mileageSource=source;try{window.save?.()}catch{}Core.emit('mileage-changed',{carId:car.id,mileage:n,source});return car}
+ function install(){const cloud=window.FleetPilotCloud;if(!cloud)return false;if(typeof cloud.updateDriverMileage==='function'&&!cloud.updateDriverMileage.__fp20){const original=cloud.updateDriverMileage.bind(cloud);const fn=async(mileage,source='driver_manual')=>{const n=valid(mileage);if(n==null)throw new Error('Некорректный пробег');if(String(source)==='vehicle_return'){set(assignedCar(),n,source);return{mileage:n,source,local_only:true}}try{return await original(n,source)}catch(error){const text=String(error?.message||error||'').toLowerCase();const missing=text.includes('update_assigned_vehicle_mileage')||text.includes('404')||text.includes('not found')||text.includes('could not find the function')||text.includes('schema cache');if(!missing)throw error;set(assignedCar(),n,source);return{mileage:n,source,local_only:true}}};fn.__fp20=true;cloud.updateDriverMileage=fn}if(typeof cloud.submitVehicleHandover==='function'&&!cloud.submitVehicleHandover.__fp20){const original=cloud.submitVehicleHandover.bind(cloud);const fn=async(payload={})=>{const isReturn=String(payload?.type||'')==='return',target=isReturn?assignedCar():null,result=await original(payload);if(isReturn&&target){set(target,payload?.mileage,'vehicle_return');try{window.renderFleet?.()}catch{}try{window.renderDriversRegistry?.()}catch{}try{FP.FleetBoard?.render?.()}catch{}}return result};fn.__fp20=true;cloud.submitVehicleHandover=fn}return Boolean(cloud.updateDriverMileage?.__fp20&&cloud.submitVehicleHandover?.__fp20)}
+ FP.Mileage=Object.freeze({valid,set,assignedCar,install});let attempts=0;const timer=setInterval(()=>{attempts++;if(install()||attempts>50)clearInterval(timer)},100);install();console.info('FleetPilot 20 mileage ready');
+})();
