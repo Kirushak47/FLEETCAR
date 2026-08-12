@@ -36,4 +36,7 @@ window.addEventListener("load",()=>{
   if(!document.querySelector('script[data-fp-ui-completion-v1]')){
     const script=document.createElement("script");script.src="fp-ui-completion-v1.js?v=20260812";script.dataset.fpUiCompletionV1="1";script.async=false;document.body.appendChild(script)
   }
+  if(!document.querySelector('script[data-fp-driver-status-v1]')){
+    const script=document.createElement("script");script.src="fp-driver-status-v1.js?v=20260812";script.dataset.fpDriverStatusV1="1";script.async=false;document.body.appendChild(script)
+  }
 },{once:true});
