@@ -19,6 +19,7 @@ window.addEventListener('load',()=>{const load=(attr,src)=>new Promise(resolve=>
  await load('data-fp20-mileage','modules/fleet/mileage.js?v=200001');
  await load('data-fp20-ui-completion','modules/ui/completion.js?v=200001');
  await load('data-fp-critical-consistency','fp-critical-consistency-hotfix.js?v=20260811');
- window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'20.0.0-alpha.3'}}));
+ await load('data-fp-v19-expense-service','modules/finance/expense-service-v19-behavior.js?v=200001');
+ window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'20.0.0-alpha.3-v19-behavior'}}));
  try{window.FleetPilot?.FleetBoard?.render?.()}catch{}
 })();},{once:true});
