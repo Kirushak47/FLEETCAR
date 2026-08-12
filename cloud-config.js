@@ -20,8 +20,6 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
  create.__fleetPilotSingleton=true;create.__nativeCreateClient=nativeCreate;supabase.createClient=create
 })();
 
-/* Compatibility shim for the legacy boot. It will disappear when the legacy files are fully split.
-   It only prevents the old desktop renderer from choosing Autopark during page refresh. */
 function fpLegacyBootShim(){
  try{
   if(typeof FLEETPILOT_ROUTES==='object')FLEETPILOT_ROUTES.driversPage='drivers';
@@ -42,17 +40,16 @@ window.addEventListener('fleetpilot:access-ready',fpLegacyBootShim);
 window.addEventListener("load",()=>{
  const load=(attr,src)=>new Promise(resolve=>{if(document.querySelector(`script[${attr}]`))return resolve();const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.async=false;s.onload=resolve;s.onerror=()=>{console.error('FleetPilot module load failed',src);resolve()};document.body.appendChild(s)});
  (async()=>{
-  await load('data-fp20-core','modules/core/runtime.js?v=200001');
+  await load('data-fp20-core','modules/core/runtime.js?v=200002');
   await load('data-fp20-router','modules/router/router.js?v=200001');
   await load('data-fp20-boot','modules/core/boot.js?v=200001');
   await load('data-fp20-fleet-status','modules/fleet/status.js?v=200001');
   await load('data-fp20-driver-state','modules/drivers/state.js?v=200001');
-  await load('data-fp20-fleet-board','modules/fleet/board.js?v=200001');
-  // Compatibility patches not migrated yet.
+  await load('data-fp20-fleet-board','modules/fleet/board.js?v=200002');
   await load('data-fp-critical-consistency','fp-critical-consistency-hotfix.js?v=20260811');
   await load('data-fp-driver-assignment-v3','fp-driver-assignment-v3.js?v=20260811d');
   await load('data-fp-driver-return-mileage','fp-driver-return-mileage-hotfix.js?v=20260812');
   await load('data-fp-ui-completion-v1','fp-ui-completion-v1.js?v=20260812b');
-  window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'20.0.0-alpha.1'}}));
+  window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'20.0.0-alpha.2'}}));
  })();
 },{once:true});
