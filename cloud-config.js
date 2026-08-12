@@ -2,7 +2,7 @@ window.FLEETPILOT_CLOUD_CONFIG = Object.freeze({
   url: "https://tbpfasumklpdqwnlfncd.supabase.co",
   publishableKey: "sb_publishable_Y8lMZQN7Fc7V2HAixaZZrA_w-7STzMh",
   ownerEmail: "balyshevy@gmail.com",
-  redirectUrl: "https://kirushak47.github.io/FLEETCAR/?email-confirmed=1",
+  redirectUrl: "https://fleetpilot.balyshevy.workers.dev/?email-confirmed=1",
   dashboardUrl: "https://supabase.com/dashboard/project/tbpfasumklpdqwnlfncd"
 });
 (()=>{const supabase=window.supabase;if(!supabase?.createClient||supabase.createClient.__fleetPilotSingleton)return;const nativeCreate=supabase.createClient.bind(supabase);let sharedClient=null,sharedUrl='',sharedKey='';const create=function(url,key,options){const u=String(url||''),k=String(key||'');if(sharedClient&&u===sharedUrl&&k===sharedKey)return sharedClient;if(sharedClient&&u!==sharedUrl){console.warn('FleetPilot blocked a second Supabase project client in the same page',u);return sharedClient}sharedClient=nativeCreate(url,key,options);sharedUrl=u;sharedKey=k;window.__FLEETPILOT_SUPABASE_CLIENT__=sharedClient;return sharedClient};create.__fleetPilotSingleton=true;create.__nativeCreateClient=nativeCreate;supabase.createClient=create})();
