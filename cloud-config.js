@@ -20,8 +20,8 @@ window.addEventListener('load',()=>{const load=(attr,src)=>new Promise(resolve=>
  await load('data-fp20-ui-completion','modules/ui/completion.js?v=200001');
  await load('data-fp-critical-consistency','fp-critical-consistency-hotfix.js?v=20260811');
  await load('data-fp-v19-expense-service','modules/finance/expense-service-v19-behavior.js?v=200001');
- css('data-driver-app-css','driver-app/app.css?v=210002');
- await load('data-driver-app','driver-app/app.js?v=210002');
- window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'21.0.0-driver-app-alpha2'}}));
+ css('data-driver-app-css','driver-app/app.css?v=210003');
+ await load('data-driver-app','driver-app/app.js?v=210003');
+ window.dispatchEvent(new CustomEvent('fleetpilot:modules-ready',{detail:{version:'21.0.0-driver-app-alpha3'}}));
  try{window.FleetPilot?.FleetBoard?.render?.()}catch{}
 })();},{once:true});
