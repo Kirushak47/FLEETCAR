@@ -1,4 +1,4 @@
-/* FleetPilot Permission Core V2 — centralized role/page/action enforcement */
+/* FleetPilot Permission Core V2.1 — centralized role/page/action enforcement */
 (()=>{'use strict';
  const FP=window.FleetPilot=window.FleetPilot||{};
  const role=()=>String(window.enterpriseCurrentRole?.()||window.FleetPilotCloud?.role||'user').toLowerCase();
@@ -11,21 +11,24 @@
   documents:[['documents.view','Видеть документы'],['documents.create','Добавлять документы'],['documents.delete','Удалять документы'],['documents.contracts','Видеть договоры']],
   company:[['company.team','Видеть команду'],['company.drivers.manage','Управлять водителями и создавать водителей'],['company.invite','Приглашать пользователей'],['company.roles','Менять роли'],['company.permissions','Менять права'],['company.data','Управлять данными и резервными копиями']],
   carProfile:[['car.profile.info','Обзор'],['car.profile.service','Сервис'],['car.profile.finance','Финансы'],['car.profile.documents','Документы'],['car.profile.history','История'],['car.profile.damages','Повреждения'],['car.profile.finance.edit','Финансы: изменять'],['car.profile.documents.edit','Документы: изменять'],['car.profile.service.edit','Сервис: изменять']],
-  driver:[['driver.portal','Использовать кабинет водителя'],['driver.tasks','Выполнять задания'],['driver.photos','Загружать фотоконтроль'],['driver.protocols','Подписывать протоколы']]
+  driver:[['driver.portal','Использовать кабинет водителя'],['driver.tasks','Работать с заявками и заданиями'],['driver.photos','Принимать/возвращать авто с фотоконтролем'],['driver.protocols','Подписывать протоколы']]
  };
+ const pageMap={fleetPage:'cars.view',carPage:'cars.view',driversPage:'company.drivers.manage',repairsPage:'service.view',paymentsPage:'finance.view',expensesPage:'finance.view',analyticsPage:'finance.analytics',documentsPage:'documents.view',companyPage:'company.team',dataPage:'company.data',calendarPage:'service.calendar',mobileMapPage:'cars.gps',driverPortalPage:'driver.portal',driverProfilePage:'driver.portal'};
  const actionMap={
-  'cars.create':['#headerAdd','[data-quick-action="car"]','[onclick*="openCarDialog(\'\')"]'],
-  'cars.edit':['#carSubmitButton','[onclick*="openCarDialog("]'],
-  'cars.delete':['[onclick*="deleteCar("]'],
+  'cars.create':['#headerAdd','[data-quick-action="car"]','[data-create-car]'],
+  'cars.edit':['#carSubmitButton','[data-edit-car]','[onclick*="openCarDialog("]'],
+  'cars.delete':['[onclick*="deleteCar("]','[data-delete-car]'],
   'cars.assign':['[data-driver-assignment]','[data-assign-driver]','[onclick*="assignDriver"]'],
-  'cars.mileage':['#mileageDialog button[type="submit"]','[onclick*="openMileage"]'],
-  'service.create':['#addRepair','[data-quick-action="repair"]','[onclick*="openRepairDialog(\'\')"]'],
-  'service.edit':['#repairSubmitButton','[onclick*="editRepair"]','[onclick*="deleteRepair("]','[onclick*="advanceServiceRepair"]'],
+  'cars.mileage':['#mileageDialog button[type="submit"]','[onclick*="openMileage"]','[data-edit-mileage]'],
+  'cars.gps':['[data-open-gps]','[onclick*="openFullFleetMap"]','[data-control-window="gps"] button'],
+  'service.create':['#addRepair','[data-quick-action="repair"]','[data-create-repair]'],
+  'service.edit':['#repairSubmitButton','[onclick*="editRepair"]','[onclick*="deleteRepair("]','[onclick*="advanceServiceRepair"]','[data-edit-repair]'],
+  'service.photos':['[data-repair-photo]','[data-service-photo]'],
   'finance.expenses':['#addExpense','[data-quick-action="expense"]','[onclick*="openExpenseDialog"]'],
   'finance.payments':['#addPayment','[data-quick-action="payment"]','[onclick*="openPaymentDialog"]','[onclick*="openDepositDialog"]'],
   'documents.create':['#addDocument','[data-quick-action="document"]','[onclick*="openDocumentDialog"]'],
-  'documents.delete':['[onclick*="deleteDocument("]'],
-  'company.drivers.manage':['#createDriverButton','#openCreateDriver','#openCreateDriverDialog','#addDriver','#newDriver','#createDriver','[data-create-driver]','[data-open-create-driver]'],
+  'documents.delete':['[onclick*="deleteDocument("]','[data-delete-document]'],
+  'company.drivers.manage':['#createDriverButton','#openCreateDriver','#openCreateDriverDialog','#addDriver','#newDriver','#createDriver','[data-create-driver]','[data-open-create-driver]','[data-edit-driver]','[data-delete-driver]','[data-delete-manual-driver]'],
   'company.invite':['#openInviteMember','#openInviteMemberSecondary'],
   'company.permissions':['[data-company-tab="permissions"]','#saveRolePermissions','#resetRolePermissions'],
   'company.roles':['select[data-enterprise-role]'],
@@ -39,6 +42,24 @@
   }
   try{if(typeof ROLE_PERMISSION_LABELS==='object'&&!ROLE_PERMISSION_LABELS.user)ROLE_PERMISSION_LABELS.user='Пользователь'}catch{}
  }
+ function permissionForPage(pageId){
+  if(pageId==='searchPage')return can('cars.view')||can('service.view')||can('documents.view')||can('finance.view');
+  if(pageId==='attentionPage'||pageId==='morePage')return role()!=='driver';
+  const p=pageMap[pageId];return p?can(p):null
+ }
+ function wrapPageAccess(){
+  const current=window.enterpriseCanOpen;
+  if(typeof current!=='function'||current.__fpPermissionCoreV21)return;
+  const raw=current.bind(window);
+  const wrapped=function(pageId){
+   if(owner())return raw(pageId);
+   if(role()==='driver'&&!['driverPortalPage','driverProfilePage'].includes(pageId))return false;
+   const enforced=permissionForPage(pageId);
+   if(enforced!==null)return Boolean(enforced);
+   return raw(pageId)
+  };
+  wrapped.__fpPermissionCoreV21=true;wrapped.__raw=raw;window.enterpriseCanOpen=wrapped
+ }
  function applyActions(){
   for(const [perm,selectors] of Object.entries(actionMap)){
    const ok=can(perm);
@@ -46,36 +67,41 @@
   }
   document.querySelectorAll('button,a').forEach(el=>{
    const text=(el.textContent||'').trim().toLowerCase();
-   if(/создать водителя|добавить водителя|новый водитель/.test(text)&&!can('company.drivers.manage')){el.hidden=true;el.setAttribute('aria-hidden','true')}
+   if(/создать водителя|добавить водителя|новый водитель/.test(text)&&!can('company.drivers.manage')){el.hidden=true;el.setAttribute('aria-hidden','true');if('disabled'in el)el.disabled=true}
   })
  }
- function applyPages(){try{window.applyEnterpriseAccess?.()}catch{};applyActions();try{window.FleetPilotDriverManagementPermissions?.apply?.()}catch{};try{window.enterpriseCanCarProfileTab&&document.querySelector('#carDetail')&&window.dispatchEvent(new Event('fleetpilot:permissions-changed'))}catch{}}
+ function redirectIfNeeded(){
+  const current=document.querySelector('.page.active')?.id;if(!current||!window.enterpriseCanOpen||window.enterpriseCanOpen(current))return;
+  const order=['fleetPage','driversPage','repairsPage','paymentsPage','expensesPage','documentsPage','calendarPage','analyticsPage','companyPage','dataPage','searchPage','driverPortalPage','driverProfilePage'];
+  const target=order.find(id=>document.getElementById(id)&&window.enterpriseCanOpen(id));if(target)window.showPage?.(target)
+ }
+ function applyPages(){wrapPageAccess();try{window.applyEnterpriseAccess?.()}catch{};applyActions();redirectIfNeeded();try{window.FleetPilotDriverManagementPermissions?.apply?.()}catch{};window.dispatchEvent(new CustomEvent('fleetpilot:permission-core-applied',{detail:{role:role()}}))}
+ function targetMatches(target,selectors){for(const sel of selectors){try{if(target.matches(sel)||target.closest(sel))return true}catch{}}return false}
  function guardClick(e){
   const target=e.target?.closest?.('button,a,[role="button"],select');if(!target)return;
-  for(const [perm,selectors] of Object.entries(actionMap)){
-   let match=false;for(const sel of selectors){try{if(target.matches(sel)||target.closest(sel)){match=true;break}}catch{}}
-   if(match&&!can(perm)){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к этому действию');return}
-  }
+  for(const [perm,selectors] of Object.entries(actionMap))if(targetMatches(target,selectors)&&!can(perm)){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к этому действию');return}
   const text=(target.textContent||'').trim().toLowerCase();if(/создать водителя|добавить водителя|новый водитель/.test(text)&&!can('company.drivers.manage')){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к управлению водителями')}
  }
  function guardSubmit(e){
-  const form=e.target,id=String(form?.id||'').toLowerCase(),dialogText=(form?.closest?.('dialog')?.textContent||'').toLowerCase();
-  const tests=[
-   ['company.drivers.manage',/driver/.test(id)&&/(create|add|new|invite)/.test(id)||(/водител/.test(dialogText)&&/создать|добавить|приглас/.test(dialogText))],
-   ['cars.edit',/car.*form|vehicle.*form/.test(id)],['service.edit',/repair.*form|service.*form/.test(id)],['finance.expenses',/expense.*form/.test(id)],['finance.payments',/payment.*form|deposit.*form/.test(id)],['documents.create',/document.*form/.test(id)]
-  ];
-  for(const [perm,hit] of tests)if(hit&&!can(perm)){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к этому действию');return}
+  const form=e.target,id=String(form?.id||'').toLowerCase(),dialogText=(form?.closest?.('dialog')?.textContent||'').toLowerCase();let required='';
+  if((/driver/.test(id)&&/(create|add|new|invite)/.test(id))||(/водител/.test(dialogText)&&/создать|добавить|приглас/.test(dialogText)))required='company.drivers.manage';
+  else if(/car.*form|vehicle.*form/.test(id)){const editing=Boolean(document.querySelector('#carId')?.value);required=editing?'cars.edit':'cars.create'}
+  else if(/repair.*form|service.*form/.test(id)){const editing=Boolean(document.querySelector('#repairId')?.value);required=editing?'service.edit':'service.create'}
+  else if(/expense.*form/.test(id))required='finance.expenses';
+  else if(/payment.*form|deposit.*form/.test(id))required='finance.payments';
+  else if(/document.*form/.test(id))required='documents.create';
+  if(required&&!can(required)){e.preventDefault();e.stopImmediatePropagation();window.toast?.('Нет доступа к этому действию')}
  }
  function wrapSavePermissions(){
-  const cloud=window.FleetPilotCloud;if(!cloud||typeof cloud.saveRolePermissions!=='function'||cloud.saveRolePermissions.__fpPermissionV2)return;
+  const cloud=window.FleetPilotCloud;if(!cloud||typeof cloud.saveRolePermissions!=='function'||cloud.saveRolePermissions.__fpPermissionV21)return;
   const raw=cloud.saveRolePermissions.bind(cloud);
   const wrapped=async(...args)=>{const out=await raw(...args);try{if(typeof companyPermissions==='object'&&args[0])companyPermissions[args[0]]=args[1]||{}}catch{};window.dispatchEvent(new CustomEvent('fleetpilot:permissions-changed',{detail:{role:args[0],permissions:args[1]||{}}));setTimeout(()=>FP.LivePermissions?.refresh?.({force:true}),0);applyPages();return out};
-  wrapped.__fpPermissionV2=true;cloud.saveRolePermissions=wrapped
+  wrapped.__fpPermissionV21=true;cloud.saveRolePermissions=wrapped
  }
- function boot(){installDefinitions();wrapSavePermissions();applyPages();try{renderRolePermissions?.()}catch{}}
+ function boot(){installDefinitions();wrapPageAccess();wrapSavePermissions();applyPages();try{renderRolePermissions?.()}catch{}}
  document.addEventListener('click',guardClick,true);document.addEventListener('submit',guardSubmit,true);
  ['fleetpilot:access-ready','fleetpilot:permissions-applied','fleetpilot:permissions-changed','fleetpilot:modules-ready'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(boot,0)));
  document.addEventListener('DOMContentLoaded',()=>{boot();new MutationObserver(()=>applyActions()).observe(document.body,{subtree:true,childList:true})},{once:true});
- setInterval(()=>{wrapSavePermissions();applyActions()},5000);
- FP.PermissionCoreV2={boot,apply:applyPages,can,defs};
+ setInterval(()=>{wrapPageAccess();wrapSavePermissions();applyActions()},5000);
+ FP.PermissionCoreV2={boot,apply:applyPages,can,defs,pageMap};
 })();
