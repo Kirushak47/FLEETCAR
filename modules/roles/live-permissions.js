@@ -32,7 +32,12 @@ async function refresh({force=false}={}){
 }
 function start(){if(timer)return;refresh({force:true});timer=setInterval(()=>refresh(),5000)}
 function stop(){if(timer)clearInterval(timer);timer=null}
-window.addEventListener('fleetpilot:access-ready',()=>setTimeout(start,0));
+function ensureCloudFiles(){
+ if(window.FleetPilot?.Files||document.querySelector('script[data-fp-cloud-files]'))return;
+ const s=document.createElement('script');s.src='modules/files/storage.js?v=210017';s.async=false;s.setAttribute('data-fp-cloud-files','1');document.body.appendChild(s)
+}
+window.addEventListener('fleetpilot:access-ready',()=>{setTimeout(start,0);setTimeout(ensureCloudFiles,0)});
 window.addEventListener('focus',()=>refresh());document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});window.addEventListener('online',()=>refresh({force:true}));window.addEventListener('beforeunload',stop);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureCloudFiles,0),{once:true});
 window.FleetPilot=window.FleetPilot||{};window.FleetPilot.LivePermissions={refresh,start,stop};
 })();
