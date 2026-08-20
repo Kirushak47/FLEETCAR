@@ -4,8 +4,17 @@
  'use strict';
  const FP=window.FleetPilot=window.FleetPilot||{};
  if(FP.Boot)return;
+ function loadVehicleReportV2(){
+  if(document.querySelector('script[data-fp-vehicle-report-v2]'))return;
+  const script=document.createElement('script');
+  script.src='modules/reports/vehicle-report-v2.js?v=220100';
+  script.async=false;
+  script.setAttribute('data-fp-vehicle-report-v2','1');
+  document.body.appendChild(script)
+ }
  function install(){
   try{
+   loadVehicleReportV2();
    if(typeof forceInitialFleetRender==='function'){
     const renderOnly=function(){
      if(window.innerWidth<1100)return;
@@ -26,7 +35,7 @@
    }
   }catch(error){console.warn('FleetPilot modular boot install',error)}
  }
- FP.Boot=Object.freeze({install});
+ FP.Boot=Object.freeze({install,loadVehicleReportV2});
  install();
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
  window.addEventListener('fleetpilot:access-ready',install);
