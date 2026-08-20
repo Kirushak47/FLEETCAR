@@ -10,26 +10,31 @@
  function rowsForCar(carId){
   const d=state();
   const expenses=(d.expenses||[]).filter(x=>String(x.carId)===String(carId)).map(x=>({
-   kind:'expense',date:x.date||'',title:x.title||cat(x.category),category:cat(x.category),amount:Number(x.amount||0),note:x.note||'',id:String(x.id||''),linkedRepairId:String(x.linkedRepairId||'')
+   kind:'expense',date:x.date||'',title:x.title||cat(x.category),category:cat(x.category),amount:Number(x.amount||0),note:x.note||'',id:String(x.id||''),linkedRepairId:String(x.linkedRepairId||''),rawCategory:String(x.category||'').toLowerCase()
   }));
   const repairs=(d.repairs||[]).filter(x=>String(x.carId)===String(carId)&&String(x.status||'')!=='cancelled'&&Number(x.actual||x.planned||0)>0);
   for(const r of repairs){
    const duplicate=expenses.some(e=>e.linkedRepairId&&e.linkedRepairId===String(r.id))||expenses.some(e=>String(r.linkedExpenseId||'')&&e.id===String(r.linkedExpenseId));
    if(duplicate)continue;
-   expenses.push({kind:'repair',date:r.completedDate||r.paidDate||r.date||'',title:r.title||'Ремонт',category:'Ремонт',amount:Number(r.actual||r.planned||0),note:[r.service,r.note,status(r.status)].filter(Boolean).join(' · ')})
+   expenses.push({kind:'repair',date:r.completedDate||r.paidDate||r.date||'',title:r.title||'Ремонт',category:'Ремонт',rawCategory:'repair',amount:Number(r.actual||r.planned||0),note:[r.service,r.note,status(r.status)].filter(Boolean).join(' · ')})
   }
   return expenses.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))
  }
  function tableRows(carId){const rows=rowsForCar(carId);return rows.length?rows.slice(0,100).map(x=>`<tr><td>${date(x.date)}</td><td>${esc(x.title||'Расход')}</td><td>${esc(x.category)}</td><td>${money(x.amount)}</td><td>${esc(x.note||'')}</td></tr>`).join(''):`<tr><td colspan="5" class="empty">Расходов нет</td></tr>`}
  function patchHtml(html,carId){
   if(!html)return html;
-  const rows=rowsForCar(carId),total=rows.reduce((s,x)=>s+Number(x.amount||0),0);
-  // Separate repair history is redundant now: repairs are part of the unified expense ledger.
+  const rows=rowsForCar(carId);
+  const total=rows.reduce((s,x)=>s+Number(x.amount||0),0);
+  const repairTotal=rows.filter(x=>x.kind==='repair'||x.rawCategory==='repair'||x.rawCategory==='service').reduce((s,x)=>s+Number(x.amount||0),0);
+  // All expense events live in one chronological ledger.
   html=html.replace(/<section class="section">\s*<h2>История ремонтов<\/h2>[\s\S]*?<\/section>\s*/i,'');
   html=html.replace(/<section class="section">\s*<h2>Последние расходы<\/h2>[\s\S]*?<\/section>/i,`<section class="section"><h2>Все расходы по автомобилю</h2><table><thead><tr><th>Дата</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Комментарий</th></tr></thead><tbody>${tableRows(carId)}</tbody></table></section>`);
-  // The summary must show one real total, including service/repair costs.
+  // Summary: total is the full cost of the car, repair subtotal is shown separately for clarity.
   html=html.replace(/<div class="info"><span>Расходы<\/span><strong>[\s\S]*?<\/strong><\/div>/i,`<div class="info"><span>Все расходы</span><strong>${money(total)}</strong></div>`);
-  html=html.replace(/\s*<div class="info"><span>Ремонты<\/span><strong>[\s\S]*?<\/strong><\/div>/i,'');
+  html=html.replace(/<div class="info"><span>Ремонты<\/span><strong>[\s\S]*?<\/strong><\/div>/i,`<div class="info"><span>Из них ремонты</span><strong>${money(repairTotal)}</strong></div>`);
+  if(!/<span>Из них ремонты<\/span>/i.test(html)){
+   html=html.replace(/(<div class="info"><span>Все расходы<\/span><strong>[\s\S]*?<\/strong><\/div>)/i,`$1<div class="info"><span>Из них ремонты</span><strong>${money(repairTotal)}</strong></div>`)
+  }
   // Localize legacy enum values if they appear elsewhere in the printable report.
   const exact={other:'Другое',insurance:'Страховка',repair:'Ремонт',service:'Сервис',inspection:'Техосмотр',done:'Выполнен',planned:'Запланирован',cancelled:'Отменён',paid:'Оплачен',unpaid:'Не оплачен'};
   for(const [from,to] of Object.entries(exact))html=html.replace(new RegExp(`>${from}<`,'gi'),`>${to}<`);
