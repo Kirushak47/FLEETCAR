@@ -7,7 +7,7 @@
  function loadVehicleReportV2(){
   if(document.querySelector('script[data-fp-vehicle-report-v2]'))return;
   const script=document.createElement('script');
-  script.src='modules/reports/vehicle-report-v2.js?v=220100';
+  script.src='modules/reports/vehicle-report-v2.js?v=220102';
   script.async=false;
   script.setAttribute('data-fp-vehicle-report-v2','1');
   document.body.appendChild(script)
