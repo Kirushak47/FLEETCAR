@@ -10,12 +10,11 @@
  }
  function loadVehicleReportV2(){loadScriptOnce('data-fp-vehicle-report-v2','modules/reports/vehicle-report-v2.js?v=220102')}
  function loadExpenseDocumentSync(){loadScriptOnce('data-fp-expense-document-sync','modules/finance/expense-document-sync.js?v=220200')}
- function loadPaymentTenantSync(){loadScriptOnce('data-fp-payment-tenant-sync','modules/finance/payment-tenant-sync.js?v=220405')}
+ function loadPaymentTenantSync(){/* disabled: replaced by payment-tenant-display-v8.js direct loader */}
  function install(){
   try{
    loadVehicleReportV2();
    loadExpenseDocumentSync();
-   loadPaymentTenantSync();
    if(typeof forceInitialFleetRender==='function'){
     const renderOnly=function(){
      if(window.innerWidth<1100)return;
