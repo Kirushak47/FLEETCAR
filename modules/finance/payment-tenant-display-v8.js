@@ -1,10 +1,10 @@
-/* FleetPilot — payment tenant picker v12
+/* FleetPilot — payment tenant picker v13
    Uses FleetPilotCore bridge instead of window.db because legacy db lives in global lexical scope.
    Assigned account driver is selected automatically; manual tenants remain selectable.
-   Duplicate warning detects any overlapping payment period for the same vehicle. */
+   Payment warning detects partial period overlap and shows only the amount attributable to the selected days. */
 (()=>{
 'use strict';
-if(window.__fpPaymentTenantPickerV12)return;window.__fpPaymentTenantPickerV12=true;
+if(window.__fpPaymentTenantPickerV13)return;window.__fpPaymentTenantPickerV13=true;
 const $=s=>document.querySelector(s);
 const same=(a,b)=>String(a??'')===String(b??'');
 const clean=v=>String(v||'').trim();
@@ -12,6 +12,12 @@ const core=()=>window.FleetPilotCore||window.FleetPilot?.Core||null;
 const cars=()=>{
  try{const rows=core()?.cars?.();if(Array.isArray(rows))return rows}catch{}
  try{const rows=window.fleetCars?.();if(Array.isArray(rows))return rows}catch{}
+ return[];
+};
+const payments=()=>{
+ try{if(typeof db!=='undefined'&&Array.isArray(db?.payments))return db.payments}catch{}
+ try{const direct=core()?.db?.();if(Array.isArray(direct?.payments))return direct.payments}catch{}
+ try{if(Array.isArray(window.__FLEETPILOT_DB__?.payments))return window.__FLEETPILOT_DB__.payments}catch{}
  return[];
 };
 const getCar=id=>{
@@ -81,16 +87,61 @@ function fillPicker({preserveUserChoice=false}={}){
  picker.innerHTML=html;picker.value=selectedName;
  const opt=picker.selectedOptions?.[0];stored.value=clean(picker.value);stored.dataset.driverUserId=clean(opt?.dataset?.userId);stored.dataset.driverSource=clean(opt?.dataset?.source)||assigned.source||'none';
 }
+
+const dayMs=86400000;
+function parseDay(value){const s=clean(value);if(!s)return NaN;const t=new Date(s+'T12:00:00').getTime();return Number.isFinite(t)?t:NaN}
+function inclusiveDays(from,to){const a=parseDay(from),b=parseDay(to);if(!Number.isFinite(a)||!Number.isFinite(b)||b<a)return 0;return Math.round((b-a)/dayMs)+1}
+function overlapInfo(payment,selectedFrom,selectedTo){
+ const pf=clean(payment?.from),pt=clean(payment?.to);if(!pf||!pt||!selectedFrom||!selectedTo)return null;
+ const overlapFrom=pf>selectedFrom?pf:selectedFrom;
+ const overlapTo=pt<selectedTo?pt:selectedTo;
+ if(overlapFrom>overlapTo)return null;
+ const paymentDays=inclusiveDays(pf,pt),overlapDays=inclusiveDays(overlapFrom,overlapTo);
+ if(!paymentDays||!overlapDays)return null;
+ const received=Number(payment?.received||0);
+ const allocated=Math.round((received/paymentDays*overlapDays)*100)/100;
+ return{payment,overlapFrom,overlapTo,paymentDays,overlapDays,received,allocated};
+}
+function overlappingPaymentParts(){
+ const carId=clean($('#paymentCarId')?.value),from=clean($('#paymentFrom')?.value),to=clean($('#paymentTo')?.value),currentId=clean($('#paymentId')?.value);
+ if(!carId||!from||!to)return[];
+ return payments().filter(p=>!same(p.id,currentId)&&same(p.carId,carId)).map(p=>overlapInfo(p,from,to)).filter(Boolean);
+}
+function fmtMoney(v){try{return window.money?window.money(v):`${Number(v||0).toFixed(2)} zł`}catch{return `${Number(v||0).toFixed(2)} zł`}}
+function fmtDate(v){try{return window.date?window.date(v):v}catch{return v}}
+function renderOverlapWarning(){
+ const box=$('#paymentDuplicateWarning');if(!box)return;
+ const parts=overlappingPaymentParts();
+ box.hidden=!parts.length;
+ if(!parts.length){box.textContent='';return}
+ const total=parts.reduce((s,x)=>s+x.allocated,0);
+ const days=[...new Set(parts.flatMap(x=>{const arr=[];let t=parseDay(x.overlapFrom),end=parseDay(x.overlapTo);while(t<=end){arr.push(new Date(t).toISOString().slice(0,10));t+=dayMs}return arr}))].length;
+ if(parts.length===1){
+  const x=parts[0],who=clean(x.payment.tenant);
+  box.textContent=`⚠️ За выбранный период уже получено ${fmtMoney(x.allocated)}${who?` (${who})`:''}. Пересечение: ${fmtDate(x.overlapFrom)} — ${fmtDate(x.overlapTo)} · ${x.overlapDays} дн. из оплаты ${fmtDate(x.payment.from)} — ${fmtDate(x.payment.to)} (${fmtMoney(x.received)}).`;
+ }else{
+  box.textContent=`⚠️ За выбранный период уже получено ${fmtMoney(total)}. Найдено ${parts.length} пересекающихся оплат, покрыто ${days} дн.`;
+ }
+}
+function scheduleOverlapWarning(){setTimeout(renderOverlapWarning,0);setTimeout(renderOverlapWarning,40)}
+function installOverlapWarning(){
+ try{window.checkPaymentDuplicate=renderOverlapWarning}catch{}
+ for(const id of ['paymentCarId','paymentFrom','paymentTo','paymentReferenceWeek','paymentTiming']){
+  const el=$('#'+id);if(!el||el.dataset.fpOverlapV13)continue;
+  el.dataset.fpOverlapV13='1';el.addEventListener('change',scheduleOverlapWarning);el.addEventListener('input',scheduleOverlapWarning);
+ }
+}
+
 function install(){
  const dialog=$('#paymentDialog'),select=$('#paymentCarId'),form=$('#paymentForm');if(!dialog||!select||!form||!$('#paymentTenant'))return false;
- ensurePicker();
- if(!dialog.dataset.fpTenantPickerV12){dialog.dataset.fpTenantPickerV12='1';new MutationObserver(()=>{if(!dialog.open)return;[0,30,100,250].forEach(ms=>setTimeout(()=>fillPicker(),ms));Promise.resolve(window.loadWorkspaceDriverDirectory?.()).then(()=>fillPicker({preserveUserChoice:true})).catch(()=>{})}).observe(dialog,{attributes:true,attributeFilter:['open']})}
- if(!select.dataset.fpTenantPickerV12){select.dataset.fpTenantPickerV12='1';select.addEventListener('change',()=>{fillPicker();setTimeout(()=>fillPicker(),60)})}
- if(!form.dataset.fpTenantPickerV12){form.dataset.fpTenantPickerV12='1';form.addEventListener('submit',()=>fillPicker({preserveUserChoice:true}),true)}
- fillPicker();return true;
+ ensurePicker();installOverlapWarning();
+ if(!dialog.dataset.fpTenantPickerV13){dialog.dataset.fpTenantPickerV13='1';new MutationObserver(()=>{if(!dialog.open)return;[0,30,100,250].forEach(ms=>setTimeout(()=>{fillPicker();renderOverlapWarning()},ms));Promise.resolve(window.loadWorkspaceDriverDirectory?.()).then(()=>fillPicker({preserveUserChoice:true})).catch(()=>{})}).observe(dialog,{attributes:true,attributeFilter:['open']})}
+ if(!select.dataset.fpTenantPickerV13){select.dataset.fpTenantPickerV13='1';select.addEventListener('change',()=>{fillPicker();scheduleOverlapWarning();setTimeout(()=>fillPicker(),60)})}
+ if(!form.dataset.fpTenantPickerV13){form.dataset.fpTenantPickerV13='1';form.addEventListener('submit',()=>fillPicker({preserveUserChoice:true}),true)}
+ fillPicker();renderOverlapWarning();return true;
 }
 let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>100)clearInterval(timer)},100);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else install();
-window.addEventListener('fleetpilot:access-ready',()=>setTimeout(()=>{install();fillPicker()},0));
+window.addEventListener('fleetpilot:access-ready',()=>setTimeout(()=>{install();fillPicker();renderOverlapWarning()},0));
 window.addEventListener('fleetpilot:authoritative-assignments',()=>setTimeout(()=>fillPicker({preserveUserChoice:true}),0));
 })();
