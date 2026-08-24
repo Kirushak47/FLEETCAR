@@ -39,7 +39,6 @@ const style=document.createElement('style');style.textContent=`
 .fp-list-more:hover{background:#f8fafc}
 .fp-completed-work{border-color:#86efac!important;background:#f0fdf4!important}
 #calendarMonthGrid>.fp-list-more{display:none!important}
-#calendarMonthGrid>[hidden]{display:initial!important}
 @media(max-width:620px){
  .profile-dialog-shell{overflow-x:hidden!important}
  .profile-admin-card,.cloud-admin-users,.cloud-admin-user,.platform-project-row{min-width:0!important;max-width:100%!important}
