@@ -1,73 +1,106 @@
-/* FleetPilot — rental payment tenant sync (observer-only, no openPaymentDialog wrapper)
-   New payments show the driver assigned to the currently selected vehicle.
-   Existing payments keep the historical tenant saved on the payment. */
+/* FleetPilot — rental payment driver binding v2
+   Driver is derived from the selected vehicle, never typed manually.
+   Existing payments preserve the historical tenant saved at the time of payment. */
 (()=>{
 'use strict';
-if(window.__fpPaymentTenantSyncObserver)return;window.__fpPaymentTenantSyncObserver=true;
+if(window.__fpPaymentDriverBindingV2)return;window.__fpPaymentDriverBindingV2=true;
 const same=(a,b)=>String(a??'')===String(b??'');
 const $=s=>document.querySelector(s);
-function getCarById(id){return window.car?.(String(id||''))||(window.db?.cars||[]).find(c=>same(c.id,id))||null}
-function memberName(userId){
- const uid=String(userId||'');if(!uid)return'';
+const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
+const getCar=id=>cars().find(c=>same(c.id,id))||null;
+function memberById(userId){
+ const uid=String(userId||'');
  const list=Array.isArray(window.workspaceDriverDirectory)?window.workspaceDriverDirectory:[];
- const m=list.find(x=>same(x?.user_id||x?.id,uid));if(!m)return'';
- return String(window.workspaceDriverName?.(m)||m?.display_name||m?.name||m?.full_name||[m?.first_name,m?.last_name].filter(Boolean).join(' ')||window.workspaceDriverEmail?.(m)||m?.profiles?.email||m?.email||'').trim();
+ return list.find(m=>same(m?.user_id||m?.id,uid))||null;
 }
-function tenantForCar(c){
- if(!c)return'';
- // Manual driver: the tenant belongs only to this vehicle.
- if(!c.driverUserId&&String(c.tenant||'').trim())return String(c.tenant).trim();
- if(c.driverAssignmentSource==='manual')return String(c.tenant||c.driverName||c.driverEmail||'').trim();
- // Account driver: resolve by this vehicle's active assignment first.
+function memberLabel(member){
+ if(!member)return'';
+ return String(
+  window.workspaceDriverName?.(member)||member?.display_name||member?.name||member?.full_name||
+  [member?.first_name,member?.last_name].filter(Boolean).join(' ')||
+  window.workspaceDriverEmail?.(member)||member?.profiles?.email||member?.email||''
+ ).trim();
+}
+function driverSnapshotForCar(carId){
+ const c=getCar(carId);if(!c)return{car:null,userId:'',name:'',source:'none'};
+ // 1) Authoritative cloud assignment for THIS vehicle.
  const row=window.FleetPilotAssignmentState?.forCar?.(c.id)||null;
- const uid=String(row?.driver_user_id||c.driverUserId||'');
- if(uid){
-  const name=memberName(uid);if(name)return name;
-  if(row?.driver_name)return String(row.driver_name).trim();
-  if(row?.driver_email)return String(row.driver_email).trim();
-  if(c.driverName)return String(c.driverName).trim();
-  if(c.driverEmail)return String(c.driverEmail).trim();
+ const assignedUserId=String(row?.driver_user_id||'');
+ if(assignedUserId){
+  const m=memberById(assignedUserId);
+  const name=memberLabel(m)||String(row?.driver_name||row?.driver_email||c.driverName||c.driverEmail||'').trim();
+  return{car:c,userId:assignedUserId,name,source:'account'};
  }
- // Legacy/manual fallback only from this same vehicle.
- return String(c.tenant||'').trim();
+ // 2) Local account assignment for THIS vehicle, when cloud state has not loaded yet.
+ const localUserId=String(c.driverUserId||'');
+ if(localUserId){
+  const m=memberById(localUserId);
+  const name=memberLabel(m)||String(c.driverName||c.driverEmail||'').trim();
+  return{car:c,userId:localUserId,name,source:'account'};
+ }
+ // 3) Manual driver belongs only to this vehicle.
+ const manual=String(c.tenant||c.driverName||c.driverEmail||'').trim();
+ if(manual)return{car:c,userId:'',name:manual,source:'manual'};
+ return{car:c,userId:'',name:'',source:'none'};
 }
-function apply(){
- const dialog=$('#paymentDialog');
- if(!dialog?.open)return;
- if($('#paymentId')?.value)return; // editing an old payment: preserve historical tenant
- const select=$('#paymentCarId'),input=$('#paymentTenant');
- if(!select||!input)return;
- const c=getCarById(select.value);
- input.value=tenantForCar(c);
+function isEditingExisting(){return Boolean($('#paymentId')?.value)}
+function renderDriver(){
+ const input=$('#paymentTenant'),select=$('#paymentCarId');if(!input||!select)return;
+ input.readOnly=true;
+ input.setAttribute('aria-readonly','true');
+ input.title='Арендатор определяется автоматически по выбранному автомобилю';
+ if(isEditingExisting())return; // historical payment stays untouched
+ const snap=driverSnapshotForCar(select.value);
+ input.value=snap.name||'';
+ input.placeholder=snap.name?'':'Водитель не назначен';
+ input.dataset.driverUserId=snap.userId||'';
+ input.dataset.driverSource=snap.source;
 }
-async function refreshAndApply(){
- if($('#paymentId')?.value)return;
- const select=$('#paymentCarId');const c=getCarById(select?.value);
- if(c&&!c.driverUserId&&String(c.tenant||'').trim()){apply();return}
+async function refreshDriver(){
+ if(isEditingExisting())return;
+ const select=$('#paymentCarId');if(!select)return;
+ const c=getCar(select.value);
+ // Manual driver requires no network lookup.
+ if(c&&!c.driverUserId&&String(c.tenant||'').trim()){renderDriver();return}
  try{await window.loadWorkspaceDriverAssignments?.()}catch{}
  try{await window.loadWorkspaceDriverDirectory?.()}catch{}
- apply();
+ renderDriver();
 }
 function install(){
- const dialog=$('#paymentDialog'),select=$('#paymentCarId');
- if(!dialog||!select)return false;
- if(!dialog.dataset.fpTenantObserver){
-  dialog.dataset.fpTenantObserver='1';
+ const dialog=$('#paymentDialog'),form=$('#paymentForm'),select=$('#paymentCarId'),input=$('#paymentTenant');
+ if(!dialog||!form||!select||!input)return false;
+ input.readOnly=true;
+ if(!dialog.dataset.fpPaymentDriverBinding){
+  dialog.dataset.fpPaymentDriverBinding='2';
   new MutationObserver(()=>{
-   if(dialog.open&&!$('#paymentId')?.value){
-    // Let native openPaymentDialog finish selecting the requested vehicle first.
-    setTimeout(apply,0);setTimeout(refreshAndApply,80);setTimeout(apply,250);
-   }
+   if(!dialog.open)return;
+   if(isEditingExisting()){input.readOnly=true;return}
+   // Wait for native openPaymentDialog to finish selecting the requested car.
+   setTimeout(renderDriver,0);
+   setTimeout(refreshDriver,50);
   }).observe(dialog,{attributes:true,attributeFilter:['open']});
  }
- if(!select.dataset.fpTenantObserver){
-  select.dataset.fpTenantObserver='1';
-  select.addEventListener('change',()=>{apply();setTimeout(refreshAndApply,0)});
+ if(!select.dataset.fpPaymentDriverBinding){
+  select.dataset.fpPaymentDriverBinding='2';
+  select.addEventListener('change',()=>{renderDriver();setTimeout(refreshDriver,0)});
+ }
+ if(!form.dataset.fpPaymentDriverBinding){
+  form.dataset.fpPaymentDriverBinding='2';
+  // Capture phase runs before the native onsubmit handler. This guarantees the
+  // saved payment gets the driver belonging to the selected car, regardless of UI timing.
+  form.addEventListener('submit',()=>{
+   if(isEditingExisting())return;
+   const snap=driverSnapshotForCar(select.value);
+   input.value=snap.name||'';
+   input.dataset.driverUserId=snap.userId||'';
+   input.dataset.driverSource=snap.source;
+  },true);
  }
  return true;
 }
-let attempts=0;const timer=setInterval(()=>{attempts++;if(install()||attempts>60)clearInterval(timer)},100);
+let n=0;const timer=setInterval(()=>{n++;if(install()||n>80)clearInterval(timer)},100);
 document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});
 window.addEventListener('fleetpilot:access-ready',()=>setTimeout(install,0));
-window.FleetPilotPaymentTenantSync={install,apply,tenantForCar,refresh:refreshAndApply};
+window.addEventListener('fleetpilot:authoritative-assignments',()=>setTimeout(()=>{if($('#paymentDialog')?.open)renderDriver()},0));
+window.FleetPilotPaymentDriverBinding={install,render:renderDriver,refresh:refreshDriver,snapshot:driverSnapshotForCar};
 })();
