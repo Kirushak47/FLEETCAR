@@ -1,9 +1,9 @@
-/* FleetPilot — rental payment driver binding v4
-   Driver is derived from the selected vehicle, never typed manually.
-   Existing payments preserve the historical tenant saved at the time of payment. */
+/* FleetPilot — rental payment driver binding v5
+   Payment driver follows the vehicle snapshot.
+   IMPORTANT: a manually entered vehicle tenant is a fully valid driver even without account/user id. */
 (()=>{
 'use strict';
-if(window.__fpPaymentDriverBindingV4)return;window.__fpPaymentDriverBindingV4=true;
+if(window.__fpPaymentDriverBindingV5)return;window.__fpPaymentDriverBindingV5=true;
 const same=(a,b)=>String(a??'')===String(b??'');
 const $=s=>document.querySelector(s);
 const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
@@ -12,36 +12,31 @@ const getCar=id=>cars().find(c=>same(c.id,id))||null;
 function driverSnapshotForCar(carId){
  const c=getCar(carId);if(!c)return{car:null,userId:'',name:'',source:'none'};
 
- // Primary source: FleetPilot's shared driver domain. This function has access to the
- // lexical workspace driver directory used by Driver Portal, unlike window.workspaceDriverDirectory.
+ // Manual text saved on the vehicle is authoritative for payment display.
+ // It must work even when the driver has no FleetPilot account and no Supabase assignment.
+ const vehicleName=String(c.tenant||c.driverName||c.driverEmail||'').trim();
+ const localUserId=String(c.driverUserId||'');
+ if(vehicleName){
+  return{car:c,userId:localUserId,name:vehicleName,source:localUserId?'account':'manual'};
+ }
+
+ // If the local vehicle has no readable name, try the shared driver domain.
  try{
   const resolved=window.workspaceDriverForCar?.(c)||null;
   if(resolved){
-   const name=String(resolved.name||resolved.email||c.driverName||c.tenant||c.driverEmail||'').trim();
-   if(name||resolved.userId){
-    return{car:c,userId:String(resolved.userId||c.driverUserId||''),name,source:resolved.source||'account'};
-   }
+   const name=String(resolved.name||resolved.email||'').trim();
+   if(name||resolved.userId)return{car:c,userId:String(resolved.userId||localUserId),name,source:resolved.source||'account'};
   }
  }catch(error){console.warn('Payment driver domain resolve failed',error)}
 
- // Secondary source: authoritative assignment row for this exact vehicle.
+ // Last fallback: authoritative assignment row for this exact vehicle.
  const row=window.FleetPilotAssignmentState?.forCar?.(c.id)||null;
  const assignedUserId=String(row?.driver_user_id||'');
  if(assignedUserId){
-  const name=String(row?.driver_name||row?.driver_email||c.driverName||c.tenant||c.driverEmail||'').trim();
+  const name=String(row?.driver_name||row?.driver_email||'').trim();
   return{car:c,userId:assignedUserId,name,source:'account'};
  }
-
- // Local vehicle snapshot while cloud state is still loading.
- const localUserId=String(c.driverUserId||'');
- if(localUserId){
-  const name=String(c.driverName||c.tenant||c.driverEmail||'').trim();
-  return{car:c,userId:localUserId,name,source:'account'};
- }
-
- const manual=String(c.tenant||c.driverName||c.driverEmail||'').trim();
- if(manual)return{car:c,userId:'',name:manual,source:'manual'};
- return{car:c,userId:'',name:'',source:'none'};
+ return{car:c,userId:localUserId,name:'',source:localUserId?'account':'none'};
 }
 
 function isEditingExisting(){return Boolean($('#paymentId')?.value)}
@@ -64,6 +59,10 @@ function renderDriver(){
 async function refreshDriver(){
  if(isEditingExisting())return;
  const select=$('#paymentCarId');if(!select)return;
+ // Paint local/manual data first. Cloud refresh must never erase a manual tenant.
+ renderDriver();
+ const c=getCar(select.value);
+ if(String(c?.tenant||c?.driverName||c?.driverEmail||'').trim())return;
  try{await window.loadWorkspaceDriverAssignments?.()}catch{}
  try{await window.loadWorkspaceDriverDirectory?.()}catch{}
  renderDriver();
@@ -72,22 +71,21 @@ function install(){
  const dialog=$('#paymentDialog'),form=$('#paymentForm'),select=$('#paymentCarId'),input=$('#paymentTenant');
  if(!dialog||!form||!select||!input)return false;
  input.readOnly=true;
- if(!dialog.dataset.fpPaymentDriverBindingV4){
-  dialog.dataset.fpPaymentDriverBindingV4='1';
+ if(!dialog.dataset.fpPaymentDriverBindingV5){
+  dialog.dataset.fpPaymentDriverBindingV5='1';
   new MutationObserver(()=>{
    if(!dialog.open)return;
    if(isEditingExisting()){input.readOnly=true;return}
    [0,16,60,150,350].forEach(ms=>setTimeout(renderDriver,ms));
    setTimeout(refreshDriver,40);
-   setTimeout(refreshDriver,180);
   }).observe(dialog,{attributes:true,attributeFilter:['open']});
  }
- if(!select.dataset.fpPaymentDriverBindingV4){
-  select.dataset.fpPaymentDriverBindingV4='1';
-  select.addEventListener('change',()=>{renderDriver();setTimeout(refreshDriver,0);setTimeout(refreshDriver,120)});
+ if(!select.dataset.fpPaymentDriverBindingV5){
+  select.dataset.fpPaymentDriverBindingV5='1';
+  select.addEventListener('change',()=>{renderDriver();setTimeout(refreshDriver,0)});
  }
- if(!form.dataset.fpPaymentDriverBindingV4){
-  form.dataset.fpPaymentDriverBindingV4='1';
+ if(!form.dataset.fpPaymentDriverBindingV5){
+  form.dataset.fpPaymentDriverBindingV5='1';
   form.addEventListener('submit',()=>{
    if(isEditingExisting())return;
    paint(driverSnapshotForCar(select.value));
