@@ -1,9 +1,9 @@
-/* FleetPilot — rental payment driver binding v6
-   Keeps the visible payment dialog driver field synchronized with the selected vehicle.
-   Manual vehicle tenant is valid even without a FleetPilot account. */
+/* FleetPilot — rental payment driver binding v7
+   The visible driver field is now independent from the hidden paymentTenant value.
+   This prevents legacy payment-dialog code from clearing what the user sees. */
 (()=>{
 'use strict';
-if(window.__fpPaymentDriverBindingV6)return;window.__fpPaymentDriverBindingV6=true;
+if(window.__fpPaymentDriverBindingV7)return;window.__fpPaymentDriverBindingV7=true;
 const same=(a,b)=>String(a??'')===String(b??'');
 const $=s=>document.querySelector(s);
 const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
@@ -31,18 +31,45 @@ function driverSnapshotForCar(carId){
 }
 
 function isEditingExisting(){return Boolean($('#paymentId')?.value)}
+
+function ensureDisplay(){
+ const stored=$('#paymentTenant');if(!stored)return null;
+ let display=$('#paymentTenantDisplay');
+ if(!display){
+  display=document.createElement('input');
+  display.id='paymentTenantDisplay';
+  display.type='text';
+  display.className=stored.className||'';
+  display.readOnly=true;
+  display.tabIndex=0;
+  display.autocomplete='off';
+  display.setAttribute('aria-readonly','true');
+  display.title='Фактический водитель, за которого проводится оплата';
+  stored.insertAdjacentElement('afterend',display);
+ }
+ // Keep the real form field only for saving; legacy code may write to it without affecting UI.
+ if(stored.type!=='hidden')stored.type='hidden';
+ return display;
+}
+
 function paint(){
- const input=$('#paymentTenant'),select=$('#paymentCarId');if(!input||!select)return;
- if(isEditingExisting()){input.readOnly=true;return}
+ const stored=$('#paymentTenant'),select=$('#paymentCarId'),display=ensureDisplay();
+ if(!stored||!select||!display)return;
+ if(isEditingExisting()){
+  display.value=stored.value||'';
+  display.placeholder=display.value?'':'Водитель не назначен';
+  return;
+ }
  const snap=driverSnapshotForCar(select.value);
- input.readOnly=true;
- input.setAttribute('aria-readonly','true');
- input.title='Арендатор определяется автоматически по выбранному автомобилю';
  const wanted=snap.name||'';
- if(input.value!==wanted)input.value=wanted;
- input.placeholder=wanted?'':'Водитель не назначен';
- input.dataset.driverUserId=snap.userId||'';
- input.dataset.driverSource=snap.source||'none';
+ display.value=wanted;
+ display.placeholder=wanted?'':'Водитель не назначен';
+ display.dataset.driverUserId=snap.userId||'';
+ display.dataset.driverSource=snap.source||'none';
+ // The hidden field is still what the native payment submit handler saves.
+ stored.value=wanted;
+ stored.dataset.driverUserId=snap.userId||'';
+ stored.dataset.driverSource=snap.source||'none';
 }
 
 async function refreshDriver(){
@@ -55,34 +82,26 @@ async function refreshDriver(){
  paint();
 }
 
-let visibleSyncTimer=0;
-function startVisibleSync(){
- clearInterval(visibleSyncTimer);
- paint();
- visibleSyncTimer=setInterval(()=>{
-  const dialog=$('#paymentDialog');
-  if(!dialog?.open){clearInterval(visibleSyncTimer);visibleSyncTimer=0;return}
-  paint();
- },100);
-}
-
 function install(){
- const dialog=$('#paymentDialog'),form=$('#paymentForm'),select=$('#paymentCarId'),input=$('#paymentTenant');
- if(!dialog||!form||!select||!input)return false;
- input.readOnly=true;
- if(!dialog.dataset.fpPaymentDriverBindingV6){
-  dialog.dataset.fpPaymentDriverBindingV6='1';
+ const dialog=$('#paymentDialog'),form=$('#paymentForm'),select=$('#paymentCarId'),stored=$('#paymentTenant');
+ if(!dialog||!form||!select||!stored)return false;
+ ensureDisplay();
+ if(!dialog.dataset.fpPaymentDriverBindingV7){
+  dialog.dataset.fpPaymentDriverBindingV7='1';
   new MutationObserver(()=>{
-   if(dialog.open){startVisibleSync();setTimeout(refreshDriver,30)}
-   else if(visibleSyncTimer){clearInterval(visibleSyncTimer);visibleSyncTimer=0}
+   if(!dialog.open)return;
+   // Native openPaymentDialog finishes its own writes first, then we render our independent display.
+   [0,16,60,150].forEach(ms=>setTimeout(paint,ms));
+   setTimeout(refreshDriver,40);
   }).observe(dialog,{attributes:true,attributeFilter:['open']});
  }
- if(!select.dataset.fpPaymentDriverBindingV6){
-  select.dataset.fpPaymentDriverBindingV6='1';
+ if(!select.dataset.fpPaymentDriverBindingV7){
+  select.dataset.fpPaymentDriverBindingV7='1';
   select.addEventListener('change',()=>{paint();setTimeout(refreshDriver,0)});
  }
- if(!form.dataset.fpPaymentDriverBindingV6){
-  form.dataset.fpPaymentDriverBindingV6='1';
+ if(!form.dataset.fpPaymentDriverBindingV7){
+  form.dataset.fpPaymentDriverBindingV7='1';
+  // Capture phase guarantees the stored tenant matches the visible driver at save time.
   form.addEventListener('submit',paint,true);
  }
  return true;
