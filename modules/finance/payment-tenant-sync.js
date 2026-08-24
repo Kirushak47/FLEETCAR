@@ -1,22 +1,27 @@
 /* FleetPilot — rental payment tenant sync
-   New payments always show the vehicle's current assigned driver.
+   New payments always show the vehicle's current driver, including manual drivers.
    Existing payments keep their historical tenant. */
 (()=>{
 'use strict';
 if(window.__fpPaymentTenantSync)return;window.__fpPaymentTenantSync=true;
 const same=(a,b)=>String(a??'')===String(b??'');
 const $=s=>document.querySelector(s);
+function manualTenant(c){
+ if(!c)return'';
+ // Manual drivers in FleetPilot are represented by tenant with no driverUserId.
+ if(!c.driverUserId&&String(c.tenant||'').trim())return String(c.tenant).trim();
+ if(c.driverAssignmentSource==='manual')return String(c.tenant||c.driverName||c.driverEmail||'').trim();
+ return'';
+}
 function currentTenant(c){
  if(!c)return'';
- // First use the same authoritative resolver as the rest of FleetPilot.
- // It already merges current assignment row + driver directory + vehicle fallback.
+ // Manual assignment must win before cloud/account resolvers. Cloud refresh has no row for it.
+ const manual=manualTenant(c);if(manual)return manual;
  try{
   const assigned=window.workspaceDriverForCar?.(c);
   if(assigned?.name)return assigned.name;
   if(assigned?.email)return assigned.email;
  }catch{}
-
- // If the local car has not yet been reconciled, recover the active cloud assignment by car id.
  try{
   const row=window.FleetPilotAssignmentState?.forCar?.(c.id);
   const userId=String(row?.driver_user_id||c.driverUserId||'');
@@ -33,22 +38,25 @@ function currentTenant(c){
    if(row?.driver_email)return row.driver_email;
   }
  }catch{}
-
- return c.driverName||c.tenant||c.driverEmail||'';
+ return String(c.tenant||c.driverName||c.driverEmail||'').trim();
 }
 function selectedCar(){
  const carId=$('#paymentCarId')?.value||'';
  return window.car?.(carId)||(window.db?.cars||[]).find(x=>same(x.id,carId));
 }
 function syncNewPaymentTenant(){
- const id=$('#paymentId')?.value||'';
- if(id)return; // historical payment: never rewrite its saved tenant
- const input=$('#paymentTenant');
- if(!input)return;
- input.value=currentTenant(selectedCar());
+ if($('#paymentId')?.value)return;
+ const input=$('#paymentTenant');if(!input)return;
+ const c=selectedCar();
+ const value=currentTenant(c);
+ // Do not let asynchronous account refresh blank a valid manual driver.
+ if(value||!manualTenant(c))input.value=value;
 }
 async function refreshTenantFromCloud(){
  if($('#paymentId')?.value)return;
+ const c=selectedCar();
+ // Manual drivers are local vehicle data; cloud assignment refresh is irrelevant and can clear account-only fields.
+ if(manualTenant(c)){syncNewPaymentTenant();return}
  try{await window.FleetPilotOperationalDomain?.pullAuthoritativeState?.()}catch{}
  try{await window.loadWorkspaceDriverAssignments?.()}catch{}
  try{await window.loadWorkspaceDriverDirectory?.()}catch{}
@@ -60,25 +68,16 @@ function install(){
  if(native.__fpTenantSync)return true;
  const wrapped=function(){
   const result=native.apply(this,arguments);
-  syncNewPaymentTenant();
-  // Re-resolve after cloud assignment + directory are ready.
-  setTimeout(refreshTenantFromCloud,0);
-  setTimeout(syncNewPaymentTenant,250);
-  setTimeout(syncNewPaymentTenant,800);
+  syncNewPaymentTenant();setTimeout(refreshTenantFromCloud,0);setTimeout(syncNewPaymentTenant,250);setTimeout(syncNewPaymentTenant,800);
   return result;
  };
- wrapped.__fpTenantSync=true;wrapped.__native=native;
- window.openPaymentDialog=wrapped;
- try{openPaymentDialog=wrapped}catch{}
+ wrapped.__fpTenantSync=true;wrapped.__native=native;window.openPaymentDialog=wrapped;try{openPaymentDialog=wrapped}catch{}
  const select=$('#paymentCarId');
- if(select&&!select.dataset.fpTenantSync){
-  select.dataset.fpTenantSync='1';
-  select.addEventListener('change',()=>{syncNewPaymentTenant();setTimeout(refreshTenantFromCloud,0)})
- }
+ if(select&&!select.dataset.fpTenantSync){select.dataset.fpTenantSync='1';select.addEventListener('change',()=>{syncNewPaymentTenant();setTimeout(refreshTenantFromCloud,0)})}
  return true;
 }
 let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>50)clearInterval(timer)},100);
 ['fleetpilot:modules-ready','fleetpilot:access-ready','fleetpilot:assignments-changed','fleetpilot:driver-assignment-changed','fleetpilot:authoritative-assignments'].forEach(ev=>window.addEventListener(ev,()=>{setTimeout(install,0);setTimeout(syncNewPaymentTenant,20)}));
 document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});
-window.FleetPilotPaymentTenantSync={install,currentTenant,sync:syncNewPaymentTenant,refresh:refreshTenantFromCloud};
+window.FleetPilotPaymentTenantSync={install,currentTenant,manualTenant,sync:syncNewPaymentTenant,refresh:refreshTenantFromCloud};
 })();
