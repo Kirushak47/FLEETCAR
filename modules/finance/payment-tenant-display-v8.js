@@ -1,10 +1,10 @@
-/* FleetPilot — payment driver visible display v9
+/* FleetPilot — payment driver visible display v10
    One visible driver field in the rental payment dialog.
-   Resolves the concrete driver from vehicle, shared driver domain, assignment state,
-   and finally the latest saved payment for the same car. */
+   Also detects ANY overlapping rental-payment period for the same vehicle,
+   not only an exact from/to duplicate. */
 (()=>{
 'use strict';
-if(window.__fpPaymentTenantDisplayV9)return;window.__fpPaymentTenantDisplayV9=true;
+if(window.__fpPaymentTenantDisplayV10)return;window.__fpPaymentTenantDisplayV10=true;
 const $=s=>document.querySelector(s);
 const same=(a,b)=>String(a??'')===String(b??'');
 const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
@@ -36,7 +36,6 @@ function resolveDriver(carId){
 
 function ensureDisplay(){
  const stored=$('#paymentTenant');if(!stored)return null;
- // Remove display fields created by older fixes so the dialog has exactly one field.
  $('#paymentTenantDisplay')?.remove();
  let display=$('#paymentTenantDisplayV8');
  if(!display){
@@ -71,30 +70,87 @@ function paint(){
  stored.dataset.driverSource=resolved.source||'none';
 }
 
+function overlaps(aFrom,aTo,bFrom,bTo){
+ if(!aFrom||!aTo||!bFrom||!bTo)return false;
+ return String(aFrom)<=String(bTo)&&String(aTo)>=String(bFrom);
+}
+function overlappingPayments(){
+ const carId=$('#paymentCarId')?.value||'';
+ const from=$('#paymentFrom')?.value||'';
+ const to=$('#paymentTo')?.value||'';
+ const currentId=$('#paymentId')?.value||'';
+ if(!carId||!from||!to)return[];
+ return payments().filter(p=>
+  !same(p.id,currentId)&&
+  same(p.carId,carId)&&
+  overlaps(from,to,p.from,p.to)
+ );
+}
+function formatRange(p){
+ const f=p?.from||'',t=p?.to||'';
+ return f&&t?`${f} — ${t}`:(f||t||'период не указан');
+}
+function renderOverlapWarning(){
+ const box=$('#paymentDuplicateWarning');if(!box)return;
+ const rows=overlappingPayments();
+ box.hidden=!rows.length;
+ if(!rows.length){box.textContent='';return}
+ const received=rows.reduce((sum,p)=>sum+Number(p.received||0),0);
+ if(rows.length===1){
+  const p=rows[0];
+  const who=String(p.tenant||'').trim();
+  box.textContent=`⚠️ Выбранный период пересекается с уже сохранённой оплатой${who?` (${who})`:''}: ${formatRange(p)}, получено ${window.money?window.money(p.received):Number(p.received||0).toFixed(2)}.`;
+ }else{
+  box.textContent=`⚠️ Выбранный период пересекается с ${rows.length} уже сохранёнными оплатами. Всего получено: ${window.money?window.money(received):received.toFixed(2)}.`;
+ }
+}
+function installOverlapGuard(){
+ // Replace the legacy exact-match visual check with overlap-aware logic.
+ try{window.checkPaymentDuplicate=renderOverlapWarning}catch{}
+ const form=$('#paymentForm');if(!form||form.dataset.fpOverlapGuardV10)return;
+ form.dataset.fpOverlapGuardV10='1';
+ form.addEventListener('submit',event=>{
+  const rows=overlappingPayments();
+  if(!rows.length)return;
+  const received=rows.reduce((sum,p)=>sum+Number(p.received||0),0);
+  const msg=rows.length===1
+   ?`За выбранный период уже есть пересекающаяся оплата: ${formatRange(rows[0])}, получено ${window.money?window.money(rows[0].received):Number(rows[0].received||0).toFixed(2)}.\n\nВсё равно сохранить новую запись?`
+   :`Выбранный период пересекается с ${rows.length} оплатами, всего получено ${window.money?window.money(received):received.toFixed(2)}.\n\nВсё равно сохранить новую запись?`;
+  if(!confirm(msg)){
+   event.preventDefault();
+   event.stopImmediatePropagation();
+  }
+ },true);
+}
+
 function install(){
  const dialog=$('#paymentDialog'),select=$('#paymentCarId'),form=$('#paymentForm');
  if(!dialog||!select||!form||!$('#paymentTenant'))return false;
  ensureDisplay();
- if(!dialog.dataset.fpTenantDisplayV9){
-  dialog.dataset.fpTenantDisplayV9='1';
+ installOverlapGuard();
+ if(!dialog.dataset.fpTenantDisplayV10){
+  dialog.dataset.fpTenantDisplayV10='1';
   new MutationObserver(()=>{
    if(!dialog.open)return;
-   [0,20,80,180,400].forEach(ms=>setTimeout(paint,ms));
+   [0,20,80,180,400].forEach(ms=>setTimeout(()=>{paint();renderOverlapWarning()},ms));
   }).observe(dialog,{attributes:true,attributeFilter:['open']});
  }
- if(!select.dataset.fpTenantDisplayV9){
-  select.dataset.fpTenantDisplayV9='1';
-  select.addEventListener('change',()=>{paint();setTimeout(paint,50)});
+ if(!select.dataset.fpTenantDisplayV10){
+  select.dataset.fpTenantDisplayV10='1';
+  select.addEventListener('change',()=>{paint();renderOverlapWarning();setTimeout(()=>{paint();renderOverlapWarning()},50)});
  }
- if(!form.dataset.fpTenantDisplayV9){
-  form.dataset.fpTenantDisplayV9='1';
+ for(const id of ['paymentFrom','paymentTo','paymentReferenceWeek','paymentTiming']){
+  const el=$('#'+id);if(el&&!el.dataset.fpOverlapV10){el.dataset.fpOverlapV10='1';el.addEventListener('change',()=>setTimeout(renderOverlapWarning,0));el.addEventListener('input',()=>setTimeout(renderOverlapWarning,0))}
+ }
+ if(!form.dataset.fpTenantDisplayV10){
+  form.dataset.fpTenantDisplayV10='1';
   form.addEventListener('submit',paint,true);
  }
- paint();
+ paint();renderOverlapWarning();
  return true;
 }
 let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>100)clearInterval(timer)},100);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else install();
-window.addEventListener('fleetpilot:access-ready',()=>setTimeout(()=>{install();paint()},0));
+window.addEventListener('fleetpilot:access-ready',()=>setTimeout(()=>{install();paint();renderOverlapWarning()},0));
 window.addEventListener('fleetpilot:authoritative-assignments',()=>setTimeout(paint,0));
 })();
