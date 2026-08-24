@@ -39,12 +39,22 @@ const style=document.createElement('style');style.textContent=`
 .fp-list-more:hover{background:#f8fafc}
 .fp-completed-work{border-color:#86efac!important;background:#f0fdf4!important}
 #calendarMonthGrid>.fp-list-more{display:none!important}
-@media(max-width:620px){
+.profile-admin-card{min-width:0!important;max-width:100%!important;overflow:hidden}
+#cloudAdminUsers{min-width:0!important;max-width:100%!important;width:100%;box-sizing:border-box}
+#cloudAdminUsers .cloud-admin-user{display:grid!important;grid-template-columns:minmax(180px,1.1fr) minmax(260px,1.4fr)!important;align-items:center!important;gap:12px!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow:hidden}
+#cloudAdminUsers .cloud-admin-user>*{min-width:0!important;max-width:100%!important}
+#cloudAdminUsers .cloud-admin-user>div:first-child{overflow:hidden}
+#cloudAdminUsers .cloud-admin-user strong,#cloudAdminUsers .cloud-admin-user small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cloudAdminUsers .cloud-admin-user-stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;min-width:0!important;width:100%!important}
+#cloudAdminUsers .cloud-admin-user-stats span{min-width:0!important;overflow:hidden}
+#cloudAdminUsers .cloud-admin-user-stats strong,#cloudAdminUsers .cloud-admin-user-stats small{white-space:normal!important;overflow-wrap:anywhere}
+@media(max-width:760px){
  .profile-dialog-shell{overflow-x:hidden!important}
  .profile-admin-card,.cloud-admin-users,.cloud-admin-user,.platform-project-row{min-width:0!important;max-width:100%!important}
  .profile-admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
  .profile-admin-kpis>div,.cloud-admin-user>*{min-width:0!important}
- .cloud-admin-user{grid-template-columns:minmax(0,1fr)!important;width:100%!important;box-sizing:border-box!important}
+ #cloudAdminUsers .cloud-admin-user{grid-template-columns:minmax(0,1fr)!important;width:100%!important;box-sizing:border-box!important}
+ #cloudAdminUsers .cloud-admin-user strong,#cloudAdminUsers .cloud-admin-user small{white-space:normal!important;overflow-wrap:anywhere;word-break:break-word}
  .cloud-admin-user-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;min-width:0!important;width:100%!important}
  .cloud-admin-user-stats span{min-width:0!important;overflow-wrap:anywhere}
  .platform-project-row strong,.platform-project-row small{overflow-wrap:anywhere;word-break:break-word}
