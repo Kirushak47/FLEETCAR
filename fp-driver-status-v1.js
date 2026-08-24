@@ -8,8 +8,19 @@
   const cars=()=>Array.isArray(window.db?.cars)?window.db.cars:[];
   const assignedCarForUser=userId=>cars().find(c=>same(c.driverUserId,userId))||null;
 
-  // Do not show handover-state labels in driver cards anymore.
-  // The assigned vehicle itself is enough context and avoids stale/conflicting statuses.
+  function acceptanceState(c){
+    if(!c)return false;
+    try{
+      const resolved=typeof window.workspaceDriverForCar==='function'?window.workspaceDriverForCar(c):null;
+      if(resolved&&typeof resolved.accepted==='boolean')return resolved.accepted;
+    }catch{}
+    try{
+      if(typeof window.currentAssignmentAcceptedLocally==='function'&&window.currentAssignmentAcceptedLocally(c))return true;
+    }catch{}
+    return Boolean(c.driverAcceptedAt);
+  }
+
+  // Keep meaningful handover states. Only the stale/annoying "Ожидает приёмки" badge is hidden.
   window.driverPickerStatus=function(member){
     const c=assignedCarForUser(member?.user_id);
     if(!c)return{label:'Без автомобиля',cls:'free',vehicle:''};
@@ -18,7 +29,8 @@
       const m=typeof window.model==='function'?window.model(c):{};
       vehicle=`${m?.brand||c.brand||''} ${m?.model||c.model||''} · ${c.plate||'—'}`.trim();
     }catch{vehicle=c.plate||''}
-    return{label:'',cls:'',vehicle};
+    const accepted=acceptanceState(c);
+    return{label:accepted?'Автомобиль принят':'',cls:accepted?'accepted':'',vehicle};
   };
 
   window.fleetDriverMeta=function(c){
@@ -26,13 +38,8 @@
     const hasDriver=Boolean(String(c.driverUserId||'').trim()||String(c.tenant||'').trim());
     if(!hasDriver)return'Не назначен';
     if(!String(c.driverUserId||'').trim())return'Введён вручную';
-    return'';
+    return acceptanceState(c)?'Автомобиль принят':'Ожидает подтверждения';
   };
-
-  const handoverLabels=new Set([
-    'Ожидает приёмки','Ожидает приемки','Ожидает подтверждения',
-    'Автомобиль принят'
-  ]);
 
   function cleanupDriverCards(){
     const roots=[
@@ -46,7 +53,7 @@
       for(const el of root.querySelectorAll('*')){
         if(el.children.length)continue;
         const text=(el.textContent||'').trim();
-        if(!handoverLabels.has(text))continue;
+        if(!['Ожидает приёмки','Ожидает приемки'].includes(text))continue;
         const card=el.closest('[data-pick-driver],[data-open-driver-profile],.driver-registry-card,.driver-picker-card');
         if(card)el.remove();
       }
@@ -59,13 +66,11 @@
     const head=page.querySelector('.driver-portal-head');
     if(!head)return;
 
-    // Remove decorative/legacy labels above the real page title.
+    // Remove only decorative/stray labels from the Driver Portal header.
     for(const el of head.querySelectorAll('*')){
       if(el.children.length)continue;
       const text=(el.textContent||'').trim();
-      if(['Driver Portal','DRIVER PORTAL','В ремонте','Ожидает приёмки','Ожидает приемки','Ожидает подтверждения'].includes(text)){
-        el.remove();
-      }
+      if(['Driver Portal','DRIVER PORTAL','В ремонте'].includes(text))el.remove();
     }
   }
 
@@ -110,5 +115,5 @@
   window.addEventListener('fleetpilot:cloud-ready',()=>setTimeout(refresh,0));
   setTimeout(refresh,0);
   setInterval(()=>{patchServiceFeed();cleanup()},1500);
-  console.info('FleetPilot driver status cleanup v1.2 active');
+  console.info('FleetPilot driver status cleanup v1.3 active');
 })();
