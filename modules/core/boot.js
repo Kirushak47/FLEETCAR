@@ -10,12 +10,10 @@
  }
  function loadVehicleReportV2(){loadScriptOnce('data-fp-vehicle-report-v2','modules/reports/vehicle-report-v2.js?v=220102')}
  function loadExpenseDocumentSync(){loadScriptOnce('data-fp-expense-document-sync','modules/finance/expense-document-sync.js?v=220200')}
- function loadPaymentTenantSync(){loadScriptOnce('data-fp-payment-tenant-sync','modules/finance/payment-tenant-sync.js?v=220304')}
  function install(){
   try{
    loadVehicleReportV2();
    loadExpenseDocumentSync();
-   loadPaymentTenantSync();
    if(typeof forceInitialFleetRender==='function'){
     const renderOnly=function(){
      if(window.innerWidth<1100)return;
@@ -36,7 +34,7 @@
    }
   }catch(error){console.warn('FleetPilot modular boot install',error)}
  }
- FP.Boot=Object.freeze({install,loadVehicleReportV2,loadExpenseDocumentSync,loadPaymentTenantSync});
+ FP.Boot=Object.freeze({install,loadVehicleReportV2,loadExpenseDocumentSync});
  install();
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
  window.addEventListener('fleetpilot:access-ready',install);
